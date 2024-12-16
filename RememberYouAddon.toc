@@ -1,6 +1,7 @@
 ## Interface: 11302
 ## Title: RememberYou Addon
 ## Author: Morveron, Agonit
+## Edit by: Crasling
 
 ## DefaultState: Enabled
 ## LoadOnDemand: 0

@@ -2,13 +2,15 @@ RememberYouAddon = LibStub("AceAddon-3.0"):NewAddon("RememberYouAddon", "AceSeri
 
 local L = LibStub("AceLocale-3.0"):GetLocale("RememberYouAddon")
 
+local LDB = LibStub("LibDataBroker-1.1")
+
 --:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 --[[                              Variables                                  ]]
 --:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 local CurrDataTime
 local CompDataTime
 
-
+local InGroup
 local success
 local SerializedCash
 local TempTable = {}
@@ -66,6 +68,12 @@ local RememberYouColour = {
 "|cff80f451", --// Дружественный 4
 "|cff80f451", --// Превозносимый 5
 }
+
+--:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+--[[                             Minimap Button                              ]]
+--:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
 
 --:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 --[[                                  Funcs                                  ]]
@@ -174,6 +182,7 @@ if GetUnitName("player", false) == sender then return end
       for k,v in pairs(TempTable) do
             RememberYouDatabase[k] = v
       end
+      print(L["RYDataReceived"])
     end
     wipe(TempTable)
 end
@@ -191,12 +200,19 @@ local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay)*24 + tonumber(CurrMon
     
     TimeTableToSend = RememberYouAddon:Serialize(TimeTable)
     RememberYouAddon:SendCommMessage("RYFullUpdate", TimeTableToSend, "PARTY")
+    print(L["RYDataSharedRecent"])
 end
 
 function RememberYouAddon:SendFullNotes()  
 wipe(TimeTable) 
     TimeTableToSend = RememberYouAddon:Serialize(RememberYouDatabase)
     RememberYouAddon:SendCommMessage("RYFullUpdate", TimeTableToSend, "PARTY")
+    print(L["RYDataSharedFull"])
+    
+end
+
+local function OnCombatEnter(self, event)
+    RememberYouNotes:Hide()
 end
 
 --:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -232,6 +248,19 @@ if not RememberYouDatabase[GetUnitName("target", false)] then return end
             TargetFrameTextureFrameTexture:SetTexture(RememberYouTargetFrames[RememberYouDatabase[tostring(GetUnitName("target", false))][2]]);
     end
 end
+
+local JoiningGroup = CreateFrame("Frame")
+    JoiningGroup:RegisterEvent("GROUP_JOINED")
+    JoiningGroup:RegisterEvent("GROUP_LEFT")
+
+JoiningGroup:SetScript("OnEvent", function(self, event)
+    if event == "GROUP_JOINED" then
+        InGroup = true
+        RememberYouAddon:SendFullNotes()
+    elseif event == "GROUP_LEFT" then
+        InGroup = false
+    end
+end)
 
 --:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 --[[                               Name Plates                               ]]
@@ -278,10 +307,11 @@ function RememberYouAddon:OnEnable()
     self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
     self:SecureHook("TargetFrame_Update",  "SetTargetingFrame")
 
-    print(L"[RememberYou] Personal Modification Version 1.0 by Crasling test")
+    print(L["RYOnLoad"])
 
     LibStub:GetLibrary("LibDataBroker-1.1"):NewDataObject("RememberYou", {
         type = "launcher",
+        text = "Remember You",
         icon = "Interface\\Icons\\Spell_Nature_BloodLust",
         OnClick = function(clickedframe, button)
             if RememberYouNotes:IsVisible() then
@@ -292,14 +322,30 @@ function RememberYouAddon:OnEnable()
         end,
     })
 
+    LibStub:GetLibrary("LibDataBroker-1.1"):NewDataObject("RememberYouAddon_MinimapButton", {
+        type = "data source",
+        text = "Remember You",
+        icon = "Interface\\Icons\\Spell_Nature_BloodLust",
+        OnClick = function(self, button)
+            if RememberYouNotes:IsVisible() then
+                RememberYouNotes:Hide()
+            else
+                RememberYouNotes:Show()
+            end
+        end,
+    })
+
+    -- To make the button appear on the Minimap
+    local minimapButton = CreateFrame("Button", "RememberYouAddon_MinimapButton", UIParent)
+    minimapButton:SetSize(32, 32)  -- Button size
+    minimapButton:SetPoint("TOPRIGHT", Minimap, "TOPRIGHT", -10, -10)  -- Position near the Minimap
+
     if not RememberYouSettings.Skin then RememberYouSettings.Skin = 2 end
     RememberYouNotes.ArtWork:SetTexture(RememberYouPanelSkins[tonumber(RememberYouSettings.Skin)]);
 
     if RememberYouSettings.Import ~= false then
         RememberYouAddon:RegisterComm("RYFullUpdate", "OnFullNotesCommReceived")
         RememberYouAddon:RegisterComm("RYOneUpdate", "OnNewNoteCommReceived")
-    
-        RememberYouAddon:SendRecentNotes() --// Update for Guild
     end
 end
 
@@ -317,8 +363,19 @@ local RememberYouNotes = CreateFrame("Frame", "RememberYouNotes", UIParent)
     RememberYouNotes:SetScript("OnDragStart", function(self) self:StartMoving() end)
     RememberYouNotes:SetScript("OnMouseDown", function(self) self:StartMoving() end)
     RememberYouNotes:SetScript("OnMouseUp", function(self) self:StopMovingOrSizing() self:SetUserPlaced(true) end)
-    RememberYouNotes:RegisterForDrag("LeftButton","RightButton")
+    RememberYouNotes:RegisterForDrag("LeftButton", "RightButton")
     RememberYouNotes:SetClampedToScreen(true)
+
+-- Create the floating text (FontString)
+local floatingText = RememberYouNotes:CreateFontString(nil, "OVERLAY")
+    floatingText:SetFont("Fonts\\FRIZQT__.TTF", 16, "OUTLINE") -- You can adjust the font, size, and style here
+    floatingText:SetText(L["VersionNumber"])  -- Change this text to whatever you want
+    floatingText:SetPoint("CENTER", RememberYouNotes, "CENTER", 0, 75)  -- Position the text in the center of the frame
+    floatingText:SetTextColor(1, 1, 0)  -- RGB values for yellow (change as needed)
+
+local frame = CreateFrame("Frame")
+    frame:RegisterEvent("PLAYER_REGEN_DISABLED")
+    frame:SetScript("OnEvent", OnCombatEnter)
 
 --[[RememberYouNotes:SetBackdrop({
 	bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
@@ -405,6 +462,7 @@ RememberYouNotes.ToggleSkin:SetScript("OnClick", function(self, button)
         RememberYouSettings.Skin = 1
     end
     RememberYouNotes.ArtWork:SetTexture(RememberYouPanelSkins[tonumber(RememberYouSettings.Skin)]);
+    print(L["RYSetSkinToggle"])
 end)
 
 RememberYouNotes.DataBaseWrite = CreateFrame("BUTTON", "RememberYouNotes.DataBaseWrite", RememberYouNotes, "SecureHandlerClickTemplate");

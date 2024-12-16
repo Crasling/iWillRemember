@@ -5,10 +5,12 @@
 
 local L = LibStub("AceLocale-3.0"):NewLocale("RememberYouAddon", "enUS", true)
 
+L["VersionNumber"] = "v1.0.0 edit by Crasling"
+L["RYOnLoad"] = "|cffff9716[RememberYou]: Personal Modification Version v1.0.0 by Crasling.|r"
 L["RYStartNote"] = "\124TInterface\\AddOns\\RememberYouAddon\\Img\\Icons\\Custom.blp:14\124t Note: "
 L["RYNotifyBase"] = "|cffff9716Character note: [|r"
 L["RYNotifyEnd"] = "|cffff9716] created.|r"
-L["RYEditboxName"] = "Nickname"
+L["RYEditboxName"] = "Player Name"
 L["RYEditboxNote"] = "Note"
 L["RYDataReset"] = "|cffff9716[RememberYou]: Database cleared.|r"
 L["RYDataSendRecent"] = "|cffff9716[RememberYou]: Sending data...|r"
@@ -16,6 +18,11 @@ L["RYDataSendFull"] = "|cffff9716[RememberYou]:  Sending data...|r"
 L["RYDataImportOn"] = "|cffff9716[RememberYou]: Data sharing is ON.|r"
 L["RYDataImportOff"] = "|cffff9716[RememberYou]: Data sharing is OFF.|r"
 L["RYSetSkin"] = "|cffff9716[RememberYou]: Skin activated.|r"
+L["RYSetSkinToggle"] = "|cffff9716[RememberYou]: Skin changed.|r"
+L["RYDataSharedFull"] = "|cffff9716[RememberYou]: Database (Full) was shared with party.|r"
+L["RYDataSharedRecent"] = "|cffff9716[RememberYou]: Database (New) was shared with party.|r"
+L["RYDataReceived"] = "|cffff9716[RememberYou]: Database was updated from party.|r"
+
 
 L["RYNoTarget"] = "|cffff9716[RememberYou]: You must target player or write name.|r"
 L["RememberYouDefaultNotes"] = {
