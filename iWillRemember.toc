@@ -1,7 +1,7 @@
 ## Interface: 11302
-## Title: RememberYou Addon
+## Title: iWillRemember
 ## Author: Morveron, Agonit
-## Edit by: Crasling
+## RememberYouAddon Edit by: Crasling
 
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
@@ -9,5 +9,5 @@
 
 embeds.xml
 locale\locale.xml
-RememberYouAddon.lua
+iWillRemember.lua
 
