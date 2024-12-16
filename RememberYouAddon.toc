@@ -1,0 +1,12 @@
+## Interface: 11302
+## Title: RememberYou Addon
+## Author: Morveron, Agonit
+
+## DefaultState: Enabled
+## LoadOnDemand: 0
+## SavedVariables: RememberYouDatabase, RememberYouSettings
+
+embeds.xml
+locale\locale.xml
+RememberYouAddon.lua
+
