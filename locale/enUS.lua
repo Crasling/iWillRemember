@@ -5,8 +5,8 @@
 
 local L = LibStub("AceLocale-3.0"):NewLocale("RememberYouAddon", "enUS", true)
 
-L["VersionNumber"] = "v1.0.0 edit by Crasling"
-L["RYOnLoad"] = "|cffff9716[RememberYou]: Personal Modification Version v1.0.0 by Crasling.|r"
+L["VersionNumber"] = "v0.1.0"
+L["RYOnLoad"] = "|cffff9716[RememberYou]: RememberYouAddon Modification Version v0.1.0 by Crasling.|r"
 L["RYStartNote"] = "\124TInterface\\AddOns\\RememberYouAddon\\Img\\Icons\\Custom.blp:14\124t Note: "
 L["RYNotifyBase"] = "|cffff9716Character note: [|r"
 L["RYNotifyEnd"] = "|cffff9716] created.|r"
