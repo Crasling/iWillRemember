@@ -3,11 +3,11 @@
 -- http://www.wowace.com/projects/bartender4/localization/ ;¶
 
 
-local L = LibStub("AceLocale-3.0"):NewLocale("RememberYouAddon", "enUS", true)
+local L = LibStub("AceLocale-3.0"):NewLocale("iWillRemember", "enUS", true)
 
 L["VersionNumber"] = "v0.1.0"
-L["RYOnLoad"] = "|cffff9716[RememberYou]: RememberYouAddon Modification Version v0.1.0 by Crasling.|r"
-L["RYStartNote"] = "\124TInterface\\AddOns\\RememberYouAddon\\Img\\Icons\\Custom.blp:14\124t Note: "
+L["RYOnLoad"] = "|cffff9716[RememberYou]: iWillRemember Modification Version v0.1.0 by Crasling.|r"
+L["RYStartNote"] = "\124TInterface\\AddOns\\iWillRemember\\Img\\Icons\\Custom.blp:14\124t Note: "
 L["RYNotifyBase"] = "|cffff9716Character note: [|r"
 L["RYNotifyEnd"] = "|cffff9716] created.|r"
 L["RYEditboxName"] = "Player Name"
@@ -21,16 +21,16 @@ L["RYSetSkin"] = "|cffff9716[RememberYou]: Skin activated.|r"
 L["RYSetSkinToggle"] = "|cffff9716[RememberYou]: Skin changed.|r"
 L["RYDataSharedFull"] = "|cffff9716[RememberYou]: Database (Full) was shared with party.|r"
 L["RYDataSharedRecent"] = "|cffff9716[RememberYou]: Database (New) was shared with party.|r"
-L["RYDataReceived"] = "|cffff9716[RememberYou]: Database was updated from party.|r"
+L["RYDataReceived"] = "|cffff9716[RememberYou]: Database was updated from: |r"
 
 
 L["RYNoTarget"] = "|cffff9716[RememberYou]: You must target player or write name.|r"
 L["RememberYouDefaultNotes"] = {
 "PlaceHolder", --// First index 1
-"\124TInterface\\AddOns\\RememberYouAddon\\Img\\Icons\\Custom.blp:14\124t Note: |cffff2121Hated|r \124TInterface\\AddOns\\RememberYouAddon\\Img\\Icons\\Skull.blp:14\124t",
-"\124TInterface\\AddOns\\RememberYouAddon\\Img\\Icons\\Custom.blp:14\124t Note: |cffff2121Unfriendly|r \124TInterface\\AddOns\\RememberYouAddon\\Img\\Icons\\Dislike.blp:14\124t",
-"\124TInterface\\AddOns\\RememberYouAddon\\Img\\Icons\\Custom.blp:14\124t Note: |cff80f451Friendly \124TInterface\\AddOns\\RememberYouAddon\\Img\\Icons\\Like.blp:14\124t",
-"\124TInterface\\AddOns\\RememberYouAddon\\Img\\Icons\\Custom.blp:14\124t Note: |cff80f451Exalted|r \124TInterface\\AddOns\\RememberYouAddon\\Img\\Icons\\Friend.blp:14\124t",
+"\124TInterface\\AddOns\\iWillRemember\\Img\\Icons\\Custom.blp:14\124t Note: |cffff2121Hated|r \124TInterface\\AddOns\\iWillRemember\\Img\\Icons\\Skull.blp:14\124t",
+"\124TInterface\\AddOns\\iWillRemember\\Img\\Icons\\Custom.blp:14\124t Note: |cffff2121Unfriendly|r \124TInterface\\AddOns\\iWillRemember\\Img\\Icons\\Dislike.blp:14\124t",
+"\124TInterface\\AddOns\\iWillRemember\\Img\\Icons\\Custom.blp:14\124t Note: |cff80f451Friendly \124TInterface\\AddOns\\iWillRemember\\Img\\Icons\\Like.blp:14\124t",
+"\124TInterface\\AddOns\\iWillRemember\\Img\\Icons\\Custom.blp:14\124t Note: |cff80f451Exalted|r \124TInterface\\AddOns\\iWillRemember\\Img\\Icons\\Friend.blp:14\124t",
 }
 
 L["RYHelp1"] = "|cffff9716[RememberYou]: /rememberyou /ry|r"

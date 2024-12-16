@@ -1,6 +1,7 @@
 ## Interface: 11302
 ## Title: iWillRemember
-## Author: Morveron, Agonit
+## Notes: iWillRemember is a continuaton of RememberYouAddon
+## RememberYouAddon Author: Morveron, Agonit
 ## RememberYouAddon Edit by: Crasling
 
 ## DefaultState: Enabled

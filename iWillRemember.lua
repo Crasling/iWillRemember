@@ -1,8 +1,9 @@
-RememberYouAddon = LibStub("AceAddon-3.0"):NewAddon("RememberYouAddon", "AceSerializer-3.0", "AceComm-3.0", "AceTimer-3.0", "AceHook-3.0")
+iWillRemember = LibStub("AceAddon-3.0"):NewAddon("iWillRemember", "AceSerializer-3.0", "AceComm-3.0", "AceTimer-3.0", "AceHook-3.0")
 
-local L = LibStub("AceLocale-3.0"):GetLocale("RememberYouAddon")
+local L = LibStub("AceLocale-3.0"):GetLocale("iWillRemember")
 
 local LDB = LibStub("LibDataBroker-1.1")
+local LDBIcon = LibStub:GetLibrary("LibDBIcon-1.0")
 
 --:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 --[[                              Variables                                  ]]
@@ -22,43 +23,43 @@ RememberYouSettings = {}
 
 local RememberYouTargetFrames = {
 "PlaceHolder", --// First index 1
-"Interface\\AddOns\\RememberYouAddon\\Img\\TargetFrames\\RedWings.blp", --// Ненавистный 2
-"Interface\\AddOns\\RememberYouAddon\\Img\\TargetFrames\\Red.blp", --// Неприятель 3
-"Interface\\AddOns\\RememberYouAddon\\Img\\TargetFrames\\Green.blp", --// Дружественный 4
-"Interface\\AddOns\\RememberYouAddon\\Img\\TargetFrames\\GreenWings.blp", --// Превозносимый 5
-"Interface\\AddOns\\RememberYouAddon\\Img\\TargetFrames\\BlueWings.blp", --// 6
-"Interface\\AddOns\\RememberYouAddon\\Img\\TargetFrames\\Neutral.blp", --// 7
+"Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\RedWings.blp", --// Ненавистный 2
+"Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\Red.blp", --// Неприятель 3
+"Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\Green.blp", --// Дружественный 4
+"Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\GreenWings.blp", --// Превозносимый 5
+"Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\BlueWings.blp", --// 6
+"Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\Neutral.blp", --// 7
 }
 
 local RememberYouIcons = {
-"Interface\\AddOns\\RememberYouAddon\\Img\\Icons\\Custom.blp", --// Кастомная заметка 1
-"Interface\\AddOns\\RememberYouAddon\\Img\\Icons\\Skull.blp", --// Ненавистный 2
-"Interface\\AddOns\\RememberYouAddon\\Img\\Icons\\Dislike.blp", --// Неприятель 3
-"Interface\\AddOns\\RememberYouAddon\\Img\\Icons\\Like.blp", --// Дружественный 4
-"Interface\\AddOns\\RememberYouAddon\\Img\\Icons\\Friend.blp", --// Превозносимый 5
+"Interface\\AddOns\\iWillRemember\\Img\\Icons\\Custom.blp", --// Кастомная заметка 1
+"Interface\\AddOns\\iWillRemember\\Img\\Icons\\Skull.blp", --// Ненавистный 2
+"Interface\\AddOns\\iWillRemember\\Img\\Icons\\Dislike.blp", --// Неприятель 3
+"Interface\\AddOns\\iWillRemember\\Img\\Icons\\Like.blp", --// Дружественный 4
+"Interface\\AddOns\\iWillRemember\\Img\\Icons\\Friend.blp", --// Превозносимый 5
 }
 
 local RememberYouPanelIcons = {
-"Interface\\AddOns\\RememberYouAddon\\Img\\Panel\\Custom.blp",      -- 1
-"Interface\\AddOns\\RememberYouAddon\\Img\\Panel\\Skull.blp",       -- 2
-"Interface\\AddOns\\RememberYouAddon\\Img\\Panel\\Dislike.blp",     -- 3
-"Interface\\AddOns\\RememberYouAddon\\Img\\Panel\\Like.blp",        -- 4
-"Interface\\AddOns\\RememberYouAddon\\Img\\Panel\\Friend.blp",      -- 5
-"Interface\\AddOns\\RememberYouAddon\\Img\\Panel\\Note.blp",        -- 6
-"Interface\\AddOns\\RememberYouAddon\\Img\\Panel\\Custom1.blp",     -- 7
-"Interface\\AddOns\\RememberYouAddon\\Img\\Panel\\Custom2.blp",     -- 8
-"Interface\\AddOns\\RememberYouAddon\\Img\\Panel\\Custom3.blp",     -- 9
-"Interface\\AddOns\\RememberYouAddon\\Img\\Panel\\Custom4.blp",     -- 10
-"Interface\\AddOns\\RememberYouAddon\\Img\\Panel\\ImportOff.blp",   -- 11
-"Interface\\AddOns\\RememberYouAddon\\Img\\Panel\\ImportOn.blp",    -- 12
-"Interface\\AddOns\\RememberYouAddon\\Img\\Panel\\editicon.blp",    -- 13
+"Interface\\AddOns\\iWillRemember\\Img\\Panel\\Custom.blp",      -- 1
+"Interface\\AddOns\\iWillRemember\\Img\\Panel\\Skull.blp",       -- 2
+"Interface\\AddOns\\iWillRemember\\Img\\Panel\\Dislike.blp",     -- 3
+"Interface\\AddOns\\iWillRemember\\Img\\Panel\\Like.blp",        -- 4
+"Interface\\AddOns\\iWillRemember\\Img\\Panel\\Friend.blp",      -- 5
+"Interface\\AddOns\\iWillRemember\\Img\\Panel\\Note.blp",        -- 6
+"Interface\\AddOns\\iWillRemember\\Img\\Panel\\Custom1.blp",     -- 7
+"Interface\\AddOns\\iWillRemember\\Img\\Panel\\Custom2.blp",     -- 8
+"Interface\\AddOns\\iWillRemember\\Img\\Panel\\Custom3.blp",     -- 9
+"Interface\\AddOns\\iWillRemember\\Img\\Panel\\Custom4.blp",     -- 10
+"Interface\\AddOns\\iWillRemember\\Img\\Panel\\ImportOff.blp",   -- 11
+"Interface\\AddOns\\iWillRemember\\Img\\Panel\\ImportOn.blp",    -- 12
+"Interface\\AddOns\\iWillRemember\\Img\\Panel\\editicon.blp",    -- 13
 }
 
 local RememberYouPanelSkins = {
-"Interface\\AddOns\\RememberYouAddon\\Img\\Skins\\Skin1.blp",
-"Interface\\AddOns\\RememberYouAddon\\Img\\Skins\\Skin2.blp",
-"Interface\\AddOns\\RememberYouAddon\\Img\\Skins\\Skin3.blp",
-"Interface\\AddOns\\RememberYouAddon\\Img\\Skins\\Skin4.blp",
+"Interface\\AddOns\\iWillRemember\\Img\\Skins\\Skin1.blp",
+"Interface\\AddOns\\iWillRemember\\Img\\Skins\\Skin2.blp",
+"Interface\\AddOns\\iWillRemember\\Img\\Skins\\Skin3.blp",
+"Interface\\AddOns\\iWillRemember\\Img\\Skins\\Skin4.blp",
 }
 
 local RememberYouColour = {
@@ -68,11 +69,6 @@ local RememberYouColour = {
 "|cff80f451", --// Дружественный 4
 "|cff80f451", --// Превозносимый 5
 }
-
---:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
---[[                             Minimap Button                              ]]
---:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
 
 
 --:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -90,19 +86,19 @@ local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay)*24 + tonumber(CurrMon
     return tonumber(CurrentTime)
 end
 
-function RememberYouAddon:EditboxNameHasText()
+function iWillRemember:EditboxNameHasText()
  if RememberYouNotes.EditBoxName:GetText() ~= L["RYEditboxName"] and RememberYouNotes.EditBoxName:GetText() ~= "" and RememberYouNotes.EditBoxName:GetText() ~= nil and (not string.find( RememberYouNotes.EditBoxName:GetText(), "^%s+$")) then
     return true
  end
 end
 
-function RememberYouAddon:EditboxNoteHasText()
+function iWillRemember:EditboxNoteHasText()
  if RememberYouNotes.EditBoxNote:GetText() ~= L["RYEditboxNote"] and RememberYouNotes.EditBoxNote:GetText() ~= "" and RememberYouNotes.EditBoxNote:GetText() ~= nil and (not string.find( RememberYouNotes.EditBoxNote:GetText(), "^%s+$")) then
     return true
  end
 end
 
-function RememberYouAddon:ClearEditboxes()
+function iWillRemember:ClearEditboxes()
     RememberYouNotes.EditBoxName:ClearFocus()
     RememberYouNotes.EditBoxNote:ClearFocus()
     RememberYouNotes.EditBoxName:SetText(L["RYEditboxName"])
@@ -110,28 +106,76 @@ function RememberYouAddon:ClearEditboxes()
 end
 
 
-function RememberYouAddon:SortNotesByType(Notelevel)
-    if RememberYouAddon:EditboxNameHasText() then
-        if RememberYouAddon:EditboxNoteHasText() then
-            RememberYouAddon:CreateNote(tostring(RememberYouNotes.EditBoxName:GetText()), tostring(RememberYouNotes.EditBoxNote:GetText()), Notelevel)
+function iWillRemember:SortNotesByType(Notelevel)
+    if iWillRemember:EditboxNameHasText() then
+        if iWillRemember:EditboxNoteHasText() then
+            iWillRemember:CreateNote(tostring(RememberYouNotes.EditBoxName:GetText()), tostring(RememberYouNotes.EditBoxNote:GetText()), Notelevel)
         else
-            RememberYouAddon:CreateNote(tostring(RememberYouNotes.EditBoxName:GetText()), Notelevel, Notelevel)
+            iWillRemember:CreateNote(tostring(RememberYouNotes.EditBoxName:GetText()), Notelevel, Notelevel)
         end
     else
         if UnitIsPlayer("target") then
-            if RememberYouAddon:EditboxNoteHasText() then
-                RememberYouAddon:CreateNote(tostring(GetUnitName("target", false)), tostring(RememberYouNotes.EditBoxNote:GetText()), Notelevel)
+            if iWillRemember:EditboxNoteHasText() then
+                iWillRemember:CreateNote(tostring(GetUnitName("target", false)), tostring(RememberYouNotes.EditBoxNote:GetText()), Notelevel)
             else
-                RememberYouAddon:CreateNote(tostring(GetUnitName("target", false)), Notelevel, Notelevel)
+                iWillRemember:CreateNote(tostring(GetUnitName("target", false)), Notelevel, Notelevel)
             end
         else
             print(L["RYNoTarget"])
         end
     end
-RememberYouAddon:ClearEditboxes()
+iWillRemember:ClearEditboxes()
 end
 
-function RememberYouAddon:CreateNote(name, note, frameicon)
+-- Sending Latest note only to friendslist
+function iWillRemember:SendNewDBUpdateToFriends()
+    -- Loop through all friends in the friend list
+    for i = 1, C_FriendList.GetNumFriends() do
+        -- Get friend's info (which includes friendName)
+        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+        -- Extract the friend's name from the table
+        local friendName = friendInfo and friendInfo.name
+        -- Ensure friendName is valid before printing
+        if friendName then
+            iWillRemember:SendCommMessage("RYOneUpdate", SerializedCash, "WHISPER", friendName)
+            print("DEBUG: Successfully shared new RememberYou note to: " .. friendName)
+        else
+            print("No friend found at index " .. i)
+        end
+    end
+end
+
+-- Sending new note only to friendslist
+function iWillRemember:SendFullDBUpdateToFriends()
+    if RememberYouSettings.Import ~= false then
+        -- Loop through all friends in the friend list
+        for i = 1, C_FriendList.GetNumFriends() do
+            -- Get friend's info (which includes friendName)
+            local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+            -- Extract the friend's name from the table
+            local friendName = friendInfo and friendInfo.name
+            -- Ensure friendName is valid before printing
+            if friendName then
+                wipe(TimeTable)
+                local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
+                local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay)*24 + tonumber(CurrMonth)*720 + tonumber(CurrYear)*8640
+                    for k,v in pairs(RememberYouDatabase) do
+                        if (RememberYouDatabase[k][3] - CurrentTime) > -800 then --// Update only recent 33 days (800 h)
+                            TimeTable[k] = RememberYouDatabase[k]
+                        end
+                    end       
+                    TimeTableToSend = iWillRemember:Serialize(TimeTable)
+                    iWillRemember:SendCommMessage("RYFullUpdate", TimeTableToSend, "WHISPER", friendName)
+                    print("DEBUG: Successfully shared all RememberYou notes to: " .. friendName)
+            else
+                print("No friend found at index " .. i)
+            end
+        end
+    end
+end
+
+-- Create new note
+function iWillRemember:CreateNote(name, note, frameicon)
 RememberYouDatabase[tostring(name)] = {
         note,
         frameicon,
@@ -146,35 +190,36 @@ TargetFrame_Update(TargetFrame)
                 frameicon,
                 GetCurrentTimeByHours(),
             }
-            
-    SerializedCash = RememberYouAddon:Serialize(CashTable)
-    RememberYouAddon:SendCommMessage("RYOneUpdate", SerializedCash, "PARTY")
+    SerializedCash = iWillRemember:Serialize(CashTable)
+    iWillRemember:SendNewDBUpdateToFriends()
     end
 print(L["RYNotifyBase"] .. tostring(name) .. L["RYNotifyEnd"])
 end
 
-function RememberYouAddon:OnFullNotesCommReceived(prefix, message, distribution, sender)
+-- Sending Latest note only
+function iWillRemember:OnFullNotesCommReceived(prefix, message, distribution, sender)
 if GetUnitName("player", false) == sender then return end
-   success, FullNotesTable = RememberYouAddon:Deserialize(message)
+   success, FullNotesTable = iWillRemember:Deserialize(message)
     
     if not success then
       print("Error")
     else
-      for k,v in pairs(FullNotesTable) do
-        if RememberYouDatabase[k] then
-            if IsNeedToUpdate((RememberYouDatabase[k][3]), v[3]) then
+        print(L["RYDataReceived"] .. sender)
+        for k,v in pairs(FullNotesTable) do
+            if RememberYouDatabase[k] then
+                if IsNeedToUpdate((RememberYouDatabase[k][3]), v[3]) then
+                    RememberYouDatabase[k] = v
+                end
+            else
                 RememberYouDatabase[k] = v
             end
-        else
-            RememberYouDatabase[k] = v
         end
-      end
     end
 end
 
-function RememberYouAddon:OnNewNoteCommReceived(prefix, message, distribution, sender)
+function iWillRemember:OnNewNoteCommReceived(prefix, message, distribution, sender)
 if GetUnitName("player", false) == sender then return end
-   success, TempTable = RememberYouAddon:Deserialize(message)
+   success, TempTable = iWillRemember:Deserialize(message)
     
     if not success then
       print("Error")
@@ -182,34 +227,34 @@ if GetUnitName("player", false) == sender then return end
       for k,v in pairs(TempTable) do
             RememberYouDatabase[k] = v
       end
-      print(L["RYDataReceived"])
+      print(L["RYDataReceived"]+sender)
     end
     wipe(TempTable)
 end
 
-function RememberYouAddon:SendRecentNotes()
-wipe(TimeTable)
+-- function iWillRemember:SendRecentNotes()
+-- wipe(TimeTable)
 
-local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
-local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay)*24 + tonumber(CurrMonth)*720 + tonumber(CurrYear)*8640
-    for k,v in pairs(RememberYouDatabase) do
-        if (RememberYouDatabase[k][3] - CurrentTime) > -800 then --// Update only recent 33 days (800 h)
-            TimeTable[k] = RememberYouDatabase[k]
-        end
-    end
+-- local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
+-- local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay)*24 + tonumber(CurrMonth)*720 + tonumber(CurrYear)*8640
+--     for k,v in pairs(RememberYouDatabase) do
+--         if (RememberYouDatabase[k][3] - CurrentTime) > -800 then --// Update only recent 33 days (800 h)
+--             TimeTable[k] = RememberYouDatabase[k]
+--         end
+--     end
     
-    TimeTableToSend = RememberYouAddon:Serialize(TimeTable)
-    RememberYouAddon:SendCommMessage("RYFullUpdate", TimeTableToSend, "PARTY")
-    print(L["RYDataSharedRecent"])
-end
+--     TimeTableToSend = iWillRemember:Serialize(TimeTable)
+--     iWillRemember:SendCommMessage("RYFullUpdate", TimeTableToSend, "PARTY")
+--     print(L["RYDataSharedRecent"])
+-- end
 
-function RememberYouAddon:SendFullNotes()  
-wipe(TimeTable) 
-    TimeTableToSend = RememberYouAddon:Serialize(RememberYouDatabase)
-    RememberYouAddon:SendCommMessage("RYFullUpdate", TimeTableToSend, "PARTY")
-    print(L["RYDataSharedFull"])
+-- function iWillRemember:SendFullNotes()  
+-- wipe(TimeTable) 
+--     TimeTableToSend = iWillRemember:Serialize(RememberYouDatabase)
+--     iWillRemember:SendCommMessage("RYFullUpdate", TimeTableToSend, "PARTY")
+--     print(L["RYDataSharedFull"])
     
-end
+-- end
 
 local function OnCombatEnter(self, event)
     RememberYouNotes:Hide()
@@ -219,7 +264,7 @@ end
 --[[                                Hooks                                    ]]
 --:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-function RememberYouAddon:AddNoteToGameTooltip(self,...)
+function iWillRemember:AddNoteToGameTooltip(self,...)
 local name, unit = self:GetUnit();
 if (not unit) then
 local mFocus = GetMouseFocus();
@@ -241,7 +286,7 @@ end
     end
 end
 
-function RememberYouAddon:SetTargetingFrame()
+function iWillRemember:SetTargetingFrame()
 if not RememberYouDatabase[GetUnitName("target", false)] then return end
 
     if RememberYouDatabase[tostring(GetUnitName("target", false))][2] > 1 then
@@ -256,7 +301,7 @@ local JoiningGroup = CreateFrame("Frame")
 JoiningGroup:SetScript("OnEvent", function(self, event)
     if event == "GROUP_JOINED" then
         InGroup = true
-        RememberYouAddon:SendFullNotes()
+        iWillRemember:SendFullDBUpdateToFriends()
     elseif event == "GROUP_LEFT" then
         InGroup = false
     end
@@ -300,16 +345,21 @@ end
 end)
 
 --:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
---[[                                 LOAD                                    ]]
+--[[                                 ENABLE                                  ]]
 --:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-function RememberYouAddon:OnEnable()
+function iWillRemember:OnEnable()
     self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
     self:SecureHook("TargetFrame_Update",  "SetTargetingFrame")
 
     print(L["RYOnLoad"])
 
-    LibStub:GetLibrary("LibDataBroker-1.1"):NewDataObject("RememberYou", {
+--:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+--[[                             Minimap Button                              ]]
+--:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+    -- Create the main launcher button
+    LDB:NewDataObject("RememberYou", {
         type = "launcher",
         text = "Remember You",
         icon = "Interface\\Icons\\Spell_Nature_BloodLust",
@@ -322,7 +372,8 @@ function RememberYouAddon:OnEnable()
         end,
     })
 
-    LibStub:GetLibrary("LibDataBroker-1.1"):NewDataObject("RememberYouAddon_MinimapButton", {
+    -- Create the minimap button (DataObject for the minimap button)
+    local minimapButton = LDB:NewDataObject("iWillRemember_MinimapButton", {
         type = "data source",
         text = "Remember You",
         icon = "Interface\\Icons\\Spell_Nature_BloodLust",
@@ -333,19 +384,40 @@ function RememberYouAddon:OnEnable()
                 RememberYouNotes:Show()
             end
         end,
+
+    -- Tooltip handling
+    OnTooltipShow = function(tooltip)
+        -- Name
+        tooltip:SetText("|cffff9716iWillRemember|r", 1, 1, 1)
+
+        -- Desc
+        tooltip:AddLine(" ", 1, 1, 1) 
+        tooltip:AddLine("Open iWillRemember interface", 1, 1, 1) 
+        tooltip:AddLine(L["VersionNumber"]) 
+
+        tooltip:Show()  -- Make sure the tooltip is displayed
+    end,
+
     })
 
-    -- To make the button appear on the Minimap
-    local minimapButton = CreateFrame("Button", "RememberYouAddon_MinimapButton", UIParent)
-    minimapButton:SetSize(32, 32)  -- Button size
-    minimapButton:SetPoint("TOPRIGHT", Minimap, "TOPRIGHT", -10, -10)  -- Position near the Minimap
+    -- Register the minimap button with LibDBIcon
+    LDBIcon:Register("iWillRemember_MinimapButton", minimapButton, {
+        minimapPos = 45,  -- Set the position on the minimap (in degrees)
+        radius = 80,     -- Set the radius from the center of the minimap
+    })
+
+--:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+--[[                           STARTING FUNCTIONS                            ]]
+--:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+    
 
     if not RememberYouSettings.Skin then RememberYouSettings.Skin = 2 end
     RememberYouNotes.ArtWork:SetTexture(RememberYouPanelSkins[tonumber(RememberYouSettings.Skin)]);
 
     if RememberYouSettings.Import ~= false then
-        RememberYouAddon:RegisterComm("RYFullUpdate", "OnFullNotesCommReceived")
-        RememberYouAddon:RegisterComm("RYOneUpdate", "OnNewNoteCommReceived")
+        iWillRemember:RegisterComm("RYFullUpdate", "OnFullNotesCommReceived")
+        iWillRemember:RegisterComm("RYOneUpdate", "OnNewNoteCommReceived")
+        iWillRemember:SendFullDBUpdateToFriends()
     end
 end
 
@@ -366,12 +438,11 @@ local RememberYouNotes = CreateFrame("Frame", "RememberYouNotes", UIParent)
     RememberYouNotes:RegisterForDrag("LeftButton", "RightButton")
     RememberYouNotes:SetClampedToScreen(true)
 
--- Create the floating text (FontString)
 local floatingText = RememberYouNotes:CreateFontString(nil, "OVERLAY")
-    floatingText:SetFont("Fonts\\FRIZQT__.TTF", 16, "OUTLINE") -- You can adjust the font, size, and style here
-    floatingText:SetText(L["VersionNumber"])  -- Change this text to whatever you want
-    floatingText:SetPoint("CENTER", RememberYouNotes, "CENTER", 0, 75)  -- Position the text in the center of the frame
-    floatingText:SetTextColor(1, 1, 0)  -- RGB values for yellow (change as needed)
+    floatingText:SetFont("Fonts\\FRIZQT__.TTF", 16, "OUTLINE")
+    floatingText:SetText(L["VersionNumber"])
+    floatingText:SetPoint("CENTER", RememberYouNotes, "CENTER", 120, 65)
+    floatingText:SetTextColor(1, 1, 0)
 
 local frame = CreateFrame("Frame")
     frame:RegisterEvent("PLAYER_REGEN_DISABLED")
@@ -386,7 +457,7 @@ local frame = CreateFrame("Frame")
 RememberYouNotes:SetBackdropColor(0, 0, 0, 1)]]
 
 RememberYouNotes.ArtWork = RememberYouNotes:CreateTexture()
-RememberYouNotes.ArtWork:SetTexture("Interface\\AddOns\\RememberYouAddon\\Img\\Skins\\Skin2.blp");
+RememberYouNotes.ArtWork:SetTexture("Interface\\AddOns\\iWillRemember\\Img\\Skins\\Skin2.blp");
 RememberYouNotes.ArtWork:SetTexCoord(0, 0.551, 0, 0.801)
 RememberYouNotes.ArtWork:SetPoint("CENTER", 0, 0)
 RememberYouNotes.ArtWork:SetDrawLayer("ARTWORK", 1)
@@ -402,7 +473,7 @@ RememberYouNotes.FriendButton:SetNormalTexture(RememberYouPanelIcons[5])
 RememberYouNotes.FriendButton:SetHighlightTexture(RememberYouPanelIcons[5])
 RememberYouNotes.FriendButton:RegisterForClicks("AnyUp")
 RememberYouNotes.FriendButton:SetScript("OnClick", function(self, button)
-    RememberYouAddon:SortNotesByType(5)
+    iWillRemember:SortNotesByType(5)
 end)
 
 RememberYouNotes.LikeButton = CreateFrame("BUTTON", "RememberYouNotes.LikeButton", RememberYouNotes, "SecureHandlerClickTemplate");
@@ -413,7 +484,7 @@ RememberYouNotes.LikeButton:SetNormalTexture(RememberYouPanelIcons[4])
 RememberYouNotes.LikeButton:SetHighlightTexture(RememberYouPanelIcons[4])
 RememberYouNotes.LikeButton:RegisterForClicks("AnyUp")
 RememberYouNotes.LikeButton:SetScript("OnClick", function(self, button)
-    RememberYouAddon:SortNotesByType(4)
+    iWillRemember:SortNotesByType(4)
 end)
 
 RememberYouNotes.CustomButton = CreateFrame("BUTTON", "RememberYouNotes.CustomButton", RememberYouNotes, "SecureHandlerClickTemplate");
@@ -424,7 +495,7 @@ RememberYouNotes.CustomButton:SetNormalTexture(RememberYouPanelIcons[1])
 RememberYouNotes.CustomButton:SetHighlightTexture(RememberYouPanelIcons[1])
 RememberYouNotes.CustomButton:RegisterForClicks("AnyUp")
 RememberYouNotes.CustomButton:SetScript("OnClick", function(self, button)
-    RememberYouAddon:SortNotesByType(0)
+    iWillRemember:SortNotesByType(0)
 end)
 
 RememberYouNotes.DisLikeButton = CreateFrame("BUTTON", "RememberYouNotes.DisLikeButton", RememberYouNotes, "SecureHandlerClickTemplate");
@@ -435,7 +506,7 @@ RememberYouNotes.DisLikeButton:SetNormalTexture(RememberYouPanelIcons[3])
 RememberYouNotes.DisLikeButton:SetHighlightTexture(RememberYouPanelIcons[3])
 RememberYouNotes.DisLikeButton:RegisterForClicks("AnyUp")
 RememberYouNotes.DisLikeButton:SetScript("OnClick", function(self, button)
-    RememberYouAddon:SortNotesByType(3)
+    iWillRemember:SortNotesByType(3)
 end)
 
 RememberYouNotes.SkullButton = CreateFrame("BUTTON", "RememberYouNotes.SkullButton", RememberYouNotes, "SecureHandlerClickTemplate");
@@ -446,7 +517,7 @@ RememberYouNotes.SkullButton:SetNormalTexture(RememberYouPanelIcons[2])
 RememberYouNotes.SkullButton:SetHighlightTexture(RememberYouPanelIcons[2])
 RememberYouNotes.SkullButton:RegisterForClicks("AnyUp")
 RememberYouNotes.SkullButton:SetScript("OnClick", function(self, button)
-    RememberYouAddon:SortNotesByType(2)
+    iWillRemember:SortNotesByType(2)
 end)
 
 RememberYouNotes.ToggleSkin = CreateFrame("BUTTON", "RememberYouNotes.ToggleSkin", RememberYouNotes, "SecureHandlerClickTemplate");
@@ -481,7 +552,6 @@ RememberYouNotes.DataBaseWrite:SetScript("OnClick", function(self, button)
     if RememberYouSettings.Import == false then
         RememberYouSettings.Import = true
         print(L["RYDataImportOn"])
-        RememberYouAddon:SendFullNotes()
         RememberYouNotes.DataBaseWrite:SetNormalTexture(RememberYouPanelIcons[12])
         RememberYouNotes.DataBaseWrite:SetHighlightTexture(RememberYouPanelIcons[12])
     else
@@ -610,10 +680,10 @@ elseif strlower(msg) == "data" then
         wipe(RememberYouDatabase)
         print(L["RYDataReset"])
     elseif strlower(arg1) == "send" and strlower(arg2) == "recent" then
-        RememberYouAddon:SendRecentNotes()
+        iWillRemember:SendRecentNotes()
         print(L["RYDataSendRecent"])
     elseif strlower(arg1) == "send" and strlower(arg2) == "full" then
-        RememberYouAddon:SendFullNotes()
+        iWillRemember:SendFullNotes()
         print(L["RYDataSendFull"])
     end
 elseif strlower(msg) == "import" then
