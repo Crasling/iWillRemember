@@ -21,15 +21,32 @@ local TimeTable = {}
 RememberYouDatabase = {}
 RememberYouSettings = {}
 
-local RememberYouTargetFrames = {
-"PlaceHolder", --// First index 1
-"Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\RedWings.blp", --// Ненавистный 2
-"Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\Red.blp", --// Неприятель 3
-"Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\Green.blp", --// Дружественный 4
-"Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\GreenWings.blp", --// Превозносимый 5
-"Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\BlueWings.blp", --// 6
-"Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\Neutral.blp", --// 7
-}
+local RememberYouTargetFrames
+
+if IsAddOnLoaded("EasyFrames") then
+    RememberYouTargetFrames = {
+        "PlaceHolder", --// First index 1
+        "Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\EFRedWings.blp", --// Ненавистный 2
+        "Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\EFRed.blp", --// Неприятель 3
+        "Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\EFGreen.blp", --// Дружественный 4
+        "Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\EFGreenWings.blp", --// Превозносимый 5
+        "Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\EFBlueWings.blp", --// 6
+        "Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\EFNeutral.blp", --// 7
+    }
+    print("EasyFrames Target Frames loaded")
+else
+    RememberYouTargetFrames = {
+        "PlaceHolder", --// First index 1
+        "Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\RedWings.blp", --// Ненавистный 2
+        "Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\Red.blp", --// Неприятель 3
+        "Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\Green.blp", --// Дружественный 4
+        "Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\GreenWings.blp", --// Превозносимый 5
+        "Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\BlueWings.blp", --// 6
+        "Interface\\AddOns\\iWillRemember\\Img\\TargetFrames\\Neutral.blp", --// 7
+    }
+    print("Normal Target Frames loaded")
+end
+
 
 local RememberYouIcons = {
 "Interface\\AddOns\\iWillRemember\\Img\\Icons\\Custom.blp", --// Кастомная заметка 1
