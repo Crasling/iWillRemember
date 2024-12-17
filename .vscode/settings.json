@@ -1,0 +1,11 @@
+{
+    "Lua.diagnostics.globals": [
+        "SlashCmdList",
+        "UIParent",
+        "GameFontHighlightSmall",
+        "TargetFrame",
+        "GameTooltip",
+        "GetUnitName",
+        "DEFAULT_CHAT_FRAME"
+    ]
+}
