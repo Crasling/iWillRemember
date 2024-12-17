@@ -25,6 +25,13 @@
         "iWRSettings",
         "iWR",
         "iWRDatabase",
-        "SlashCmdList"
+        "SlashCmdList",
+        "UnitPopupMenus",
+        "iWRBase",
+        "iWRNoteInput",
+        "iWRNameInput"
+    ],
+    "Lua.diagnostics.disable": [
+        "missing-fields"
     ]
 }
