@@ -6,8 +6,8 @@
 
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
-## SavedVariables: iWillRememberDataBase, iWillRememberSettings
+## SavedVariables: iWRDataBase, iWRSettings
 
 embeds.xml
-locale\locale.xml
+Localization\locale.xml
 iWillRemember.lua
