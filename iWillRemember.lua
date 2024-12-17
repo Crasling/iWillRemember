@@ -244,34 +244,10 @@ if GetUnitName("player", false) == sender then return end
       for k,v in pairs(TempTable) do
             RememberYouDatabase[k] = v
       end
-      print(L["RYDataReceived"]+sender)
+      print(L["RYDataReceived"] .. sender)
     end
     wipe(TempTable)
 end
-
--- function iWillRemember:SendRecentNotes()
--- wipe(TimeTable)
-
--- local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
--- local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay)*24 + tonumber(CurrMonth)*720 + tonumber(CurrYear)*8640
---     for k,v in pairs(RememberYouDatabase) do
---         if (RememberYouDatabase[k][3] - CurrentTime) > -800 then --// Update only recent 33 days (800 h)
---             TimeTable[k] = RememberYouDatabase[k]
---         end
---     end
-    
---     TimeTableToSend = iWillRemember:Serialize(TimeTable)
---     iWillRemember:SendCommMessage("RYFullUpdate", TimeTableToSend, "PARTY")
---     print(L["RYDataSharedRecent"])
--- end
-
--- function iWillRemember:SendFullNotes()  
--- wipe(TimeTable) 
---     TimeTableToSend = iWillRemember:Serialize(RememberYouDatabase)
---     iWillRemember:SendCommMessage("RYFullUpdate", TimeTableToSend, "PARTY")
---     print(L["RYDataSharedFull"])
-    
--- end
 
 local function OnCombatEnter(self, event)
     RememberYouNotes:Hide()
