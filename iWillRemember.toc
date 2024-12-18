@@ -10,5 +10,4 @@
 
 embeds.xml
 Localization\locale.xml
-iWRBase.lua
 iWillRemember.lua

@@ -29,7 +29,10 @@
         "UnitPopupMenus",
         "iWRBase",
         "iWRNoteInput",
-        "iWRNameInput"
+        "iWRNameInput",
+        "Event",
+        "Add",
+        "message"
     ],
     "Lua.diagnostics.disable": [
         "missing-fields"
