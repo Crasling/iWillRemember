@@ -105,30 +105,6 @@ iWRBase.TargetFrames = {
     [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. addonpath .. "\\Hostile.blp",
 }
 
--- -- ╭────────────────────────────────╮
--- -- │      List of General Icons     │ TO BE ADDED
--- -- ╰────────────────────────────────╯
--- iWRBase.Icons = {
---     [10]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Superior.blp",
---     [5]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\BestFriends.blp",
---     [3]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Friend.blp",
---     [1]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Neutral.blp",
---     [-3]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Unpleasant.blp",
---     [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Hostile.blp",
--- }
-
--- ╭──────────────────────────────╮
--- │      List of Panel Icons     │ TO BE ADDED
--- ╰──────────────────────────────╯
--- iWRBase.PanelIcons = {
---     [10]    = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Superior.blp",
---     [5]     = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\BestFriends.blp",
---     [3]     = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Friend.blp",
---     [1]     = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Neutral.blp",
---     [-3]    = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Unpleasant.blp",
---     [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Hostile.blp",
--- }
-
 -- ╭─────────────────────────╮
 -- │      List of Colors     │
 -- ╰─────────────────────────╯
@@ -452,7 +428,7 @@ function iWR:CreateNote(Name, Note, Type)
         iWR:SendNewDBUpdateToFriends()
     end
 
-    print("|cffff9716Character note: [|r" .. tostring(targetName) .. "|cffff9716] created.|r")
+    print("|cffff9716Character note: [|r" .. tostring(Name) .. "|cffff9716] created.|r")
 end
 
 
