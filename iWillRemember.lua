@@ -137,6 +137,13 @@ iWRBase.Types = {
     Hostile = -5,
 }
 
+-- ╭────────────────────────╮
+-- │      List of Icons     │
+-- ╰────────────────────────╯
+iWRBase.Icons = {
+    iWRIcon = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\iWRIcon.blp",
+}
+
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                    Functions                                   │
 -- ├───────────────────────┬────────────────────────────────────────────────────────╯
@@ -738,7 +745,7 @@ function iWR:OnEnable()
     LDBroker:NewDataObject("iWillRemember_DataObject", {
         type = "launcher",
         text = "iWillRemember",
-        icon = "Interface\\Icons\\Spell_Nature_BloodLust",
+        icon = iWRBase.Icons.iWRIcon,
         OnClick = function(clickedframe, button)
 
         end,
@@ -748,7 +755,7 @@ function iWR:OnEnable()
 local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
     type = "data source",
     text = "iWillRemember",
-    icon = "Interface\\Icons\\Spell_Nature_BloodLust",
+    icon = iWRBase.Icons.iWRIcon,
     OnClick = function(self, button)
         if button == "LeftButton" and IsShiftKeyDown() then
             iWRDatabaseFrame:Show()
