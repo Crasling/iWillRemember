@@ -32,7 +32,9 @@
         "iWRNameInput",
         "Event",
         "Add",
-        "message"
+        "message",
+        "StaticPopupDialogs",
+        "StaticPopup_Show"
     ],
     "Lua.diagnostics.disable": [
         "missing-fields"

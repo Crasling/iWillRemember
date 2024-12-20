@@ -46,6 +46,41 @@ iWRDatabase = {}
 iWRSettings = {}
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
+-- │                                     Colors                                     │
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
+local Colors = {
+    -- Standard Colors
+    iWR = "|cffff9716",
+    White = "|cFFFFFFFF",
+    Black = "|cFF000000",
+    Red = "|cFFFF0000",
+    Green = "|cFF00FF00",
+    Blue = "|cFF0000FF",
+    Yellow = "|cFFFFFF00",
+    Cyan = "|cFF00FFFF",
+    Magenta = "|cFFFF00FF",
+    Orange = "|cFFFFA500",
+    Gray = "|cFF808080",
+
+    -- WoW Class Colors
+    Classes = {
+        WARRIOR = "|cFFC79C6E",
+        PALADIN = "|cFFF58CBA",
+        HUNTER = "|cFFABD473",
+        ROGUE = "|cFFFFF569",
+        PRIEST = "|cFFFFFFFF",
+        SHAMAN = "|cFF0070DE",
+        MAGE = "|cFF40C7EB",
+        WARLOCK = "|cFF8788EE",
+        DRUID = "|cFFFF7D0A",
+    },
+
+    -- Reset Color
+    Reset = "|r"
+}
+
+
+-- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                 Initialization                                 │
 -- ├──────────────────────────┬─────────────────────────────────────────────────────╯
 -- │      Check what UI       │
@@ -70,29 +105,29 @@ iWRBase.TargetFrames = {
     [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. addonpath .. "\\Hostile.blp",
 }
 
--- ╭────────────────────────────────╮
--- │      List of General Icons     │
--- ╰────────────────────────────────╯
-iWRBase.Icons = {
-    [10]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Superior.blp",
-    [5]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\BestFriends.blp",
-    [3]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Friend.blp",
-    [1]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Neutral.blp",
-    [-3]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Unpleasant.blp",
-    [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Hostile.blp",
-}
+-- -- ╭────────────────────────────────╮
+-- -- │      List of General Icons     │ TO BE ADDED
+-- -- ╰────────────────────────────────╯
+-- iWRBase.Icons = {
+--     [10]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Superior.blp",
+--     [5]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\BestFriends.blp",
+--     [3]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Friend.blp",
+--     [1]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Neutral.blp",
+--     [-3]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Unpleasant.blp",
+--     [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Hostile.blp",
+-- }
 
 -- ╭──────────────────────────────╮
--- │      List of Panel Icons     │
+-- │      List of Panel Icons     │ TO BE ADDED
 -- ╰──────────────────────────────╯
-iWRBase.PanelIcons = {
-    [10]    = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Superior.blp",
-    [5]     = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\BestFriends.blp",
-    [3]     = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Friend.blp",
-    [1]     = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Neutral.blp",
-    [-3]    = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Unpleasant.blp",
-    [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Hostile.blp",
-}
+-- iWRBase.PanelIcons = {
+--     [10]    = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Superior.blp",
+--     [5]     = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\BestFriends.blp",
+--     [3]     = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Friend.blp",
+--     [1]     = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Neutral.blp",
+--     [-3]    = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Unpleasant.blp",
+--     [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\PanelIcons\\Hostile.blp",
+-- }
 
 -- ╭─────────────────────────╮
 -- │      List of Colors     │
@@ -121,6 +156,7 @@ iWRBase.Types = {
     BestFriend = 5,
     Friend = 3,
     Neutral = 1,
+    Clear = 0,
     Unpleasant = -3,
     Hostile = -5,
 }
@@ -129,16 +165,15 @@ iWRBase.Types = {
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                    Functions                                   │
--- ├───────────────────────┬───────────────────────────────────────────────────────╯
+-- ├───────────────────────┬────────────────────────────────────────────────────────╯
 -- │      Create Note      │
 -- ╰───────────────────────╯
 function iWR:InputNotEmpty(Text)
-    if Text ~= L["DefaultNameInput"] and Text ~= L["DefaultNoteInput"] and Text ~= "" and Text ~= nil and not string.find(Text, "^%s+$") then
+    if Text ~= L["DefaultNameInput"] and Text ~= L["DefaultNoteInput"] and Text ~= "" and Text ~= nil and not string.find(Text, "^%s+$") and not string.find(Text, "^%d") then
         return true
     end
     return false
 end
-
 
 -- Add Tooltip
 function iWR:AddNoteToGameTooltip(self,...)
@@ -163,7 +198,9 @@ function iWR:AddNoteToGameTooltip(self,...)
     end
 end
 
--- Time Compare
+-- ╭───────────────────────────╮
+-- │      Timestamp Compare    │
+-- ╰───────────────────────────╯
 local function IsNeedToUpdate(CurrDataTime, CompDataTime)
     if tonumber(CurrDataTime) < tonumber(CompDataTime) then
         return true
@@ -200,6 +237,11 @@ function iWR:SendNewDBUpdateToFriends()
         end
     end
 end
+
+local function StripColorCodes(input)
+    return input:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+end
+
 
 function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
     if GetUnitName("player", false) == sender then return end
@@ -244,29 +286,51 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
         wipe(TempTable)
     end
 
+local function ColorizePlayerNameByClass(playerName, class)
+    if Colors.Classes[class] then
+        return Colors.Classes[class] .. playerName .. Colors.Reset
+    else
+        return Colors.iWR .. playerName .. Colors.Reset
+    end
+end
+
 -- ╭──────────────────────────────────╮
 -- │      Set New Targeting Frame     │
 -- ╰──────────────────────────────────╯
 function iWR:SetTargetingFrame()
     if not iWRDatabase[GetUnitName("target", false)] then
-        local targetName = GetUnitName("target")
-        if UnitIsPlayer("target") then
+        if UnitExists("target") and UnitIsPlayer("target") then
+            local playerName = UnitName("target")
+            local _, class = UnitClass("target")
+            if class then
+                iWRNameInput:SetText(ColorizePlayerNameByClass(playerName, class))
+            else
+                iWRNameInput:SetText(playerName)
+            end
             if DebugMsg then
-                
-                print("|cffff9716[iWR]: DEBUG: Player [|r" .. targetName .. "|cffff9716] was not found in Database")
+                print("|cffff9716[iWR]: DEBUG: Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was not found in Database")
             end
         end
         return
     end
 
     if iWRDatabase[tostring(GetUnitName("target", false))][2] ~= 0 then
-        local targetName = GetUnitName("target")
-        if DebugMsg then
-            print("|cffff9716[iWR]: DEBUG: Player [|r" .. targetName .. "|cffff9716] was found in Database")
+        if UnitExists("target") and UnitIsPlayer("target") then
+            local playerName = UnitName("target")
+            local _, class = UnitClass("target")
+            if class then
+                iWRNameInput:SetText(ColorizePlayerNameByClass(playerName, class))
+            else
+                iWRNameInput:SetText(playerName)
+            end
+            TargetFrameTextureFrameTexture:SetTexture(iWRBase.TargetFrames[iWRDatabase[tostring(GetUnitName("target", false))][2]]);
+            if DebugMsg then
+                print("|cffff9716[iWR]: DEBUG: Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was found in Database")
+            end
         end
-        TargetFrameTextureFrameTexture:SetTexture(iWRBase.TargetFrames[iWRDatabase[tostring(GetUnitName("target", false))][2]]);
     end
 end
+
 
 -- ╭──────────────────────────────╮
 -- │      Toggle Menu Window      │
@@ -286,10 +350,14 @@ function iWR:MenuOpen(Name)
     iWRPanel:Show()
     iWRNameInput:SetText(L["DefaultNameInput"])
     iWRNoteInput:SetText(L["DefaultNoteInput"])
-    if Name and Name ~= "" then
-        iWRNameInput:SetText(Name)
-    elseif UnitExists("target") and UnitIsPlayer("target") then
-        iWRNameInput:SetText(UnitName("target"))
+    if UnitExists("target") and UnitIsPlayer("target") then
+        local playerName = UnitName("target")
+        local _, class = UnitClass("target")
+        if class then
+            iWRNameInput:SetText(ColorizePlayerNameByClass(playerName, class))
+        else
+            iWRNameInput:SetText(playerName)
+        end
     end
 end
 
@@ -311,7 +379,10 @@ function iWR:AddNewNote(Name,Note,Type)
             iWR:CreateNote(Name,Note,Type)
         else
             iWR:CreateNote(Name,"",Type)
+            print(Colors.iWR .. "[iWR]: NoteInput error: [|r" .. Name .. "|cffff9716]")
+            print(Colors.iWR .. "[iWR]: Note was either starting with a ".. Colors.Yellow .. "number " .. Colors.iWR ..  "or ".. Colors.Yellow .. "empty" .. Colors.iWR .. ".")
         end
+        iWR:PopulateDatabase()
     else
         if DebugMsg then
             print("|cffff9716[iWR]: DEBUG: NameInput error: [|r" .. Name .. "|cffff9716]")
@@ -324,9 +395,12 @@ end
 -- ╰──────────────────────╯
 function iWR:ClearNote(Name)
     if iWR:InputNotEmpty(Name) then
-        iWRDatabase[Name] = nil
+        -- Remove color codes from the name
+    local uncoloredName = StripColorCodes(Name)
+        iWRDatabase[uncoloredName] = nil
+        iWR:PopulateDatabase()
         local targetName = UnitName("target")
-            if Name == targetName then
+            if uncoloredName == targetName then
                 TargetFrame_Update(TargetFrame)
             end
         if DebugMsg then
@@ -342,35 +416,44 @@ end
 -- ╭───────────────────────────╮
 -- │      Create New Note      │
 -- ╰───────────────────────────╯
-function iWR:CreateNote(Name,Note,Type)
+function iWR:CreateNote(Name, Note, Type)
     if DebugMsg then
         print("|cffff9716[iWR]: DEBUG: New note Name: [|r" .. Name .. "|cffff9716]")
         print("|cffff9716[iWR]: DEBUG: New note Note: [|r" .. Note .. "|cffff9716]")
         print("|cffff9716[iWR]: DEBUG: New note Type: [|r" .. Type .. "|cffff9716]")
     end
-    iWRDatabase[Name] = {
+
+    -- Remove color codes from the name
+    local uncoloredName = StripColorCodes(Name)
+
+    -- Save to database using uncolored name
+    iWRDatabase[uncoloredName] = {
         Note,
         Type,
         GetCurrentTimeByHours(),
+        Name,
     }
 
     local targetName = UnitName("target")
-        if Name == targetName then
-            TargetFrame_Update(TargetFrame)
-        end
+    if uncoloredName == targetName then
+        TargetFrame_Update(TargetFrame)
+    end
 
     if iWRSettings.DataSharing ~= false then
         wipe(DataCacheTable)
-        DataCacheTable[tostring(Name)] = {
+        DataCacheTable[tostring(uncoloredName)] = {
             Note,
             Type,
             GetCurrentTimeByHours(),
+            Name,
         }
-    DataCache = iWR:Serialize(DataCacheTable)
-    iWR:SendNewDBUpdateToFriends()
+        DataCache = iWR:Serialize(DataCacheTable)
+        iWR:SendNewDBUpdateToFriends()
     end
-print("|cffff9716Character note: [|r" .. tostring(Name) .. "|cffff9716] created.|r")
+
+    print("|cffff9716Character note: [|r" .. tostring(targetName) .. "|cffff9716] created.|r")
 end
+
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                      Frames                                    │
@@ -379,34 +462,17 @@ end
 -- ╰─────────────────────────────╯
 iWRPanel = CreateFrame("Frame", "SettingsMenu", UIParent, "BackdropTemplate")
 
--- Set panel size
-iWRPanel:SetSize(350, 300)
-
--- Initially hide the panel
+iWRPanel:SetSize(350, 200)
 iWRPanel:Hide()
-
--- Position the panel at the center of the screen
 iWRPanel:SetPoint("CENTER", UIParent, "CENTER")
-
--- Enable mouse interaction and make it movable
 iWRPanel:EnableMouse()
 iWRPanel:SetMovable(true)
-
--- Set the frame strata
 iWRPanel:SetFrameStrata("MEDIUM")
-
--- Set up drag functionality
 iWRPanel:SetScript("OnDragStart", function(self) self:StartMoving() end)
 iWRPanel:SetScript("OnMouseDown", function(self) self:StartMoving() end)
 iWRPanel:SetScript("OnMouseUp", function(self) self:StopMovingOrSizing() self:SetUserPlaced(true) end)
-
--- Allow the frame to be dragged with both mouse buttons
 iWRPanel:RegisterForDrag("LeftButton", "RightButton")
-
--- Keep the panel clamped to the screen
 iWRPanel:SetClampedToScreen(true)
-
--- Set the panel's backdrop (background and border)
 iWRPanel:SetBackdrop({
     bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -416,28 +482,32 @@ iWRPanel:SetBackdrop({
 iWRPanel:SetBackdropColor(0, 0, 0, 1) -- Background color
 iWRPanel:SetBackdropBorderColor(1, 1, 1, 1) -- Border color
 
--- Create the title bar
+-- ╭──────────────────────────────────╮
+-- │      Create Main Panel title     │
+-- ╰──────────────────────────────────╯
 local titleBar = CreateFrame("Frame", nil, iWRPanel, "BackdropTemplate")
 titleBar:SetHeight(30)
 titleBar:SetPoint("TOP", iWRPanel, "TOP", 0, 0)
 titleBar:SetWidth(iWRPanel:GetWidth())
-
--- Set title bar background and border
 titleBar:SetBackdrop({
     bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
     edgeSize = 16,
     insets = {left = 4, right = 4, top = 4, bottom = 4},
 })
-titleBar:SetBackdropColor(0.1, 0.1, 0.1, 1) -- Dark gray background
+titleBar:SetBackdropColor(0.1, 0.1, 0.1, 1)
 
--- Add title text to the title bar
+-- ╭─────────────────────────────────╮
+-- │      Main Panel title text      │
+-- ╰─────────────────────────────────╯
 local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
-titleText:SetText("iWillRemember Menu")
+titleText:SetText("iWillRemember Menu v" .. Version)
 titleText:SetTextColor(1, 1, 1, 1) -- White text
 
--- Create the close button (X)
+-- ╭───────────────────────────────────╮
+-- │      Main Panel close button      │
+-- ╰───────────────────────────────────╯
 local closeButton = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
 closeButton:SetSize(20, 20)
 closeButton:SetPoint("TOPRIGHT", iWRPanel, "TOPRIGHT", -5, -5)
@@ -446,13 +516,14 @@ closeButton:SetScript("OnClick", function()
     iWR:MenuClose()
 end)
 
--- Add title for Player Name input field
+-- ╭───────────────────────────────────────────╮
+-- │      Main Panel Name And Note Inputs      │
+-- ╰───────────────────────────────────────────╯
 local playerNameTitle = iWRPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 playerNameTitle:SetPoint("TOP", titleBar, "BOTTOM", 0, -10)
 playerNameTitle:SetText("Player Name")
 playerNameTitle:SetTextColor(1, 1, 1, 1)
 
--- Create the Player Name input field
 iWRNameInput = CreateFrame("EditBox", nil, iWRPanel, "InputBoxTemplate")
 iWRNameInput:SetSize(150, 30)
 iWRNameInput:SetPoint("TOP", playerNameTitle, "BOTTOM", 0, -1)
@@ -460,14 +531,15 @@ iWRNameInput:SetMaxLetters(20)
 iWRNameInput:SetAutoFocus(false)
 iWRNameInput:SetTextColor(1, 1, 1, 1)
 iWRNameInput:SetText(L["DefaultNameInput"])
+iWRNameInput:SetJustifyH("CENTER")  -- Center horizontally
+iWRNameInput:SetJustifyV("MIDDLE")  -- Center vertically
 
--- Add title for Note input field
+
 local noteTitle = iWRPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 noteTitle:SetPoint("TOP", iWRNameInput, "BOTTOM", 0, -10)
 noteTitle:SetText("Personalized note about chosen player")
 noteTitle:SetTextColor(1, 1, 1, 1) -- White text
 
--- Create the Note input field
 iWRNoteInput = CreateFrame("EditBox", nil, iWRPanel, "InputBoxTemplate")
 iWRNoteInput:SetSize(250, 30)
 iWRNoteInput:SetPoint("TOP", noteTitle, "BOTTOM", 0, -3)
@@ -477,96 +549,78 @@ iWRNoteInput:SetAutoFocus(false)
 iWRNoteInput:SetTextColor(1, 1, 1, 1)
 iWRNoteInput:SetText(L["DefaultNoteInput"])
 
--- Grab targets name Button
-local playerNameButton = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
-playerNameButton:SetSize(60, 30)
-playerNameButton:SetPoint("LEFT", iWRNameInput, "RIGHT", 5, 0)
-playerNameButton:SetText("Target")
-playerNameButton:SetScript("OnClick", function()
-    if UnitExists("target") and UnitIsPlayer("target") then
-        iWRNameInput:SetText(UnitName("target"))
-    else
-        print(L["InvalidTarget"])
-    end
-end)
-
--- Create buttons below the Note input field
+-- ╭───────────────────────────────────────╮
+-- │      Main Panel Set Type Hostile      │
+-- ╰───────────────────────────────────────╯
 local button1 = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
-button1:SetSize(50, 30)
-button1:SetPoint("TOP", iWRNoteInput, "BOTTOM", -120, -10)
-button1:SetText("1")
+button1:SetSize(60, 30)
+button1:SetPoint("TOP", iWRNoteInput, "BOTTOM", -130, -10)
+button1:SetText("Hostile")
 button1:SetScript("OnClick", function()
     iWR:AddNewNote(iWRNameInput:GetText(),iWRNoteInput:GetText(),iWRBase.Types["Hostile"])
-    iWR:MenuClose()
+    iWRNoteInput:SetText(L["DefaultNoteInput"])
 end)
 
+-- ╭──────────────────────────────────────────╮
+-- │      Main Panel Set Type Unfriendly      │
+-- ╰──────────────────────────────────────────╯
 local button2 = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
-button2:SetSize(50, 30)
-button2:SetPoint("TOP", iWRNoteInput, "BOTTOM", -60, -10)
-button2:SetText("2")
+button2:SetSize(60, 30)
+button2:SetPoint("TOP", iWRNoteInput, "BOTTOM", -65, -10)
+button2:SetText("Unfriendly")
 button2:SetScript("OnClick", function()
-    iWR:AddNewNote(iWRNameInput:GetText(),iWRNoteInput:GetText(),iWRBase.Types["Unfriendly"])
-    iWR:MenuClose()
+    iWR:AddNewNote(iWRNameInput:GetText(),iWRNoteInput:GetText(),iWRBase.Types["Unpleasant"])
+    iWRNoteInput:SetText(L["DefaultNoteInput"])
 end)
 
+-- ╭──────────────────────────────────────╮
+-- │      Main Panel Set Type Friend      │
+-- ╰──────────────────────────────────────╯
 local button3 = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
-button3:SetSize(50, 30)
+button3:SetSize(60, 30)
 button3:SetPoint("TOP", iWRNoteInput, "BOTTOM", 0, -10)
-button3:SetText("3")
+button3:SetText("Friend")
 button3:SetScript("OnClick", function()
     iWR:AddNewNote(iWRNameInput:GetText(),iWRNoteInput:GetText(),iWRBase.Types["Friend"])
-    iWR:MenuClose()
+    iWRNoteInput:SetText(L["DefaultNoteInput"])
 end)
 
+-- ╭──────────────────────────────────────────╮
+-- │      Main Panel Set Type BestFriend      │
+-- ╰──────────────────────────────────────────╯
 local button4 = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
-button4:SetSize(50, 30)
-button4:SetPoint("TOP", iWRNoteInput, "BOTTOM", 60, -10)
-button4:SetText("4")
+button4:SetSize(60, 30)
+button4:SetPoint("TOP", iWRNoteInput, "BOTTOM", 65, -10)
+button4:SetText("BestFriend")
 button4:SetScript("OnClick", function()
     iWR:AddNewNote(iWRNameInput:GetText(),iWRNoteInput:GetText(),iWRBase.Types["BestFriend"])
-    iWR:MenuClose()
+    iWRNoteInput:SetText(L["DefaultNoteInput"])
 end)
 
+-- ╭─────────────────────────────────────╮
+-- │      Main Panel Set Type Clear      │
+-- ╰─────────────────────────────────────╯
 local button5 = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
-button5:SetSize(50, 30)
-button5:SetPoint("TOP", iWRNoteInput, "BOTTOM", 120, -10)
-button5:SetText("5")
+button5:SetSize(60, 30)
+button5:SetPoint("TOP", iWRNoteInput, "BOTTOM", 130, -10)
+button5:SetText("Clear")
 button5:SetScript("OnClick", function()
     iWR:ClearNote(iWRNameInput:GetText())
-    iWR:MenuClose()
 end)
 
 -- Create a new frame to display the database
 local iWRDatabaseFrame = CreateFrame("Frame", "DatabaseFrame", UIParent, "BackdropTemplate")
-
--- Set panel size
 iWRDatabaseFrame:SetSize(350, 300)
-
--- Initially hide the frame
 iWRDatabaseFrame:Hide()
-
--- Position the frame at the center of the screen
 iWRDatabaseFrame:SetPoint("CENTER", UIParent, "CENTER")
-
--- Enable mouse interaction and make it movable
 iWRDatabaseFrame:EnableMouse()
 iWRDatabaseFrame:SetMovable(true)
-
--- Set the frame strata
 iWRDatabaseFrame:SetFrameStrata("MEDIUM")
-
--- Set up drag functionality
 iWRDatabaseFrame:SetScript("OnDragStart", function(self) self:StartMoving() end)
 iWRDatabaseFrame:SetScript("OnMouseDown", function(self) self:StartMoving() end)
 iWRDatabaseFrame:SetScript("OnMouseUp", function(self) self:StopMovingOrSizing() self:SetUserPlaced(true) end)
-
--- Allow the frame to be dragged with both mouse buttons
 iWRDatabaseFrame:RegisterForDrag("LeftButton", "RightButton")
-
--- Keep the frame clamped to the screen
 iWRDatabaseFrame:SetClampedToScreen(true)
-
--- Set the frame's backdrop (background and border)
 iWRDatabaseFrame:SetBackdrop({
     bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
     edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -594,7 +648,7 @@ dbTitleBar:SetBackdropColor(0.1, 0.1, 0.1, 1) -- Dark gray background
 -- Add title text to the database title bar
 local dbTitleText = dbTitleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 dbTitleText:SetPoint("CENTER", dbTitleBar, "CENTER", 0, 0)
-dbTitleText:SetText("iWR Database")
+dbTitleText:SetText("iWillRemember Database")
 dbTitleText:SetTextColor(1, 1, 1, 1) -- White text
 
 -- Create a scrollable frame to list database entries
@@ -613,8 +667,8 @@ openDatabaseButton:SetSize(100, 30)
 openDatabaseButton:SetPoint("TOP", button5, "BOTTOM", 0, -10)
 openDatabaseButton:SetText("Open DB")
 openDatabaseButton:SetScript("OnClick", function()
-    iWRDatabaseFrame:Show()  -- Show the database frame
-    iWR:PopulateDatabase()    -- Populate the database list
+    iWRDatabaseFrame:Show()
+    iWR:PopulateDatabase()
 end)
 
 -- Create a close button for the database frame
@@ -641,14 +695,41 @@ function iWR:PopulateDatabase()
         local entryButton = CreateFrame("Button", nil, dbContainer, "UIPanelButtonTemplate")
         entryButton:SetSize(280, 30)
         entryButton:SetPoint("TOP", dbContainer, "TOP", 0, yOffset)
-        entryButton:SetText(playerName .. ": " .. data[1]) -- Display player name and note
+        entryButton:SetText(data[4] .. ": " .. data[1]) -- Display player name and note
         entryButton:SetScript("OnClick", function()
-            print("Selected " .. playerName) -- You can add functionality here for what happens when the entry is clicked
+            print("Selected " .. data[4]) -- You can add functionality here for what happens when the entry is clicked
         end)
 
         yOffset = yOffset - 35 -- Adjust for next button's position
     end
 end
+
+-- Add a button to clear all data in the database
+local clearDatabaseButton = CreateFrame("Button", nil, iWRDatabaseFrame, "UIPanelButtonTemplate")
+clearDatabaseButton:SetSize(100, 30)
+clearDatabaseButton:SetPoint("BOTTOM", iWRDatabaseFrame, "BOTTOM", 0, 10)
+clearDatabaseButton:SetText("Clear All")
+clearDatabaseButton:SetScript("OnClick", function()
+    -- Confirm before clearing the database
+    StaticPopupDialogs["CLEAR_DATABASE_CONFIRM"] = {
+        text = "Are you sure you want to clear all data in the database?",
+        button1 = "Yes",
+        button2 = "No",
+        OnAccept = function()
+            -- Clear the database
+            iWRDatabase = {}
+            print("|cffff9716[iWR]: Database cleared.")
+            -- Refresh the display
+            iWR:PopulateDatabase()
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+        preferredIndex = 3,
+    }
+    StaticPopup_Show("CLEAR_DATABASE_CONFIRM")
+end)
+
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Event Handlers                                │
@@ -659,9 +740,7 @@ function iWR:OnEnable()
     -- Secure hooks to add custom behavior
     self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
     self:SecureHook("TargetFrame_Update", "SetTargetingFrame")
-
-
-
+    
     -- Activate DataSharing
     iWR:RegisterComm("iWRFullDBUpdate", "OnFullDBUpdate")
     iWR:RegisterComm("iWRNewDBUpdate", "OnNewDBUpdate")
@@ -676,7 +755,7 @@ function iWR:OnEnable()
     end
 
     -- Print a message to the chat frame when the addon is loaded
-    print(L["iWRLoaded"] .. L["VersionNumber"])
+    print(L["iWRLoaded"] .. " v" .. Version)
 
     -- Create the main launcher button
     LDBroker:NewDataObject("iWillRemember_DataObject", {
@@ -688,24 +767,31 @@ function iWR:OnEnable()
         end,
     })
 
-    -- Create the minimap button (DataObject for the minimap button)
-    local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
-        type = "data source",
-        text = "iWillRemember",
-        icon = "Interface\\Icons\\Spell_Nature_BloodLust",
-        OnClick = function(self, button)
+-- Create the minimap button (DataObject for the minimap button)
+local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
+    type = "data source",
+    text = "iWillRemember",
+    icon = "Interface\\Icons\\Spell_Nature_BloodLust",
+    OnClick = function(self, button)
+        if button == "LeftButton" and IsShiftKeyDown() then
+            iWRDatabaseFrame:Show()
+            iWR:PopulateDatabase()
+        elseif button == "LeftButton" then
             iWR:MenuToggle()
-        end,
+        elseif button == "RightButton" then
+            --Nothing
+        end
+    end,
 
     -- Tooltip handling
     OnTooltipShow = function(tooltip)
         -- Name
-        tooltip:SetText("|cffff9716iWillRemember|r", 1, 1, 1)
+        tooltip:SetText("|cffff9716iWillRemember v" .. Version, 1, 1, 1)
 
         -- Desc
         tooltip:AddLine(" ", 1, 1, 1) 
-        tooltip:AddLine("Open iWillRemember interface", 1, 1, 1) 
-        tooltip:AddLine(L["VersionNumber"]) 
+        tooltip:AddLine(L["MinimapButtonLeftClick"], 1, 1, 1)
+        tooltip:AddLine(L["MinimapButtonShiftLeftClick"], 1, 1, 1)
 
         -- Make visible
         tooltip:Show()  -- Make sure the tooltip is displayed

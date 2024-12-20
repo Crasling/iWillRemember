@@ -7,26 +7,60 @@
 -- ╚═╝  ╚══╝╚══╝  ╚══════╝ 
 -- ═════════════════════════
 
--- ──────────────────────────────────────────────────────────────
--- [[                      Localization                        ]]
--- ──────────────────────────────────────────────────────────────
+-- ╭────────────────────────────────────────────────────────────────────────────────╮
+-- │                                     Colors                                     │
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
+local Colors = {
+    -- Standard Colors
+    iWR = "|cffff9716",
+    White = "|cFFFFFFFF",
+    Black = "|cFF000000",
+    Red = "|cFFFF0000",
+    Green = "|cFF00FF00",
+    Blue = "|cFF0000FF",
+    Yellow = "|cFFFFFF00",
+    Cyan = "|cFF00FFFF",
+    Magenta = "|cFFFF00FF",
+    Orange = "|cFFFFA500",
+    Gray = "|cFF808080",
 
+    -- WoW Class Colors
+    Classes = {
+        WARRIOR = "|cFFC79C6E",
+        PALADIN = "|cFFF58CBA",
+        HUNTER = "|cFFABD473",
+        ROGUE = "|cFFFFF569",
+        PRIEST = "|cFFFFFFFF",
+        SHAMAN = "|cFF0070DE",
+        MAGE = "|cFF40C7EB",
+        WARLOCK = "|cFF8788EE",
+        DRUID = "|cFFFF7D0A",
+    },
+
+    -- Reset Color
+    Reset = "|r"
+}
+
+-- ╭────────────────────────────────────────────────────────────────────────────────╮
+-- │                                  Localization                                  │
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
 local L = LibStub("AceLocale-3.0"):NewLocale("iWR", "enUS", true)
 
--- Default Message Start (color and prefix)
-local DefaultMessageStart = "|cffff9716[iWR]:"
+local DefaultMessageStart = Colors.iWR .. "[iWR]: "
 
--- Create String
 local function Msg(message)
     return DefaultMessageStart .. message
 end
 
--- Using the helper function to set the localized strings
-L["VersionNumber"] = ("v0.1.0")
+-- ╭────────────────────────────────────────────────────────────────────────────────╮
+-- │                                 Text Templates                                 │
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
 L["NoteToolTip"] = "[iWR]: "
+L["DefaultNameInput"] = "Enter player name..."
+L["DefaultNoteInput"] = "Enter note..."
+L["MinimapButtonLeftClick"] = (Colors.Yellow .. "Left Click: " .. Colors.Orange .. "Open iWR Menu")
+L["MinimapButtonShiftLeftClick"] = (Colors.Yellow .. "Shift-Left Click: " .. Colors.Orange .. "Open iWR Database")
 
 L["iWRLoaded"] = Msg("iWillRemember Version")
-L["DefaultNameInput"] = Msg("Enter player name...")
-L["DefaultNoteInput"] = Msg("Enter note...")
 L["DevLoad"] = Msg("iWillRemember Debug messages are now active. Welcome Developer")
-L["InvalidTarget"] = Msg("|cffff9716[iWR]: Target must be a player")
+L["InvalidTarget"] = Msg("Target must be a player")
