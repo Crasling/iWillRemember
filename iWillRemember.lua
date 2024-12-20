@@ -161,8 +161,6 @@ iWRBase.Types = {
     Hostile = -5,
 }
 
-
-
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                    Functions                                   │
 -- ├───────────────────────┬────────────────────────────────────────────────────────╯
@@ -331,7 +329,6 @@ function iWR:SetTargetingFrame()
     end
 end
 
-
 -- ╭──────────────────────────────╮
 -- │      Toggle Menu Window      │
 -- ╰──────────────────────────────╯
@@ -368,6 +365,10 @@ function iWR:MenuClose()
     iWRNameInput:SetText(L["DefaultNameInput"])
     iWRNoteInput:SetText(L["DefaultNoteInput"])
     iWRPanel:Hide()
+end
+
+local function OnCombatEnter(self, event)
+    iWR:MenuClose()
 end
 
 -- ╭────────────────────────╮
