@@ -168,7 +168,7 @@ end
 function iWR:AddNoteToGameTooltip(self,...)
     local name, unit = self:GetUnit();
     if (not unit) then
-    local mFocus = GetMouseFocus();
+        local mFocus = GetMouseFocus();
         if (mFocus) and (mFocus.unit) then
             unit = mFocus.unit;
         else
@@ -178,22 +178,16 @@ function iWR:AddNoteToGameTooltip(self,...)
 
     if (UnitIsPlayer(unit)) then    
         if iWRDatabase[tostring(name)] then
-            if tonumber(iWRDatabase[tostring(name)][1]) then
-                if tonumber(iWRDatabase[tostring(name)][1]) > 1 and tonumber(iWRDatabase[tostring(name)][1]) <= getn(L["iWRBase.TargetFrames"]) then
-                    GameTooltip:AddLine(L["iWRBase.Types"][tonumber(iWRDatabase[tostring(name)][1])])
-                end
+            -- Add the type icon and note to the tooltip
+            local iconPath = iWRBase.Icons[tonumber(iWRDatabase[tostring(name)][2])]
+            if iconPath then
+                local icon = "|T" .. iconPath .. ":16:16:0:0|t" -- Create the icon string (16x16 size)
+                GameTooltip:AddLine(Colors.iWR .. L["NoteToolTip"] .. icon .. iWRBase.Color[tonumber(iWRDatabase[tostring(name)][2])]  .. " " ..  tostring(iWRBase.Types[iWRDatabase[tostring(name)][2]]) .. "|r" .. " "  .. icon)
             else
-                -- Add the type icon and note to the tooltip
-                local iconPath = iWRBase.Icons[tonumber(iWRDatabase[tostring(name)][2])]
-                if iconPath then
-                    local icon = "|T" .. iconPath .. ":16:16:0:0|t" -- Create the icon string (16x16 size)
-                    GameTooltip:AddLine(Colors.iWR .. L["NoteToolTip"] .. icon .. iWRBase.Color[tonumber(iWRDatabase[tostring(name)][2])]  .. " " ..  tostring(iWRBase.Types[iWRDatabase[tostring(name)][2]]) .. "|r" .. " "  .. icon)
-                else
-                    GameTooltip:AddLine(Colors.iWR ..  L["NoteToolTip"] .. tostring(iWRBase.Types[iWRDatabase[tostring(name)][2]]) .. "|r")
-                end
-                if iWRDatabase[tostring(name)][1] and iWRDatabase[tostring(name)][1] ~= "" then
-                    GameTooltip:AddLine(Colors.iWR .. "Note: " .. iWRBase.Color[tonumber(iWRDatabase[tostring(name)][2])] .. tostring(iWRDatabase[tostring(name)][1]) .. "|r")
-                end                
+                GameTooltip:AddLine(Colors.iWR ..  L["NoteToolTip"] .. tostring(iWRBase.Types[iWRDatabase[tostring(name)][2]]) .. "|r")
+            end
+            if iWRDatabase[tostring(name)][1] and iWRDatabase[tostring(name)][1] ~= "" then
+                GameTooltip:AddLine(Colors.iWR .. "Note: " .. iWRBase.Color[tonumber(iWRDatabase[tostring(name)][2])] .. tostring(iWRDatabase[tostring(name)][1]) .. "|r")
             end
         end
     end
@@ -214,13 +208,10 @@ end
 local function GetCurrentTimeByHours()
     -- Extract current time components
     local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
-
     -- Calculate the current time in hours
     local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay) * 24 + tonumber(CurrMonth) * 720 + tonumber(CurrYear) * 8640
-
     -- Format the current date as YYYY-MM-DD
     local CurrentDate = string.format("20".."%02d-%02d-%02d", tonumber(CurrYear), tonumber(CurrMonth), tonumber(CurrDay))
-
     -- Return both the current time in hours and the formatted current date
     return tonumber(CurrentTime), CurrentDate
 end
@@ -308,61 +299,113 @@ end
 -- │      Full Database Update        │
 -- ╰──────────────────────────────────╯
 function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
+    -- Check if the sender is the player itself
     if GetUnitName("player", false) == sender then return end
-        Success, FullNotesTable = iWR:Deserialize(message)
-        if not Success then
-            if DebugMsg then
-                print("|cffff9716[iWR]: DEBUG: OnFullDBUpdate Error")
-            end
-        else
-            if DebugMsg then
-                print("|cffff9716[iWR]: DEBUG: DataReceived from: " .. sender)
-            end
-            for k,v in pairs(FullNotesTable) do
-                if iWRDatabase[k] then
-                    if IsNeedToUpdate((iWRDatabase[k][3]), v[3]) then
-                        iWRDatabase[k] = v
-                    end
-                else
-                    iWRDatabase[k] = v
-                end
-            end
-            local targetName = UnitName("target")
-            if targetName and targetName ~= "" and NoteName == targetName then
-                TargetFrame_Update(TargetFrame)
-            end
 
-            iWR:PopulateDatabase()
-            iWR:UpdateTooltip()
+    -- Verify the sender is on the friends list
+    local isFriend = false
+    local numFriends = C_FriendList.GetNumFriends()
+    for i = 1, numFriends do
+        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+        if friendInfo and friendInfo.name == sender then
+            isFriend = true
+            break
         end
     end
+
+    -- If the sender is not a friend, skip processing
+    if not isFriend then
+        if DebugMsg then
+            print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
+        end
+        return
+    end
+
+    -- Deserialize the message
+    Success, FullNotesTable = iWR:Deserialize(message)
+    if not Success then
+        if DebugMsg then
+            print("|cffff9716[iWR]: DEBUG: OnFullDBUpdate Error")
+        end
+    else
+        if DebugMsg then
+            print("|cffff9716[iWR]: DEBUG: Data received from: " .. sender)
+        end
+        for k, v in pairs(FullNotesTable) do
+            if iWRDatabase[k] then
+                if IsNeedToUpdate((iWRDatabase[k][3]), v[3]) then
+                    iWRDatabase[k] = v
+                end
+            else
+                iWRDatabase[k] = v
+            end
+        end
+
+        local targetName = UnitName("target")
+        if targetName and targetName ~= "" and NoteName == targetName then
+            TargetFrame_Update(TargetFrame)
+        end
+
+        iWR:PopulateDatabase()
+        iWR:UpdateTooltip()
+    end
+end
+
 
 -- ╭──────────────────────────────────╮
 -- │      New Database Update         │
 -- ╰──────────────────────────────────╯
 function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
+    -- Check if the sender is the player itself
     if GetUnitName("player", false) == sender then return end
-        Success, TempTable = iWR:Deserialize(message)
-        if not Success then
-            if DebugMsg then
-                print("|cffff9716[iWR]: DEBUG: OnNewDBUpdate Error")
-            end
-        else
-          for k,v in pairs(TempTable) do
-                iWRDatabase[k] = v
-          end
-          local targetName = UnitName("target")
-            if targetName and targetName ~= "" and NoteName == targetName then
-                TargetFrame_Update(TargetFrame)
-            end
-          iWR:PopulateDatabase()
-          iWR:UpdateTooltip()
-          if DebugMsg then
-            print("|cffff9716[iWR]: DEBUG: DataReceived from: " .. sender)
-          end
+
+    -- Verify the sender is on the friends list
+    local isFriend = false
+    local numFriends = C_FriendList.GetNumFriends()
+    for i = 1, numFriends do
+        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+        if friendInfo and friendInfo.name == sender then
+            isFriend = true
+            break
         end
-        wipe(TempTable)
     end
+
+    -- If the sender is not a friend, skip processing
+    if not isFriend then
+        if DebugMsg then
+            print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
+        end
+        return
+    end
+
+    -- Deserialize the message
+    Success, TempTable = iWR:Deserialize(message)
+    if not Success then
+        if DebugMsg then
+            print("|cffff9716[iWR]: DEBUG: OnNewDBUpdate Error")
+        end
+    else
+        for k, v in pairs(TempTable) do
+            iWRDatabase[k] = v
+        end
+
+        local targetName = UnitName("target")
+        if targetName and targetName ~= "" and NoteName == targetName then
+            TargetFrame_Update(TargetFrame)
+        end
+
+        iWR:PopulateDatabase()
+        iWR:UpdateTooltip()
+
+        if DebugMsg then
+            print("|cffff9716[iWR]: DEBUG: Data received from: " .. sender)
+        end
+    end
+
+    -- Clean up the temporary table
+    wipe(TempTable)
+end
+
 
 -- ╭────────────────────────────────────────╮
 -- │      Colorize Player Name by Class     │
@@ -984,7 +1027,7 @@ dbTitleBar:SetBackdropColor(0.1, 0.1, 0.1, 1) -- Dark gray background
 -- Add title text to the database title bar
 local dbTitleText = dbTitleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 dbTitleText:SetPoint("CENTER", dbTitleBar, "CENTER", 0, 0)
-dbTitleText:SetText("iWillRemember Database")
+dbTitleText:SetText("iWillRemember Personal Database")
 dbTitleText:SetTextColor(1, 1, 1, 1) -- White text
 
 -- Create a scrollable frame to list database entries
@@ -1034,7 +1077,7 @@ function iWR:PopulateDatabase()
 
     for _, category in ipairs(sortedCategories) do
         table.sort(categorizedData[category], function(a, b)
-            return a.name > b.name -- Reverse alphabetical for player names
+            return a.name < b.name
         end)
     end
 
@@ -1300,6 +1343,8 @@ local function ModifyMenuForContext(menuType)
         local playerName = contextData.name
         local unitToken = contextData.unitToken
 
+        print(menuType)
+
         -- Check if playerName is available and valid
         if playerName then
             if DebugMsg then
@@ -1328,7 +1373,7 @@ end
 -- Modify the right-click menu for players
 ModifyMenuForContext("MENU_UNIT_PLAYER")
 ModifyMenuForContext("MENU_UNIT_PARTY")
-ModifyMenuForContext("MENU_UNIT_RAID")
+ModifyMenuForContext("MENU_UNIT_RAID_PLAYER")
 ModifyMenuForContext("MENU_UNIT_ENEMY_PLAYER")
 end
 

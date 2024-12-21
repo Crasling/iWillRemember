@@ -14,7 +14,10 @@
         "DEFAULT_CHAT_FRAME",
         "AddonCompartmentFrame",
         "FCFDock_GetSelectedWindow",
-        "GENERAL_CHAT_DOCK"
+        "GENERAL_CHAT_DOCK",
+        "UIDropDownMenu_AddButton",
+        "UIDROPDOWNMENU_MENU_LEVEL",
+        "UIDropDownMenu_CreateInfo"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {
