@@ -1,14 +1,15 @@
-## Interface: 11302
+## Interface: 11506
 ## Title: iWillRemember
-## Notes: iWillRemember is a continuaton of RememberYouAddon
-## RememberYouAddon Author: Morveron, Agonit
-## RememberYouAddon Edit by: Crasling
+## Version: 0.3.9
+## Notes: 
+## Author: Crasling
+
+## X-Curse-Project-ID: 1160664
 
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
-## SavedVariables: RememberYouDatabase, RememberYouSettings
+## SavedVariables: iWRDatabase, iWRSettings
 
 embeds.xml
-locale\locale.xml
+Localization\locale.xml
 iWillRemember.lua
-
