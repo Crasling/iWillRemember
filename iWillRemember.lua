@@ -171,6 +171,8 @@ function iWR:AddNoteToGameTooltip(self,...)
     local mFocus = GetMouseFocus();
         if (mFocus) and (mFocus.unit) then
             unit = mFocus.unit;
+        else
+            return
         end
     end
 
@@ -498,21 +500,18 @@ function iWR:ClearNote(Name)
     if iWR:InputNotEmpty(Name) then
         -- Remove color codes from the name
         local uncoloredName = StripColorCodes(Name)
-        
+
         if iWRDatabase[uncoloredName] then
             -- Remove the entry from the database
             iWRDatabase[uncoloredName] = nil
             iWR:PopulateDatabase()
-            iWR:SendNewDBUpdateToFriends()
-            
+
             local targetName = UnitName("target")
             if uncoloredName == targetName then
                 TargetFrame_Update(TargetFrame)
             end
 
-            if DebugMsg then
-                print("|cffff9716[iWR]: DEBUG: Database information [|r" .. Name .. "|cffff9716] cleared.")
-            end
+            print(L["CharNoteStart"] .. Name .. "|cffff9716] removed from database.")
         else
             -- Notify that the name was not found in the database
             print("|cffff9716[iWR]: Name [|r" .. Name .. "|cffff9716] does not exist in the database.")
@@ -534,6 +533,8 @@ function iWR:CreateNote(Name, Note, Type)
         print("|cffff9716[iWR]: DEBUG: New note Note: [|r" .. Note .. "|cffff9716]")
         print("|cffff9716[iWR]: DEBUG: New note Type: [|r" .. Type .. "|cffff9716]")
     end
+
+    local colorCode = string.match(Name, "|c%x%x%x%x%x%x%x%x")
 
     -- Remove color codes from the name
     local uncoloredName = StripColorCodes(Name)
@@ -570,7 +571,7 @@ function iWR:CreateNote(Name, Note, Type)
         iWR:SendNewDBUpdateToFriends()
     end
 
-    print("|cffff9716Character note: [|r" .. NoteName .. "|cffff9716] created.|r")
+    print(L["CharNoteStart"] .. colorCode .. NoteName .. L["CharNoteEnd"])
 end
 
 
@@ -979,7 +980,7 @@ function iWR:PopulateDatabase()
         -- Add the icon for the type
         local iconTexture = entryFrame:CreateTexture(nil, "ARTWORK")
         iconTexture:SetSize(20, 20)
-        iconTexture:SetPoint("LEFT", entryFrame, "LEFT", 5, 0)
+        iconTexture:SetPoint("LEFT", entryFrame, "LEFT", 10, 0)
 
         -- Set the icon texture based on the type in `iWRBase.Types`
         local typeIcon = iWRBase.Icons[data[2]]
@@ -1010,7 +1011,7 @@ function iWR:PopulateDatabase()
             GameTooltip:SetOwner(entryFrame, "ANCHOR_RIGHT")
             GameTooltip:AddLine(data[4], 1, 1, 1) -- Title (Player Name)
             if data[1] ~= "" then
-                GameTooltip:AddLine("Note: " .. data[1], 1, 0.82, 0) -- Add note in tooltip
+                GameTooltip:AddLine("Note: " .. iWRBase.Color[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
             end
             GameTooltip:Show()
         end)
@@ -1020,8 +1021,8 @@ function iWR:PopulateDatabase()
 
         -- Create the Edit button for each player
         local editButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
-        editButton:SetSize(60, 30)
-        editButton:SetPoint("RIGHT", entryFrame, "RIGHT", -70, 0)
+        editButton:SetSize(50, 30)
+        editButton:SetPoint("RIGHT", entryFrame, "RIGHT", -60, 0)
         editButton:SetText("Edit")
 
         -- Store playerName and note in the button
@@ -1039,7 +1040,7 @@ function iWR:PopulateDatabase()
         -- Create the Remove button for each player
         local removeButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
         removeButton:SetSize(60, 30)
-        removeButton:SetPoint("RIGHT", entryFrame, "RIGHT", -5, 0)
+        removeButton:SetPoint("RIGHT", entryFrame, "RIGHT", 0, 0)
         removeButton:SetText("Remove")
         removeButton:SetScript("OnClick", function()
             StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {

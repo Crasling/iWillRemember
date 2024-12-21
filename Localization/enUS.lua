@@ -69,4 +69,5 @@ L["iWRLoaded"] = Msg("iWillRemember Version")
 L["DevLoad"] = Msg("iWillRemember Debug messages are now active. Welcome Developer")
 L["InvalidTarget"] = Msg("Target must be a player")
 L["InCombat"] = Msg("Cannot be used in combat")
-
+L["CharNoteStart"] = Msg("Character note: [")
+L["CharNoteEnd"] = "|cffff9716] created.|r"
