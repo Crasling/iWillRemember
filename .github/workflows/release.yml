@@ -10,7 +10,7 @@ env:
   GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -18,21 +18,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prepare Package
+      - name: Prepare Build Directory
         run: |
-          mkdir build
-          rsync -av --progress ./ ./build/iWillRemember --exclude build --exclude .git --exclude .github
-          mv build/iWillRemember build/iWillRemember-temp
-          mkdir build/iWillRemember
-          mv build/iWillRemember-temp/* build/iWillRemember
-          rmdir build/iWillRemember-temp
-          cd build
-          zip -r "iWillRemember-${GITHUB_REF##*/}.zip" iWillRemember
-        env:
-          GITHUB_REF: ${{ github.ref_name }}
+          mkdir -p build
+          cp -r ./* build/iWillRemember-temp
+          cd build/iWillRemember-temp && mv * ../iWillRemember
+          cd ../ && zip -r iWillRemember.zip iWillRemember
 
-      - name: Publish Release
+      - name: Clean Temporary Build Directory
+        run: |
+          rm -rf build/iWillRemember-temp
+
+      - name: Publish to CurseForge
         uses: BigWigsMods/packager@v2
         with:
-          name: "iWillRemember-${GITHUB_REF##*/}"
-          path: build/"iWillRemember-${GITHUB_REF##*/}.zip"
+          name: iWillRemember
+          path: build/iWillRemember.zip
