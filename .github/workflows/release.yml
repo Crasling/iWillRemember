@@ -1,23 +1,34 @@
-name: Release AddOn # description of this workflow, can be anything you want
+name: Release AddOn
 
-# triggers when pushing a tag
 on:
   push:
     tags:
-      - '**'
+      - '*'
 
 env:
   CF_API_KEY: ${{ secrets.CF_API_KEY }}
-  # for github releases, this secret is automatically provided to the workflow
-  # this must be explicitly configured with read-write permissions on the repository.
   GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-  release: # "release" is a job, you can name it anything you want
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # reads history for commit changelog
+          fetch-depth: 0
 
-      - uses: BigWigsMods/packager@v2
+      - name: Prepare Package
+        run: |
+          mkdir build
+          cp -r . ./build/iWillRemember  # Ensure folder inside zip is named `iWillRemember`
+          cd build
+          zip -r "iWillRemember-${GITHUB_REF##*/}.zip" iWillRemember
+        env:
+          GITHUB_REF: ${{ github.ref_name }} # Extracts the tag name (e.g., 0.2.6-beta)
+
+      - name: Publish Release
+        uses: BigWigsMods/packager@v2
+        with:
+          name: "iWillRemember-${GITHUB_REF##*/}"
+          path: build/"iWillRemember-${GITHUB_REF##*/}.zip"
