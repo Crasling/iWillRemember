@@ -35,8 +35,16 @@ jobs:
           # Create the zip file with the tag in the name
           zip -r iWillRemember-$(git describe --tags).zip iWillRemember
 
+      - name: Extract Tag Changelog
+        id: changelog
+        run: |
+          # Extract the tag description as the changelog
+          changelog=$(git for-each-ref refs/tags --format='%(contents)' --count=1 | sed '/^$/d')
+          echo "::set-output name=changelog::$changelog"
+
       - name: Publish to CurseForge
         uses: BigWigsMods/packager@v2
         with:
           name: iWillRemember
           path: build/iWillRemember-$(git describe --tags).zip
+          changelog: ${{ steps.changelog.outputs.changelog }}

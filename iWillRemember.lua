@@ -10,7 +10,6 @@
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                     Namespace                                  │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
-
 local Name, AddOn = ...
 local Title = select(2, C_AddOns.GetAddOnInfo(Name)):gsub("%s*v?[%d%.]+$", "")
 local Version = C_AddOns.GetAddOnMetadata(Name, "Version")
@@ -19,7 +18,6 @@ local Author = C_AddOns.GetAddOnMetadata(Name, "Author")
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                        Libs                                    │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
-
 iWR = LibStub("AceAddon-3.0"):NewAddon("iWR", "AceSerializer-3.0", "AceComm-3.0", "AceTimer-3.0", "AceHook-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("iWR")
 local LDBroker = LibStub("LibDataBroker-1.1")
@@ -30,15 +28,12 @@ local LDBIcon = LibStub("LibDBIcon-1.0")
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 
 -- Local Variables
-local CurrDataTime
-local CompDataTime
 local Success
 local DataCache
 local addonpath = "Classic"
 local TempTable = {}
 local DataCacheTable = {}
 local DataTimeTable = {}
-local isInitialized = false
 local iWRBase = {}
 local InCombat
 
@@ -62,6 +57,13 @@ local Colors = {
     Orange = "|cFFFFA500",
     Gray = "|cFF808080",
 
+    [10]    = "|cff80f451", -- Superior Colour
+    [5]     = "|cff80f451", -- Respected Colour
+    [3]     = "|cff80f451", -- Liked Colour
+    [1]     = "|cff80f451", -- Neutral Colour
+    [-3]    = "|cfffb9038", -- Disliked Colour
+    [-5]    = "|cffff2121", -- Hated Colour
+
     -- WoW Class Colors
     Classes = {
         WARRIOR = "|cFFC79C6E",
@@ -79,16 +81,11 @@ local Colors = {
     Reset = "|r"
 }
 
-
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                    Set Paths                                   │
 -- ├──────────────────────────┬─────────────────────────────────────────────────────╯
 -- │      Check what UI       │
 -- ╰──────────────────────────╯
-
--- Check if a different UI Frame is used
-local addonpath = "Classic"     -- default path
-
 if C_AddOns.IsAddOnLoaded("EasyFrames") then
     addonpath = "EasyFrames"    -- EasyFrames path
 end
@@ -103,18 +100,6 @@ iWRBase.TargetFrames = {
     [1]     = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. addonpath .. "\\Neutral.blp",
     [-3]    = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. addonpath .. "\\Disliked.blp",
     [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. addonpath .. "\\Hated.blp",
-}
-
--- ╭─────────────────────────╮
--- │      List of Colors     │
--- ╰─────────────────────────╯
-iWRBase.Color = {
-    [10]    = "|cff80f451", -- Superior Colour
-    [5]     = "|cff80f451", -- Respected Colour
-    [3]     = "|cff80f451", -- Liked Colour
-    [1]     = "|cff80f451", -- Neutral Colour
-    [-3]    = "|cfffb9038", -- Disliked Colour
-    [-5]    = "|cffff2121", -- Hated Colour
 }
 
 -- ╭────────────────────────╮
@@ -182,12 +167,12 @@ function iWR:AddNoteToGameTooltip(self,...)
             local iconPath = iWRBase.Icons[tonumber(iWRDatabase[tostring(name)][2])]
             if iconPath then
                 local icon = "|T" .. iconPath .. ":16:16:0:0|t" -- Create the icon string (16x16 size)
-                GameTooltip:AddLine(Colors.iWR .. L["NoteToolTip"] .. icon .. iWRBase.Color[tonumber(iWRDatabase[tostring(name)][2])]  .. " " ..  tostring(iWRBase.Types[iWRDatabase[tostring(name)][2]]) .. "|r" .. " "  .. icon)
+                GameTooltip:AddLine(Colors.iWR .. L["NoteToolTip"] .. icon .. Colors[tonumber(iWRDatabase[tostring(name)][2])]  .. " " ..  tostring(iWRBase.Types[iWRDatabase[tostring(name)][2]]) .. "|r" .. " "  .. icon)
             else
                 GameTooltip:AddLine(Colors.iWR ..  L["NoteToolTip"] .. tostring(iWRBase.Types[iWRDatabase[tostring(name)][2]]) .. "|r")
             end
             if iWRDatabase[tostring(name)][1] and iWRDatabase[tostring(name)][1] ~= "" then
-                GameTooltip:AddLine(Colors.iWR .. "Note: " .. iWRBase.Color[tonumber(iWRDatabase[tostring(name)][2])] .. tostring(iWRDatabase[tostring(name)][1]) .. "|r")
+                GameTooltip:AddLine(Colors.iWR .. "Note: " .. Colors[tonumber(iWRDatabase[tostring(name)][2])] .. tostring(iWRDatabase[tostring(name)][1]) .. "|r")
             end
         end
     end
@@ -1120,7 +1105,7 @@ function iWR:PopulateDatabase()
             local playerNameText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             playerNameText:SetPoint("LEFT", iconTexture, "RIGHT", 5, 0)
             if data[1] ~= "" then
-                playerNameText:SetText(data[4] .. Colors.iWR .. " (" .. iWRBase.Color[data[2]] .. truncatedNote .. Colors.iWR .. ")")
+                playerNameText:SetText(data[4] .. Colors.iWR .. " (" .. Colors[data[2]] .. truncatedNote .. Colors.iWR .. ")")
             else
                 playerNameText:SetText(data[4])
             end
@@ -1131,11 +1116,11 @@ function iWR:PopulateDatabase()
                 GameTooltip:SetOwner(entryFrame, "ANCHOR_RIGHT")
                 GameTooltip:AddLine(data[4], 1, 1, 1) -- Title (Player Name)
                 if #data[1] <= 30 then
-                    GameTooltip:AddLine("Note: " .. iWRBase.Color[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
+                    GameTooltip:AddLine("Note: " .. Colors[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
                 else
                     local firstLine, secondLine = splitOnSpace(data[1], 30) -- Split text on the nearest space
-                    GameTooltip:AddLine("Note: " .. iWRBase.Color[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
-                    GameTooltip:AddLine(iWRBase.Color[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
+                    GameTooltip:AddLine("Note: " .. Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
+                    GameTooltip:AddLine(Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
                 end
                 
                 if data[6] ~= "" and data[6] ~= nil then
@@ -1342,8 +1327,6 @@ local function ModifyMenuForContext(menuType)
         -- Retrieve the name of the player for whom the menu is opened
         local playerName = contextData.name
         local unitToken = contextData.unitToken
-
-        print(menuType)
 
         -- Check if playerName is available and valid
         if playerName then
