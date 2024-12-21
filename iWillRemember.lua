@@ -348,6 +348,12 @@ local function ColorizePlayerNameByClass(playerName, class)
     end
 end
 
+function RemoveAuthorFromNote(note)
+    -- Pattern to match `(by: Name)` at the end of the string
+    local cleanedNote = note:gsub("%s*%(by:%s[%a%d_%-]+%)$", "")
+    return cleanedNote
+end
+
 -- ╭──────────────────────────────────╮
 -- │      Set New Targeting Frame     │
 -- ╰──────────────────────────────────╯
@@ -479,8 +485,12 @@ end
 -- │      Add New Note      │
 -- ╰────────────────────────╯
 function iWR:AddNewNote(Name, Note, Type)
+    iWRNameInput:ClearFocus()
+    iWRNoteInput:ClearFocus()
     if iWR:InputNotEmpty(Name) then
         if iWR:InputNotEmpty(Note) then
+            local playerName = GetUnitName("player")
+            Note = Note .. Colors.iWR .. " (by: " .. playerName ..")"
             iWR:CreateNote(Name, tostring(Note), Type)
         else
             iWR:CreateNote(Name, "", Type)
@@ -778,6 +788,7 @@ button1:SetSize(53, 62)
 button1:SetPoint("TOP", iWRNoteInput, "BOTTOM", 120, -10)
 button1:SetScript("OnClick", function()
     iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWRBase.Types["Hated"])
+
 end)
 
 -- Add an icon to the button using the iWRBase.Icons table
@@ -1027,7 +1038,7 @@ function iWR:PopulateDatabase()
 
         -- Store playerName and note in the button
         editButton.playerName = data[4]
-        editButton.note = data[1]
+        editButton.note = RemoveAuthorFromNote(data[1])
 
         -- OnClick event to set inputs and open the menu
         editButton:SetScript("OnClick", function(self)

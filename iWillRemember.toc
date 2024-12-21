@@ -1,6 +1,6 @@
 ## Interface: 11506
 ## Title: iWillRemember
-## Version: 0.3.8
+## Version: 0.3.9
 ## Notes: 
 ## Author: Crasling
 
