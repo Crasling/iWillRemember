@@ -1,5 +1,5 @@
 package-as: iWillRemember
-tag: 0.2.5-beta 
+tag: 0.2.6-beta 
 ignore:
   - .git/
   - .gitignore
@@ -11,4 +11,4 @@ ignore:
   - Tests/
   - Tools/
   - Temp/
-
+  - .github/

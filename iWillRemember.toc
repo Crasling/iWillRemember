@@ -1,8 +1,10 @@
 ## Interface: 11302
 ## Title: iWillRemember
-## Version: 0.2.5
+## Version: @project-version@
 ## Notes: 
 ## Author: Crasling
+
+## X-Curse-Project-ID: 1160664
 
 ## DefaultState: Enabled
 ## LoadOnDemand: 0

@@ -181,7 +181,17 @@ function iWR:AddNoteToGameTooltip(self,...)
                     GameTooltip:AddLine(L["iWRBase.Types"][tonumber(iWRDatabase[tostring(name)][1])])
                 end
             else
-                GameTooltip:AddLine(iWRBase.Color[tonumber(iWRDatabase[tostring(name)][2])] .. L["NoteToolTip"] .. tostring(iWRDatabase[tostring(name)][1]).."|r")
+                -- Add the type icon and note to the tooltip
+                local iconPath = iWRBase.Icons[tonumber(iWRDatabase[tostring(name)][2])]
+                if iconPath then
+                    local icon = "|T" .. iconPath .. ":16:16:0:0|t" -- Create the icon string (16x16 size)
+                    GameTooltip:AddLine(Colors.iWR .. L["NoteToolTip"] .. icon .. iWRBase.Color[tonumber(iWRDatabase[tostring(name)][2])]  .. " " ..  tostring(iWRBase.Types[iWRDatabase[tostring(name)][2]]) .. "|r" .. " "  .. icon)
+                else
+                    GameTooltip:AddLine(Colors.iWR ..  L["NoteToolTip"] .. tostring(iWRBase.Types[iWRDatabase[tostring(name)][2]]) .. "|r")
+                end
+                if iWRDatabase[tostring(name)][1] and iWRDatabase[tostring(name)][1] ~= "" then
+                    GameTooltip:AddLine(Colors.iWR .. "Note: " .. iWRBase.Color[tonumber(iWRDatabase[tostring(name)][2])] .. tostring(iWRDatabase[tostring(name)][1]) .. "|r")
+                end                
             end
         end
     end
@@ -1138,7 +1148,7 @@ function iWR:OnEnable()
 
     local playerName = GetUnitName("player")
 
-    if playerName == "Baldvin" or playerName == "Crasling" or playerName == "Enöl" then
+    if playerName == false then
         DebugMsg = true
         print(L["DevLoad"])
     else
