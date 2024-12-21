@@ -1,4 +1,4 @@
-## Interface: 11302
+## Interface: 11506
 ## Title: iWillRemember
 ## Version: 0.3.4
 ## Notes: 
