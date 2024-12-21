@@ -20,10 +20,15 @@ jobs:
 
       - name: Prepare Build Directory
         run: |
+          # Create the build folder and prepare the directory structure
           mkdir -p build
           cp -r ./* build/iWillRemember-temp
-          cd build/iWillRemember-temp && mv * ../iWillRemember
-          cd ../ && zip -r iWillRemember.zip iWillRemember
+          mkdir -p build/iWillRemember
+          mv build/iWillRemember-temp/* build/iWillRemember/
+          
+          # Create the zip file with the correct naming convention
+          cd build
+          zip -r iWillRemember-$(git describe --tags).zip iWillRemember
 
       - name: Clean Temporary Build Directory
         run: |
@@ -33,4 +38,4 @@ jobs:
         uses: BigWigsMods/packager@v2
         with:
           name: iWillRemember
-          path: build/iWillRemember.zip
+          path: build/iWillRemember-$(git describe --tags).zip
