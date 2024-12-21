@@ -212,10 +212,19 @@ end
 -- │      Get Current Time      │
 -- ╰────────────────────────────╯
 local function GetCurrentTimeByHours()
+    -- Extract current time components
     local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
-    local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay)*24 + tonumber(CurrMonth)*720 + tonumber(CurrYear)*8640
-        return tonumber(CurrentTime)
-    end
+
+    -- Calculate the current time in hours
+    local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay) * 24 + tonumber(CurrMonth) * 720 + tonumber(CurrYear) * 8640
+
+    -- Format the current date as YYYY-MM-DD
+    local CurrentDate = string.format("20".."%02d-%02d-%02d", tonumber(CurrYear), tonumber(CurrMonth), tonumber(CurrDay))
+
+    -- Return both the current time in hours and the formatted current date
+    return tonumber(CurrentTime), CurrentDate
+end
+
 
 -- ╭──────────────────────────────╮
 -- │      Update the Tooltip      │
@@ -265,16 +274,27 @@ function iWR:SendFullDBUpdateToFriends()
         local friendName = friendInfo and friendInfo.name
         -- Ensure friendName is valid before printing
         if friendName then
-            iWR:SendCommMessage("iWRFullDBUpdate", DataCache, "WHISPER", friendName)
-            if DebugMsg then
-                print("|cffff9716[iWR]: DEBUG: Successfully shared all notes to: " .. friendName)
-            end
-        else
-            if DebugMsg then
-                print("|cffff9716[iWR]: DEBUG: No friend found at index " .. i)
-            end
+            wipe(DataTimeTable)
+            local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
+            local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay)*24 + tonumber(CurrMonth)*720 + tonumber(CurrYear)*8640
+            for k,v in pairs(iWRDatabase) do
+                if (iWRDatabase[k][3] - CurrentTime) > -800 then --// Update only recent 33 days (800 h)
+                    DataTimeTable[k] = iWRDatabase[k]
+                end
+            end       
+            TimeTableToSend = iWR:Serialize(DataTimeTable)
+            iWR:SendCommMessage("iWRFullDBUpdate", TimeTableToSend, "WHISPER", friendName)
         end
     end
+end
+
+local function splitOnSpace(text, maxLength)
+    -- Find the position of the last space within the maxLength
+    local spacePos = text:sub(1, maxLength):match(".*() ")
+    if not spacePos then
+        spacePos = maxLength -- If no space is found, split at maxLength
+    end
+    return text:sub(1, spacePos), text:sub(spacePos + 1)
 end
 
 -- ╭────────────────────────────────────╮
@@ -307,7 +327,11 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
                     iWRDatabase[k] = v
                 end
             end
-            TargetFrame_Update(TargetFrame)
+            local targetName = UnitName("target")
+            if targetName and targetName ~= "" and NoteName == targetName then
+                TargetFrame_Update(TargetFrame)
+            end
+
             iWR:PopulateDatabase()
             iWR:UpdateTooltip()
         end
@@ -327,7 +351,10 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
           for k,v in pairs(TempTable) do
                 iWRDatabase[k] = v
           end
-          TargetFrame_Update(TargetFrame)
+          local targetName = UnitName("target")
+            if targetName and targetName ~= "" and NoteName == targetName then
+                TargetFrame_Update(TargetFrame)
+            end
           iWR:PopulateDatabase()
           iWR:UpdateTooltip()
           if DebugMsg then
@@ -346,12 +373,6 @@ local function ColorizePlayerNameByClass(playerName, class)
     else
         return Colors.iWR .. playerName .. Colors.Reset
     end
-end
-
-function RemoveAuthorFromNote(note)
-    -- Pattern to match `(by: Name)` at the end of the string
-    local cleanedNote = note:gsub("%s*%(by:%s[%a%d_%-]+%)$", "")
-    return cleanedNote
 end
 
 -- ╭──────────────────────────────────╮
@@ -490,7 +511,6 @@ function iWR:AddNewNote(Name, Note, Type)
     if iWR:InputNotEmpty(Name) then
         if iWR:InputNotEmpty(Note) then
             local playerName = GetUnitName("player")
-            Note = Note .. Colors.iWR .. " (by: " .. playerName ..")"
             iWR:CreateNote(Name, tostring(Note), Type)
         else
             iWR:CreateNote(Name, "", Type)
@@ -545,7 +565,14 @@ function iWR:CreateNote(Name, Note, Type)
     end
 
     local colorCode = string.match(Name, "|c%x%x%x%x%x%x%x%x")
-
+    local NoteAuthor 
+    local playerName = UnitName("player")
+    local _, class = UnitClass("player")
+    if class then
+        NoteAuthor = ColorizePlayerNameByClass(playerName, class)
+    else
+        NoteAuthor = playerName
+    end
     -- Remove color codes from the name
     local uncoloredName = StripColorCodes(Name)
 
@@ -556,12 +583,15 @@ function iWR:CreateNote(Name, Note, Type)
         -- Use the modified name
         NoteName = capitalizedName
 
+        local currentTime, currentDate = GetCurrentTimeByHours()
     -- Save to database using uncolored name
     iWRDatabase[NoteName] = {
         Note,
         Type,
-        GetCurrentTimeByHours(),
+        currentTime,
         Name,
+        currentDate,
+        NoteAuthor,
     }
 
     local targetName = UnitName("target")
@@ -574,14 +604,19 @@ function iWR:CreateNote(Name, Note, Type)
         DataCacheTable[tostring(NoteName)] = {
             Note,
             Type,
-            GetCurrentTimeByHours(),
+            currentTime,
             Name,
+            currentDate,
+            NoteAuthor,
         }
         DataCache = iWR:Serialize(DataCacheTable)
         iWR:SendNewDBUpdateToFriends()
     end
-
-    print(L["CharNoteStart"] .. colorCode .. NoteName .. L["CharNoteEnd"])
+    if colorCode ~= nil then 
+        print(L["CharNoteStart"] .. colorCode .. NoteName .. L["CharNoteEnd"])
+    else
+        print(L["CharNoteStart"] .. NoteName .. L["CharNoteEnd"])
+    end
 end
 
 
@@ -687,7 +722,7 @@ iWRNoteInput = CreateFrame("EditBox", nil, iWRPanel, "InputBoxTemplate")
 iWRNoteInput:SetSize(250, 30)
 iWRNoteInput:SetPoint("TOP", noteTitle, "BOTTOM", 0, -3)
 iWRNoteInput:SetMultiLine(false)
-iWRNoteInput:SetMaxLetters(40)
+iWRNoteInput:SetMaxLetters(66)
 iWRNoteInput:SetAutoFocus(false)
 iWRNoteInput:SetTextColor(1, 1, 1, 1)
 iWRNoteInput:SetText(L["DefaultNoteInput"])
@@ -911,7 +946,7 @@ openDatabaseButtonLabel:SetText("Open DB")
 
 -- Create a new frame to display the database
 iWRDatabaseFrame = CreateFrame("Frame", "DatabaseFrame", UIParent, "BackdropTemplate")
-iWRDatabaseFrame:SetSize(350, 300)
+iWRDatabaseFrame:SetSize(400, 500)
 iWRDatabaseFrame:Hide()
 iWRDatabaseFrame:SetPoint("CENTER", UIParent, "CENTER")
 iWRDatabaseFrame:EnableMouse()
@@ -954,12 +989,12 @@ dbTitleText:SetTextColor(1, 1, 1, 1) -- White text
 
 -- Create a scrollable frame to list database entries
 local dbScrollFrame = CreateFrame("ScrollFrame", nil, iWRDatabaseFrame, "UIPanelScrollFrameTemplate")
-dbScrollFrame:SetPoint("TOP", dbTitleBar, "BOTTOM", 0, -5)
-dbScrollFrame:SetSize(320, 200)
+dbScrollFrame:SetPoint("TOP", dbTitleBar, "BOTTOM", -20, -5)
+dbScrollFrame:SetSize(350, 420)
 
 -- Create a container for the database entries (this will be scrollable)
 local dbContainer = CreateFrame("Frame", nil, dbScrollFrame)
-dbContainer:SetSize(300, 400) -- Make sure it's larger than the scroll area
+dbContainer:SetSize(360, 500) -- Make sure it's larger than the scroll area
 dbScrollFrame:SetScrollChild(dbContainer)
 
 -- Create a close button for the database frame
@@ -971,117 +1006,158 @@ dbCloseButton:SetScript("OnClick", function()
     iWR:DatabaseClose()
 end)
 
--- ╭──────────────────────────────────────────────╮
--- │      Function to Populate Database List      │
--- ╰──────────────────────────────────────────────╯
+-- ╭─────────────────────────────────────────╮
+-- │      Function to Populate Database      │
+-- ╰─────────────────────────────────────────╯
 function iWR:PopulateDatabase()
-    -- Clear the container first
+    -- Clear the container first by hiding all existing child frames
     for _, child in ipairs({dbContainer:GetChildren()}) do
         child:Hide()
     end
 
-    -- Iterate over the iWRDatabase and create an entry for each player
-    local yOffset = -5
+    -- Categorize entries
+    local categorizedData = {}
     for playerName, data in pairs(iWRDatabase) do
-        -- Create a frame to hold the player name, icon, and buttons
-        local entryFrame = CreateFrame("Frame", nil, dbContainer)
-        entryFrame:SetSize(320, 30)
-        entryFrame:SetPoint("TOP", dbContainer, "TOP", 0, yOffset)
+        local category = data[2] or "Uncategorized"
+        categorizedData[category] = categorizedData[category] or {}
+        table.insert(categorizedData[category], { name = playerName, data = data })
+    end
 
-        -- Add the icon for the type
-        local iconTexture = entryFrame:CreateTexture(nil, "ARTWORK")
-        iconTexture:SetSize(20, 20)
-        iconTexture:SetPoint("LEFT", entryFrame, "LEFT", 10, 0)
+    -- Sort categories and entries alphabetically (descending)
+    local sortedCategories = {}
+    for category in pairs(categorizedData) do
+        table.insert(sortedCategories, category)
+    end
+    table.sort(sortedCategories, function(a, b)
+        return a > b -- Reverse alphabetical for categories
+    end)
 
-        -- Set the icon texture based on the type in `iWRBase.Types`
-        local typeIcon = iWRBase.Icons[data[2]]
-        if typeIcon then
-            iconTexture:SetTexture(typeIcon)
-        else
-            iconTexture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark") -- Fallback icon if no match is found
-        end
+    for _, category in ipairs(sortedCategories) do
+        table.sort(categorizedData[category], function(a, b)
+            return a.name > b.name -- Reverse alphabetical for player names
+        end)
+    end
 
-        -- Truncate the note if it exceeds the character limit
-        local truncatedNote = data[1]
-        if truncatedNote and #truncatedNote > 15 then
-            truncatedNote = truncatedNote:sub(1, 12) .. "..."
-        end
+    -- Iterate over categorized data and create entries
+    local yOffset = -5
+    for _, category in ipairs(sortedCategories) do
+        -- Add category label
+        local categoryLabel = dbContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        categoryLabel:SetPoint("TOPLEFT", dbContainer, "TOPLEFT", 5, yOffset)
+        yOffset = yOffset - 20
 
-        -- Create the player name text with truncated note
-        local playerNameText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        playerNameText:SetPoint("LEFT", iconTexture, "RIGHT", 5, 0)
-        if data[1] ~= "" then
-            playerNameText:SetText(data[4] .. Colors.iWR .. " (" .. iWRBase.Color[data[2]] .. truncatedNote .. Colors.iWR .. ")")
-        else
-            playerNameText:SetText(data[4])
-        end
-        playerNameText:SetTextColor(1, 1, 1, 1) -- White text
+        for _, entry in ipairs(categorizedData[category]) do
+            local playerName, data = entry.name, entry.data
 
-        -- Tooltip functionality
-        entryFrame:SetScript("OnEnter", function()
-            GameTooltip:SetOwner(entryFrame, "ANCHOR_RIGHT")
-            GameTooltip:AddLine(data[4], 1, 1, 1) -- Title (Player Name)
-            if data[1] ~= "" then
-                GameTooltip:AddLine("Note: " .. iWRBase.Color[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
+            -- Create a frame to hold the player name, icon, and buttons
+            local entryFrame = CreateFrame("Frame", nil, dbContainer)
+            entryFrame:SetSize(340, 30)
+            entryFrame:SetPoint("TOP", dbContainer, "TOP", 0, yOffset)
+
+            -- Add the icon for the type
+            local iconTexture = entryFrame:CreateTexture(nil, "ARTWORK")
+            iconTexture:SetSize(20, 20)
+            iconTexture:SetPoint("LEFT", entryFrame, "LEFT", 5, 0)
+
+            -- Set the icon texture based on the type in `iWRBase.Types`
+            local typeIcon = iWRBase.Icons[data[2]]
+            if typeIcon then
+                iconTexture:SetTexture(typeIcon)
+            else
+                iconTexture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark") -- Fallback icon if no match is found
             end
-            GameTooltip:Show()
-        end)
-        entryFrame:SetScript("OnLeave", function()
-            GameTooltip:Hide()
-        end)
 
-        -- Create the Edit button for each player
-        local editButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
-        editButton:SetSize(50, 30)
-        editButton:SetPoint("RIGHT", entryFrame, "RIGHT", -60, 0)
-        editButton:SetText("Edit")
+            -- Truncate the note if it exceeds the character limit
+            local truncatedNote = StripColorCodes(data[1])
+            if truncatedNote and #truncatedNote > 15 then
+                truncatedNote = truncatedNote:sub(1, 12) .. "..."
+            end
 
-        -- Store playerName and note in the button
-        editButton.playerName = data[4]
-        editButton.note = RemoveAuthorFromNote(data[1])
+            -- Create the player name text with truncated note
+            local playerNameText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            playerNameText:SetPoint("LEFT", iconTexture, "RIGHT", 5, 0)
+            if data[1] ~= "" then
+                playerNameText:SetText(data[4] .. Colors.iWR .. " (" .. iWRBase.Color[data[2]] .. truncatedNote .. Colors.iWR .. ")")
+            else
+                playerNameText:SetText(data[4])
+            end
+            playerNameText:SetTextColor(1, 1, 1, 1) -- White text
 
-        -- OnClick event to set inputs and open the menu
-        editButton:SetScript("OnClick", function(self)
-            -- Use the stored values from the button
-            iWR:MenuOpen(self.playerName)
-            iWRNameInput:SetText(self.playerName)
-            iWRNoteInput:SetText(self.note or "")
-        end)
+            -- Tooltip functionality
+            entryFrame:SetScript("OnEnter", function()
+                GameTooltip:SetOwner(entryFrame, "ANCHOR_RIGHT")
+                GameTooltip:AddLine(data[4], 1, 1, 1) -- Title (Player Name)
+                if #data[1] <= 30 then
+                    GameTooltip:AddLine("Note: " .. iWRBase.Color[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
+                else
+                    local firstLine, secondLine = splitOnSpace(data[1], 30) -- Split text on the nearest space
+                    GameTooltip:AddLine("Note: " .. iWRBase.Color[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
+                    GameTooltip:AddLine(iWRBase.Color[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
+                end
+                
+                if data[6] ~= "" and data[6] ~= nil then
+                    GameTooltip:AddLine("Author: " .. data[6], 1, 0.82, 0) -- Add author in tooltip
+                end
+                if data[5] ~= "" and data[5] ~= nil then
+                    GameTooltip:AddLine("Date: " .. data[5], 1, 0.82, 0) -- Add date in tooltip
+                end
+                GameTooltip:Show()
+            end)
+            entryFrame:SetScript("OnLeave", function()
+                GameTooltip:Hide()
+            end)
 
-        -- Create the Remove button for each player
-        local removeButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
-        removeButton:SetSize(60, 30)
-        removeButton:SetPoint("RIGHT", entryFrame, "RIGHT", 0, 0)
-        removeButton:SetText("Remove")
-        removeButton:SetScript("OnClick", function()
-            StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
-                text = "Are you sure you want to remove " .. playerName .. " from the database?",
-                button1 = "Yes",
-                button2 = "No",
-                OnAccept = function()
-                    iWRDatabase[playerName] = nil
-                    print("|cffff9716[iWR]: Removed player |r" .. playerName .. " |cffff9716from the database.")
-                    iWR:PopulateDatabase()
-                end,
-                timeout = 0,
-                whileDead = true,
-                hideOnEscape = true,
-                preferredIndex = 3,
-            }
-            StaticPopup_Show("REMOVE_PLAYER_CONFIRM")
-        end)
+            -- Create the Edit button for each player
+            local editButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
+            editButton:SetSize(50, 30)
+            editButton:SetPoint("RIGHT", entryFrame, "RIGHT", -60, 0)
+            editButton:SetText("Edit")
 
-        -- Add a divider below the current entry
-        local divider = entryFrame:CreateTexture(nil, "BACKGROUND")
-        divider:SetPoint("BOTTOMLEFT", entryFrame, "BOTTOMLEFT", 0, -2)
-        divider:SetPoint("BOTTOMRIGHT", entryFrame, "BOTTOMRIGHT", 0, -2)
-        divider:SetHeight(1)
-        divider:SetColorTexture(0.3, 0.3, 0.3, 1)
+            -- Store playerName and note in the button
+            editButton.playerName = data[4]
+            editButton.note = data[1]
 
-        yOffset = yOffset - 40
+            -- OnClick event to set inputs and open the menu
+            editButton:SetScript("OnClick", function(self)
+                iWR:MenuOpen(self.playerName)
+                iWRNameInput:SetText(self.playerName)
+                iWRNoteInput:SetText(self.note or "")
+            end)
+
+            -- Create the Remove button for each player
+            local removeButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
+            removeButton:SetSize(60, 30)
+            removeButton:SetPoint("RIGHT", entryFrame, "RIGHT", 0, 0)
+            removeButton:SetText("Remove")
+            removeButton:SetScript("OnClick", function()
+                StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
+                    text = "Are you sure you want to remove " .. playerName .. " from the database?",
+                    button1 = "Yes",
+                    button2 = "No",
+                    OnAccept = function()
+                        iWRDatabase[playerName] = nil
+                        print("|cffff9716[iWR]: Removed player |r" .. playerName .. " |cffff9716from the database.")
+                        iWR:PopulateDatabase()
+                    end,
+                    timeout = 0,
+                    whileDead = true,
+                    hideOnEscape = true,
+                    preferredIndex = 3,
+                }
+                StaticPopup_Show("REMOVE_PLAYER_CONFIRM")
+            end)
+
+            -- Add a divider below the current entry
+            local divider = entryFrame:CreateTexture(nil, "BACKGROUND")
+            divider:SetPoint("BOTTOMLEFT", entryFrame, "BOTTOMLEFT", 0, -2)
+            divider:SetPoint("BOTTOMRIGHT", entryFrame, "BOTTOMRIGHT", 0, -2)
+            divider:SetHeight(1)
+            divider:SetColorTexture(0.3, 0.3, 0.3, 1)
+
+            yOffset = yOffset - 40
+        end
     end
 end
-
 
 -- ╭──────────────────────────────────────────────────╮
 -- │      Create the "Clear All" Database Button      │
@@ -1142,7 +1218,6 @@ shareDatabaseButton:SetScript("OnClick", function()
     }
     StaticPopup_Show("SHARE_DATABASE_CONFIRM")
 end)
-
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Event Handlers                                │
@@ -1214,7 +1289,7 @@ local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
 
     -- Register the minimap button with LibDBIcon
     LDBIcon:Register("iWillRemember_MinimapButton", minimapButton, {
-        minimapPos = 45,
+        minimapPos = -30,
         radius = 80,
     })
 
@@ -1279,3 +1354,19 @@ combatEventFrame:SetScript("OnEvent", function(self, event)
 end)
 combatEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 combatEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+
+-- ╭──────────────────────────────────╮
+-- │      Event Handler for Login     │
+-- ╰──────────────────────────────────╯
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("FRIENDLIST_UPDATE")
+frame:RegisterEvent("PLAYER_LOGIN") -- To handle when you log in
+
+-- Event handler function
+frame:SetScript("OnEvent", function(self, event, ...)
+    if event == "FRIENDLIST_UPDATE" then
+        iWR:SendFullDBUpdateToFriends()
+    elseif event == "PLAYER_LOGIN" then
+        iWR:SendFullDBUpdateToFriends()
+    end
+end)

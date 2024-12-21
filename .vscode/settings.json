@@ -11,7 +11,10 @@
         "SlashCmdList",
         "GameFontHighlightSmall",
         "Add",
-        "DEFAULT_CHAT_FRAME"
+        "DEFAULT_CHAT_FRAME",
+        "AddonCompartmentFrame",
+        "FCFDock_GetSelectedWindow",
+        "GENERAL_CHAT_DOCK"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {
