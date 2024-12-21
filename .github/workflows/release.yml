@@ -21,11 +21,11 @@ jobs:
       - name: Prepare Package
         run: |
           mkdir build
-          cp -r . ./build/iWillRemember  # Ensure folder inside zip is named `iWillRemember`
+          rsync -av --progress ./ ./build/iWillRemember --exclude build --exclude .git --exclude .github
           cd build
           zip -r "iWillRemember-${GITHUB_REF##*/}.zip" iWillRemember
         env:
-          GITHUB_REF: ${{ github.ref_name }} # Extracts the tag name (e.g., 0.2.6-beta)
+          GITHUB_REF: ${{ github.ref_name }}
 
       - name: Publish Release
         uses: BigWigsMods/packager@v2
