@@ -1,0 +1,42 @@
+name: Release AddOn
+
+on:
+  push:
+    tags:
+      - '*' # Trigger on any tag
+
+env:
+  CF_API_KEY: ${{ secrets.CF_API_KEY }}
+  GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for tags
+
+      - name: Prepare Build Directory
+        run: |
+          # Ensure the build directory exists
+          mkdir -p build
+
+          # Create a clean folder structure for the add-on
+          mkdir -p build/iWillRemember
+          
+          # Copy repository files to the final folder
+          cp -r $(ls -A | grep -v build) build/iWillRemember/
+          
+          # Navigate to the build directory
+          cd build
+
+          # Create the zip file with the tag in the name
+          zip -r iWillRemember-$(git describe --tags).zip iWillRemember
+
+      - name: Publish to CurseForge
+        uses: BigWigsMods/packager@v2
+        with:
+          name: iWillRemember
+          path: build/iWillRemember-$(git describe --tags).zip
