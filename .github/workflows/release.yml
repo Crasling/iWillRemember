@@ -22,6 +22,10 @@ jobs:
         run: |
           mkdir build
           rsync -av --progress ./ ./build/iWillRemember --exclude build --exclude .git --exclude .github
+          mv build/iWillRemember build/iWillRemember-temp
+          mkdir build/iWillRemember
+          mv build/iWillRemember-temp/* build/iWillRemember
+          rmdir build/iWillRemember-temp
           cd build
           zip -r "iWillRemember-${GITHUB_REF##*/}.zip" iWillRemember
         env:
