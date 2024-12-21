@@ -20,9 +20,13 @@ jobs:
 
       - name: Prepare Build Directory
         run: |
-          # Create the build folder and prepare the directory structure
-          mkdir -p build
-          cp -r ./* build/iWillRemember-temp
+          # Ensure the build directory and temporary directory exist
+          mkdir -p build/iWillRemember-temp
+          
+          # Copy repository files to the temporary directory
+          cp -r ./* build/iWillRemember-temp/
+          
+          # Move files to the final iWillRemember folder
           mkdir -p build/iWillRemember
           mv build/iWillRemember-temp/* build/iWillRemember/
           
