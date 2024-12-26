@@ -454,17 +454,47 @@ local function AddRelationshipIconToChat(self, event, message, author, flags, ..
 end
 
 local function RegisterChatFilters()
-    local events = {
+    local chatEvents = {
         "CHAT_MSG_CHANNEL",
         "CHAT_MSG_SAY",
         "CHAT_MSG_YELL",
         "CHAT_MSG_GUILD",
+        "CHAT_MSG_OFFICER",
         "CHAT_MSG_PARTY",
+        "CHAT_MSG_PARTY_LEADER",
         "CHAT_MSG_RAID",
+        "CHAT_MSG_RAID_LEADER",
+        "CHAT_MSG_RAID_WARNING",
+--       "CHAT_MSG_BATTLEGROUND",
+--       "CHAT_MSG_BATTLEGROUND_LEADER",
         "CHAT_MSG_WHISPER",
+        "CHAT_MSG_WHISPER_INFORM",
+        "CHAT_MSG_INSTANCE_CHAT",
+        "CHAT_MSG_INSTANCE_CHAT_LEADER",
+        "CHAT_MSG_EMOTE",
+        "CHAT_MSG_TEXT_EMOTE",
+        "CHAT_MSG_SYSTEM",
+        "CHAT_MSG_MONSTER_SAY",
+        "CHAT_MSG_MONSTER_YELL",
+        "CHAT_MSG_MONSTER_EMOTE",
+        "CHAT_MSG_MONSTER_WHISPER",
+        "CHAT_MSG_MONSTER_PARTY",
+        "CHAT_MSG_ACHIEVEMENT",
+        "CHAT_MSG_LOOT",
+        "CHAT_MSG_BG_SYSTEM_NEUTRAL",
+        "CHAT_MSG_BG_SYSTEM_ALLIANCE",
+        "CHAT_MSG_BG_SYSTEM_HORDE",
+        "CHAT_MSG_CHANNEL_NOTICE",
+        "CHAT_MSG_CHANNEL_NOTICE_USER",
+        "CHAT_MSG_IGNORED",
+        "CHAT_MSG_COMBAT_FACTION_CHANGE",
+        "CHAT_MSG_COMBAT_HONOR_GAIN",
+        "CHAT_MSG_COMBAT_MISC_INFO",
+        "CHAT_MSG_DND",
+        "CHAT_MSG_AFK",
     }
 
-    for _, event in ipairs(events) do
+    for _, event in ipairs(chatEvents) do
         ChatFrame_AddMessageEventFilter(event, AddRelationshipIconToChat)
     end
 end
