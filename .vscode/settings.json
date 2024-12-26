@@ -17,7 +17,11 @@
         "GENERAL_CHAT_DOCK",
         "UIDropDownMenu_AddButton",
         "UIDROPDOWNMENU_MENU_LEVEL",
-        "UIDropDownMenu_CreateInfo"
+        "UIDropDownMenu_CreateInfo",
+        "ChatFrame_AddMessageEventFilter",
+        "ChatFrame_GetMessageEventFilters",
+        "NUM_CHAT_WINDOWS",
+        "message"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {

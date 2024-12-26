@@ -201,7 +201,6 @@ local function GetCurrentTimeByHours()
     return tonumber(CurrentTime), CurrentDate
 end
 
-
 -- ╭──────────────────────────────╮
 -- │      Update the Tooltip      │
 -- ╰──────────────────────────────╯
@@ -212,7 +211,6 @@ function iWR:UpdateTooltip()
         tooltip:Show() -- Trigger it to show again with updated info
     end
 end
-
 
 -- ╭──────────────────────────────────────────────╮
 -- │      Sending Latest Note to Friendslist      │
@@ -437,6 +435,37 @@ function iWR:SetTargetingFrame()
                 print("|cffff9716[iWR]: DEBUG: Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was found in Database")
             end
         end
+    end
+end
+
+local function AddRelationshipIconToChat(self, event, message, author, flags, ...)
+    -- Extract the base player name without the realm
+    local authorName = string.match(author, "^[^-]+") or author
+
+    -- Check if the author exists in your database
+    if iWRDatabase[authorName] then
+        local iconPath = iWRBase.Icons[iWRDatabase[authorName][2]] or "Interface\\Icons\\INV_Misc_QuestionMark"
+        local iconString = "|T" .. iconPath .. ":12|t"
+        flags = iconString
+    end
+
+    -- Return the modified message and the original author
+    return false, message, author, flags, ...
+end
+
+local function RegisterChatFilters()
+    local events = {
+        "CHAT_MSG_CHANNEL",
+        "CHAT_MSG_SAY",
+        "CHAT_MSG_YELL",
+        "CHAT_MSG_GUILD",
+        "CHAT_MSG_PARTY",
+        "CHAT_MSG_RAID",
+        "CHAT_MSG_WHISPER",
+    }
+
+    for _, event in ipairs(events) do
+        ChatFrame_AddMessageEventFilter(event, AddRelationshipIconToChat)
     end
 end
 
@@ -1164,7 +1193,7 @@ function iWR:PopulateDatabase()
                     button2 = "No",
                     OnAccept = function()
                         iWRDatabase[playerName] = nil
-                        print("|cffff9716[iWR]: Removed player |r" .. playerName .. " |cffff9716from the database.")
+                        print(L["CharNoteStart"] .. playerName .. "|cffff9716] removed from database.")
                         iWR:PopulateDatabase()
                     end,
                     timeout = 0,
@@ -1317,6 +1346,8 @@ local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
 
     -- Register the minimap button with LibDBIcon
     LDBIcon:Register("iWillRemember_MinimapButton", minimapButton, {
+        hide = false,
+        lock = false,
         minimapPos = -30,
         radius = 80,
     })
@@ -1353,6 +1384,8 @@ local function ModifyMenuForContext(menuType)
     end)
 end
 
+-- Call to register filters
+RegisterChatFilters()
 -- Modify the right-click menu for players
 ModifyMenuForContext("MENU_UNIT_PLAYER")
 ModifyMenuForContext("MENU_UNIT_PARTY")

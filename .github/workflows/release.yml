@@ -38,8 +38,8 @@ jobs:
       - name: Extract Tag Changelog
         id: changelog
         run: |
-          # Extract the tag description as the changelog
-          changelog=$(git for-each-ref refs/tags --format='%(contents)' --count=1 | sed '/^$/d')
+          # Extract the current tag's annotated message
+          changelog=$(git tag -l --format='%(contents)' $(git describe --tags))
           echo "::set-output name=changelog::$changelog"
 
       - name: Publish to CurseForge
