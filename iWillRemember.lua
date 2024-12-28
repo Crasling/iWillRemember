@@ -213,6 +213,31 @@ function iWR:UpdateTooltip()
 end
 
 -- ╭──────────────────────────────────────────────╮
+-- │      Sending Remove Note to Friendslist      │
+-- ╰──────────────────────────────────────────────╯
+function iWR:SendRemoveRequestToFriends(name)
+    -- Loop through all friends in the friend list
+    for i = 1, C_FriendList.GetNumFriends() do
+        -- Get friend's info (which includes friendName)
+        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+        -- Extract the friend's name from the table
+        local friendName = friendInfo and friendInfo.name
+        DataCache = iWR:Serialize(name)
+        -- Ensure friendName is valid before printing
+        if friendName then
+            iWR:SendCommMessage("iWRRemDBUpdate", DataCache, "WHISPER", friendName)
+            if DebugMsg then
+                print("|cffff9716[iWR]: DEBUG: Successfully shared remove request to: " .. friendName)
+            end
+        else
+            if DebugMsg then
+                print("|cffff9716[iWR]: DEBUG: No friend found at index " .. i)
+            end
+        end
+    end
+end
+
+-- ╭──────────────────────────────────────────────╮
 -- │      Sending Latest Note to Friendslist      │
 -- ╰──────────────────────────────────────────────╯
 function iWR:SendNewDBUpdateToFriends()
@@ -389,6 +414,70 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
     wipe(TempTable)
 end
 
+-- ╭──────────────────────────────────────────╮
+-- │      Remove from Database Update         │
+-- ╰──────────────────────────────────────────╯
+function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
+    -- Check if the sender is the player itself
+    if GetUnitName("player", false) == sender then return end
+
+    -- Verify the sender is on the friends list
+    local isFriend = false
+    local numFriends = C_FriendList.GetNumFriends()
+    for i = 1, numFriends do
+        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+        if friendInfo and friendInfo.name == sender then
+            isFriend = true
+            break
+        end
+    end
+
+    -- If the sender is not a friend, skip processing
+    if not isFriend then
+        if DebugMsg then
+            print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
+        end
+        return
+    end
+
+    -- Deserialize the message
+    Success, NoteName = iWR:Deserialize(message)
+    if not Success then
+        if DebugMsg then
+            print("|cffff9716[iWR]: DEBUG: OnRemoveDBUpdate Error")
+        end
+    else
+        if not iWRDatabase[NoteName] then
+            if DebugMsg then
+                print("|cffff9716[iWR]: DEBUG: " .. sender .. " Sent remove request on a player not existing in your database. Ignoring update.")
+            end
+            return
+        end
+        local targetName = UnitName("target")
+        if targetName and targetName ~= "" and NoteName == targetName then
+            TargetFrame_Update(TargetFrame)
+        end
+        StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
+            text = sender .. "Your friend ".. sender .. " removed " .. iWRDatabase[NoteName][6] .. " from their database. Do You also want to remove " .. iWRDatabase[NoteName][6] .. " from your database?",
+            button1 = "Yes",
+            button2 = "No",
+            OnAccept = function()
+                iWRDatabase[NoteName] = nil
+                print(L["CharNoteStart"] .. NoteName .. "|cffff9716] removed from database.")
+                iWR:PopulateDatabase()
+                iWR:UpdateTooltip()
+            end,
+            timeout = 0,
+            whileDead = true,
+            hideOnEscape = true,
+            preferredIndex = 3,
+        }
+
+        if DebugMsg then
+            print("|cffff9716[iWR]: DEBUG: remove request received from: " .. sender)
+        end
+    end
+end
 
 -- ╭────────────────────────────────────────╮
 -- │      Colorize Player Name by Class     │
@@ -609,7 +698,7 @@ function iWR:ClearNote(Name)
             if uncoloredName == targetName then
                 TargetFrame_Update(TargetFrame)
             end
-
+            iWR:SendRemoveRequestToFriends(uncoloredName)
             print(L["CharNoteStart"] .. Name .. "|cffff9716] removed from database.")
         else
             -- Notify that the name was not found in the database
@@ -1207,6 +1296,7 @@ function iWR:PopulateDatabase()
                         iWRDatabase[playerName] = nil
                         print(L["CharNoteStart"] .. playerName .. "|cffff9716] removed from database.")
                         iWR:PopulateDatabase()
+                        iWR:SendRemoveRequestToFriends(playerName)
                     end,
                     timeout = 0,
                     whileDead = true,
@@ -1301,7 +1391,8 @@ function iWR:OnEnable()
     -- Activate DataSharing
     iWR:RegisterComm("iWRFullDBUpdate", "OnFullDBUpdate")
     iWR:RegisterComm("iWRNewDBUpdate", "OnNewDBUpdate")
-
+    iWR:RegisterComm("iWRRemBUpdate", "OnRemDBUpdate")
+    
     local playerName = GetUnitName("player")
 
     if playerName == false then
