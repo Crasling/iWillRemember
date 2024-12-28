@@ -421,6 +421,10 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     -- Check if the sender is the player itself
     if GetUnitName("player", false) == sender then return end
 
+    if DebugMsg then
+        print("|cffff9716[iWR]: DEBUG: Remove request successfully received by " .. sender)
+    end
+
     -- Verify the sender is on the friends list
     local isFriend = false
     local numFriends = C_FriendList.GetNumFriends()
@@ -588,18 +592,23 @@ end
 -- ╭────────────────────────────╮
 -- │      Open Menu Window      │
 -- ╰────────────────────────────╯
-function iWR:MenuOpen(Name)
+function iWR:MenuOpen(menuName)
     if not InCombat then
         iWRPanel:Show()
-        iWRNameInput:SetText(L["DefaultNameInput"])
-        iWRNoteInput:SetText(L["DefaultNoteInput"])
-        if UnitExists("target") and UnitIsPlayer("target") then
-            local playerName = UnitName("target")
-            local _, class = UnitClass("target")
-            if class then
-                iWRNameInput:SetText(ColorizePlayerNameByClass(playerName, class))
-            else
-                iWRNameInput:SetText(playerName)
+        if menuName ~= "" and menuName and menuName ~= UnitName("target") then
+            iWRNameInput:SetText(menuName)
+            iWRNoteInput:SetText(L["DefaultNoteInput"])
+        else
+            iWRNameInput:SetText(L["DefaultNameInput"])
+            iWRNoteInput:SetText(L["DefaultNoteInput"])
+            if UnitExists("target") and UnitIsPlayer("target") then
+                local playerName = UnitName("target")
+                local _, class = UnitClass("target")
+                if class then
+                    iWRNameInput:SetText(ColorizePlayerNameByClass(playerName, class))
+                else
+                    iWRNameInput:SetText(playerName)
+                end
             end
         end
     else
@@ -1387,12 +1396,12 @@ function iWR:OnEnable()
     -- Secure hooks to add custom behavior
     self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
     self:SecureHook("TargetFrame_Update", "SetTargetingFrame")
-    
+
     -- Activate DataSharing
     iWR:RegisterComm("iWRFullDBUpdate", "OnFullDBUpdate")
     iWR:RegisterComm("iWRNewDBUpdate", "OnNewDBUpdate")
-    iWR:RegisterComm("iWRRemBUpdate", "OnRemDBUpdate")
-    
+    iWR:RegisterComm("iWRRemDBUpdate", "OnRemDBUpdate")
+
     local playerName = GetUnitName("player")
 
     if playerName == false then
@@ -1401,7 +1410,6 @@ function iWR:OnEnable()
     else
         DebugMsg = false
     end
-    
 
     -- Print a message to the chat frame when the addon is loaded
     print(L["iWRLoaded"] .. " v" .. Version)

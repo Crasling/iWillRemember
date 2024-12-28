@@ -21,7 +21,8 @@
         "ChatFrame_AddMessageEventFilter",
         "ChatFrame_GetMessageEventFilters",
         "NUM_CHAT_WINDOWS",
-        "message"
+        "message",
+        "class"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {
