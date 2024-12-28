@@ -1,7 +1,7 @@
 ## Interface: 11505
 ## Title: iWillRemember
-## Version: 0.5.2
-## Notes: 
+## Version: 0.5.3
+## Notes: Personalized Player Notes Addon
 ## Author: Crasling
 
 ## X-Curse-Project-ID: 1160664
