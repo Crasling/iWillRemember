@@ -241,11 +241,11 @@ function iWR:SendRemoveRequestToFriends(name)
             if friendName then
                 iWR:SendCommMessage("iWRRemDBUpdate", DataCache, "WHISPER", friendName)
                 if iWRSettings.DebugMode then
-                    print("|cffff9716[iWR]: DEBUG: Successfully shared remove request to: " .. friendName)
+                    print("|cffff9716[iWR]: DEBUG: Successfully shared remove request to: " .. friendName .. ".")
                 end
             else
                 if iWRSettings.DebugMode then
-                    print("|cffff9716[iWR]: DEBUG: No friend found at index " .. i)
+                    print("|cffff9716[iWR]: DEBUG: No friend found at index " .. i .. ".")
                 end
             end
         end
@@ -266,11 +266,11 @@ function iWR:SendNewDBUpdateToFriends()
         if friendName then
             iWR:SendCommMessage("iWRNewDBUpdate", DataCache, "WHISPER", friendName)
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: Successfully shared new note to: " .. friendName)
+                print("|cffff9716[iWR]: DEBUG: Successfully shared new note to: " .. friendName .. ".")
             end
         else
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: No friend found at index " .. i)
+                print("|cffff9716[iWR]: DEBUG: No friend found at index " .. i .. ".")
             end
         end
     end
@@ -280,6 +280,9 @@ end
 -- │      Sending All Notes to Friendslist      │
 -- ╰────────────────────────────────────────────╯
 function iWR:SendFullDBUpdateToFriends()
+    if iWRSettings.DebugMode then
+        print("|cffff9716[iWR]: DEBUG: Sending full database data.")
+    end
     -- Loop through all friends in the friend list
     for i = 1, C_FriendList.GetNumFriends() do
         -- Get friend's info (which includes friendName)
@@ -349,11 +352,11 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
         Success, FullNotesTable = iWR:Deserialize(message)
         if not Success then
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: OnFullDBUpdate Error")
+                print("|cffff9716[iWR]: DEBUG: OnFullDBUpdate Error.")
             end
         else
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: Data received from: " .. sender)
+                print("|cffff9716[iWR]: DEBUG: Full database data received from: " .. sender .. ".")
             end
             for k, v in pairs(FullNotesTable) do
                 if iWRDatabase[k] then
@@ -407,7 +410,7 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
         Success, TempTable = iWR:Deserialize(message)
         if not Success then
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: OnNewDBUpdate Error")
+                print("|cffff9716[iWR]: DEBUG: OnNewDBUpdate Error.")
             end
         else
             for k, v in pairs(TempTable) do
@@ -423,7 +426,7 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
             iWR:UpdateTooltip()
 
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: Data received from: " .. sender)
+                print("|cffff9716[iWR]: DEBUG: New database data received from: " .. sender .. ".")
             end
         end
 
@@ -440,7 +443,7 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     if GetUnitName("player", false) == sender then return end
 
     if iWRSettings.DebugMode then
-        print("|cffff9716[iWR]: DEBUG: Remove request successfully received by " .. sender)
+        print("|cffff9716[iWR]: DEBUG: Remove request successfully received by " .. sender .. ".")
     end
 
     -- Verify the sender is on the friends list
@@ -474,7 +477,7 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     -- Ensure NoteName is valid and exists in the database
     if not NoteName or not iWRDatabase[NoteName] then
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: Received remove request for a non-existent player: " .. (NoteName or "nil"))
+            print("|cffff9716[iWR]: DEBUG: Received remove request for a non-existent player: " .. (NoteName or "nil") .. ".")
         end
         return -- Exit if the player does not exist in the database
     end
@@ -487,7 +490,7 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
 
     -- Prompt the user with a confirmation dialog to remove the note
     StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
-        text = "Your friend " .. sender .. " removed " .. NoteName .. " from their iWR database. Do you also want to remove " .. NoteName .. " from your iWR database?",
+        text = "Your friend " .. sender .. " removed [" .. NoteName .. "] from their iWR database. Do you also want to remove [" .. NoteName .. "] from your iWR database?",
         button1 = "Yes",
         button2 = "No",
         OnAccept = function()
@@ -506,7 +509,7 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
 
     -- Debug message for successful handling
     if iWRSettings.DebugMode then
-        print("|cffff9716[iWR]: DEBUG: Remove request processed for player: " .. NoteName .. " from sender: " .. sender)
+        print("|cffff9716[iWR]: DEBUG: Remove request processed for player: " .. NoteName .. " from sender: " .. sender .. ".")
     end
 end
 
@@ -535,7 +538,7 @@ function iWR:SetTargetingFrame()
                 iWRNameInput:SetText(playerName)
             end
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was not found in Database")
+                print("|cffff9716[iWR]: DEBUG: Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was not found in Database.")
             end
         end
         return
@@ -552,7 +555,7 @@ function iWR:SetTargetingFrame()
             end
             TargetFrameTextureFrameTexture:SetTexture(iWRBase.TargetFrames[iWRDatabase[tostring(GetUnitName("target", false))][2]]);
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was found in Database")
+                print("|cffff9716[iWR]: DEBUG: Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was found in Database.")
             end
         end
     end
@@ -735,7 +738,7 @@ function iWR:AddNewNote(Name, Note, Type)
         iWR:PopulateDatabase()
     else
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: NameInput error: [|r" .. (Name or "nil") .. "|cffff9716]")
+            print("|cffff9716[iWR]: DEBUG: NameInput error: [|r" .. (Name or "nil") .. "|cffff9716].")
         end
     end
 end
@@ -766,7 +769,7 @@ function iWR:ClearNote(Name)
             end
         else
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: NameInput error: [|r" .. (Name or "nil") .. "|cffff9716]")
+                print("|cffff9716[iWR]: DEBUG: NameInput error: [|r" .. (Name or "nil") .. "|cffff9716].")
             end
         end
     end
@@ -778,9 +781,9 @@ end
 -- ╰───────────────────────────╯
 function iWR:CreateNote(Name, Note, Type)
     if iWRSettings.DebugMode then
-        print("|cffff9716[iWR]: DEBUG: New note Name: [|r" .. Name .. "|cffff9716]")
-        print("|cffff9716[iWR]: DEBUG: New note Note: [|r" .. Note .. "|cffff9716]")
-        print("|cffff9716[iWR]: DEBUG: New note Type: [|r" .. Type .. "|cffff9716]")
+        print("|cffff9716[iWR]: DEBUG: New note Name: [|r" .. Name .. "|cffff9716].")
+        print("|cffff9716[iWR]: DEBUG: New note Note: [|r" .. Note .. "|cffff9716].")
+        print("|cffff9716[iWR]: DEBUG: New note Type: [|r" .. Type .. "|cffff9716].")
     end
 
     local colorCode = string.match(Name, "|c%x%x%x%x%x%x%x%x")
@@ -1476,7 +1479,6 @@ debugCheckbox:SetChecked(iWRSettings.DebugMode or false) -- Initialize from sett
 debugCheckbox:SetScript("OnClick", function(self)
     local isDebugEnabled = self:GetChecked()
     iWRSettings.DebugMode = isDebugEnabled
-    print("Debug Mode Updated: " .. tostring(isDebugEnabled)) -- Debug message
 end)
 
 -- Chat Icon Size Dropdown
@@ -1584,11 +1586,11 @@ Settings.RegisterAddOnCategory(optionsCategory)
             -- Check if playerName is available and valid
             if playerName then
                 if iWRSettings.DebugMode then
-                    print("|cffff9716[iWR]: DEBUG: Right-click menu opened for:", playerName)
+                    print("|cffff9716[iWR]: DEBUG: Right-click menu opened for:", playerName .. ".")
                 end
             else
                 if iWRSettings.DebugMode then
-                    print("|cffff9716[iWR]: DEBUG: No player name found for menu type:", menuType)
+                    print("|cffff9716[iWR]: DEBUG: No player name found for menu type:", menuType .. ".")
                 end
             end
 
@@ -1615,9 +1617,9 @@ Settings.RegisterAddOnCategory(optionsCategory)
     ModifyMenuForContext("MENU_UNIT_ENEMY_PLAYER")
 end
 
--- ╭────────────────────────────────────────────╮
+-- ╭───────────────────────────────────────────╮
 -- │      Event Handler for Combat Events      │
--- ╰────────────────────────────────────────────╯
+-- ╰───────────────────────────────────────────╯
 local combatEventFrame = CreateFrame("Frame")
 InCombat = false
 combatEventFrame:SetScript("OnEvent", function(self, event)
@@ -1643,13 +1645,11 @@ combatEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 -- ╰──────────────────────────────────╯
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("FRIENDLIST_UPDATE")
-frame:RegisterEvent("PLAYER_LOGIN") -- To handle when you log in
+frame:RegisterEvent("PLAYER_LOGIN")
 
 -- Event handler function
 frame:SetScript("OnEvent", function(self, event, ...)
-    if event == "FRIENDLIST_UPDATE" then
-        iWR:SendFullDBUpdateToFriends()
-    elseif event == "PLAYER_LOGIN" then
+    if event == "PLAYER_LOGIN" then
         iWR:SendFullDBUpdateToFriends()
     end
 end)
