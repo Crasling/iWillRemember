@@ -22,7 +22,11 @@
         "ChatFrame_GetMessageEventFilters",
         "NUM_CHAT_WINDOWS",
         "message",
-        "class"
+        "class",
+        "UIDropDownMenu_SetWidth",
+        "UIDropDownMenu_SetText",
+        "UIDropDownMenu_Initialize",
+        "Settings"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {

@@ -33,7 +33,7 @@ local DataCache
 local addonpath = "Classic"
 local TempTable = {}
 local DataCacheTable = {}
-local DataTimeTable = {}
+local FullTableToSend = {}
 local iWRBase = {}
 local InCombat
 
@@ -226,11 +226,11 @@ function iWR:SendRemoveRequestToFriends(name)
         -- Ensure friendName is valid before printing
         if friendName then
             iWR:SendCommMessage("iWRRemDBUpdate", DataCache, "WHISPER", friendName)
-            if DebugMsg then
+            if iWRSettings.DebugMode then
                 print("|cffff9716[iWR]: DEBUG: Successfully shared remove request to: " .. friendName)
             end
         else
-            if DebugMsg then
+            if iWRSettings.DebugMode then
                 print("|cffff9716[iWR]: DEBUG: No friend found at index " .. i)
             end
         end
@@ -250,11 +250,11 @@ function iWR:SendNewDBUpdateToFriends()
         -- Ensure friendName is valid before printing
         if friendName then
             iWR:SendCommMessage("iWRNewDBUpdate", DataCache, "WHISPER", friendName)
-            if DebugMsg then
+            if iWRSettings.DebugMode then
                 print("|cffff9716[iWR]: DEBUG: Successfully shared new note to: " .. friendName)
             end
         else
-            if DebugMsg then
+            if iWRSettings.DebugMode then
                 print("|cffff9716[iWR]: DEBUG: No friend found at index " .. i)
             end
         end
@@ -273,16 +273,16 @@ function iWR:SendFullDBUpdateToFriends()
         local friendName = friendInfo and friendInfo.name
         -- Ensure friendName is valid before printing
         if friendName then
-            wipe(DataTimeTable)
+            wipe(DataCacheTable)
             local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
             local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay)*24 + tonumber(CurrMonth)*720 + tonumber(CurrYear)*8640
             for k,v in pairs(iWRDatabase) do
                 if (iWRDatabase[k][3] - CurrentTime) > -800 then --// Update only recent 33 days (800 h)
-                    DataTimeTable[k] = iWRDatabase[k]
+                    DataCacheTable[k] = iWRDatabase[k]
                 end
-            end       
-            TimeTableToSend = iWR:Serialize(DataTimeTable)
-            iWR:SendCommMessage("iWRFullDBUpdate", TimeTableToSend, "WHISPER", friendName)
+            end   
+            FullTableToSend = iWR:Serialize(DataCacheTable)
+            iWR:SendCommMessage("iWRFullDBUpdate", FullTableToSend, "WHISPER", friendName)
         end
     end
 end
@@ -307,111 +307,114 @@ end
 -- │      Full Database Update        │
 -- ╰──────────────────────────────────╯
 function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
-    -- Check if the sender is the player itself
-    if GetUnitName("player", false) == sender then return end
+    if iWRSettings.DataSharing then
+        -- Check if the sender is the player itself
+        if GetUnitName("player", false) == sender then return end
 
-    -- Verify the sender is on the friends list
-    local isFriend = false
-    local numFriends = C_FriendList.GetNumFriends()
-    for i = 1, numFriends do
-        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-        if friendInfo and friendInfo.name == sender then
-            isFriend = true
-            break
-        end
-    end
-
-    -- If the sender is not a friend, skip processing
-    if not isFriend then
-        if DebugMsg then
-            print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
-        end
-        return
-    end
-
-    -- Deserialize the message
-    Success, FullNotesTable = iWR:Deserialize(message)
-    if not Success then
-        if DebugMsg then
-            print("|cffff9716[iWR]: DEBUG: OnFullDBUpdate Error")
-        end
-    else
-        if DebugMsg then
-            print("|cffff9716[iWR]: DEBUG: Data received from: " .. sender)
-        end
-        for k, v in pairs(FullNotesTable) do
-            if iWRDatabase[k] then
-                if IsNeedToUpdate((iWRDatabase[k][3]), v[3]) then
-                    iWRDatabase[k] = v
-                end
-            else
-                iWRDatabase[k] = v
+        -- Verify the sender is on the friends list
+        local isFriend = false
+        local numFriends = C_FriendList.GetNumFriends()
+        for i = 1, numFriends do
+            local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+            if friendInfo and friendInfo.name == sender then
+                isFriend = true
+                break
             end
         end
 
-        local targetName = UnitName("target")
-        if targetName and targetName ~= "" and NoteName == targetName then
-            TargetFrame_Update(TargetFrame)
+        -- If the sender is not a friend, skip processing
+        if not isFriend then
+            if iWRSettings.DebugMode then
+                print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
+            end
+            return
         end
 
-        iWR:PopulateDatabase()
-        iWR:UpdateTooltip()
+        -- Deserialize the message
+        Success, FullNotesTable = iWR:Deserialize(message)
+        if not Success then
+            if iWRSettings.DebugMode then
+                print("|cffff9716[iWR]: DEBUG: OnFullDBUpdate Error")
+            end
+        else
+            if iWRSettings.DebugMode then
+                print("|cffff9716[iWR]: DEBUG: Data received from: " .. sender)
+            end
+            for k, v in pairs(FullNotesTable) do
+                if iWRDatabase[k] then
+                    if IsNeedToUpdate((iWRDatabase[k][3]), v[3]) then
+                        iWRDatabase[k] = v
+                    end
+                else
+                    iWRDatabase[k] = v
+                end
+            end
+
+            local targetName = UnitName("target")
+            if targetName and targetName ~= "" and NoteName == targetName then
+                TargetFrame_Update(TargetFrame)
+            end
+
+            iWR:PopulateDatabase()
+            iWR:UpdateTooltip()
+        end
     end
 end
-
 
 -- ╭──────────────────────────────────╮
 -- │      New Database Update         │
 -- ╰──────────────────────────────────╯
 function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
-    -- Check if the sender is the player itself
-    if GetUnitName("player", false) == sender then return end
+    if iWRSettings.DataSharing then
+        -- Check if the sender is the player itself
+        if GetUnitName("player", false) == sender then return end
 
-    -- Verify the sender is on the friends list
-    local isFriend = false
-    local numFriends = C_FriendList.GetNumFriends()
-    for i = 1, numFriends do
-        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-        if friendInfo and friendInfo.name == sender then
-            isFriend = true
-            break
+        -- Verify the sender is on the friends list
+        local isFriend = false
+        local numFriends = C_FriendList.GetNumFriends()
+        for i = 1, numFriends do
+            local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+            if friendInfo and friendInfo.name == sender then
+                isFriend = true
+                break
+            end
         end
+
+        -- If the sender is not a friend, skip processing
+        if not isFriend then
+            if iWRSettings.DebugMode then
+                print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
+            end
+            return
+        end
+
+        -- Deserialize the message
+        Success, TempTable = iWR:Deserialize(message)
+        if not Success then
+            if iWRSettings.DebugMode then
+                print("|cffff9716[iWR]: DEBUG: OnNewDBUpdate Error")
+            end
+        else
+            for k, v in pairs(TempTable) do
+                iWRDatabase[k] = v
+            end
+
+            local targetName = UnitName("target")
+            if targetName and targetName ~= "" and NoteName == targetName then
+                TargetFrame_Update(TargetFrame)
+            end
+
+            iWR:PopulateDatabase()
+            iWR:UpdateTooltip()
+
+            if iWRSettings.DebugMode then
+                print("|cffff9716[iWR]: DEBUG: Data received from: " .. sender)
+            end
+        end
+
+        -- Clean up the temporary table
+        wipe(TempTable)
     end
-
-    -- If the sender is not a friend, skip processing
-    if not isFriend then
-        if DebugMsg then
-            print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
-        end
-        return
-    end
-
-    -- Deserialize the message
-    Success, TempTable = iWR:Deserialize(message)
-    if not Success then
-        if DebugMsg then
-            print("|cffff9716[iWR]: DEBUG: OnNewDBUpdate Error")
-        end
-    else
-        for k, v in pairs(TempTable) do
-            iWRDatabase[k] = v
-        end
-
-        local targetName = UnitName("target")
-        if targetName and targetName ~= "" and NoteName == targetName then
-            TargetFrame_Update(TargetFrame)
-        end
-
-        iWR:PopulateDatabase()
-        iWR:UpdateTooltip()
-
-        if DebugMsg then
-            print("|cffff9716[iWR]: DEBUG: Data received from: " .. sender)
-        end
-    end
-
-    -- Clean up the temporary table
-    wipe(TempTable)
 end
 
 -- ╭──────────────────────────────────────────╮
@@ -421,7 +424,7 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     -- Check if the sender is the player itself
     if GetUnitName("player", false) == sender then return end
 
-    if DebugMsg then
+    if iWRSettings.DebugMode then
         print("|cffff9716[iWR]: DEBUG: Remove request successfully received by " .. sender)
     end
 
@@ -438,7 +441,7 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
 
     -- If the sender is not a friend, skip processing
     if not isFriend then
-        if DebugMsg then
+        if iWRSettings.DebugMode then
             print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
         end
         return
@@ -447,39 +450,47 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     -- Deserialize the message
     Success, NoteName = iWR:Deserialize(message)
     if not Success then
-        if DebugMsg then
-            print("|cffff9716[iWR]: DEBUG: OnRemoveDBUpdate Error")
+        if iWRSettings.DebugMode then
+            print("|cffff9716[iWR]: DEBUG: OnRemoveDBUpdate Error - Failed to deserialize message.")
         end
-    else
-        if not iWRDatabase[NoteName] then
-            if DebugMsg then
-                print("|cffff9716[iWR]: DEBUG: " .. sender .. " Sent remove request on a player not existing in your database. Ignoring update.")
-            end
-            return
-        end
-        local targetName = UnitName("target")
-        if targetName and targetName ~= "" and NoteName == targetName then
-            TargetFrame_Update(TargetFrame)
-        end
-        StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
-            text = sender .. "Your friend ".. sender .. " removed " .. iWRDatabase[NoteName][6] .. " from their database. Do You also want to remove " .. iWRDatabase[NoteName][6] .. " from your database?",
-            button1 = "Yes",
-            button2 = "No",
-            OnAccept = function()
-                iWRDatabase[NoteName] = nil
-                print(L["CharNoteStart"] .. NoteName .. "|cffff9716] removed from database.")
-                iWR:PopulateDatabase()
-                iWR:UpdateTooltip()
-            end,
-            timeout = 0,
-            whileDead = true,
-            hideOnEscape = true,
-            preferredIndex = 3,
-        }
+        return -- Exit early on failure
+    end
 
-        if DebugMsg then
-            print("|cffff9716[iWR]: DEBUG: remove request received from: " .. sender)
+    -- Ensure NoteName is valid and exists in the database
+    if not NoteName or not iWRDatabase[NoteName] then
+        if iWRSettings.DebugMode then
+            print("|cffff9716[iWR]: DEBUG: Received remove request for a non-existent player: " .. (NoteName or "nil"))
         end
+        return -- Exit if the player does not exist in the database
+    end
+
+    local targetName = UnitName("target")
+
+    -- Prompt the user with a confirmation dialog to remove the note
+    StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
+        text = "Your friend " .. sender .. " removed " .. NoteName .. " from their iWR database. Do you also want to remove " .. NoteName .. " from your iWR database?",
+        button1 = "Yes",
+        button2 = "No",
+        OnAccept = function()
+            iWRDatabase[NoteName] = nil
+            print(L["CharNoteStart"] .. NoteName .. "|cffff9716] removed from database.")
+            iWR:PopulateDatabase()
+            iWR:UpdateTooltip()
+            if targetName and targetName ~= "" and NoteName == targetName then
+                TargetFrame_Update(TargetFrame)
+            end
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+        preferredIndex = 3,
+    }
+
+    StaticPopup_Show("REMOVE_PLAYER_CONFIRM")
+
+    -- Debug message for successful handling
+    if iWRSettings.DebugMode then
+        print("|cffff9716[iWR]: DEBUG: Remove request processed for player: " .. NoteName .. " from sender: " .. sender)
     end
 end
 
@@ -507,7 +518,7 @@ function iWR:SetTargetingFrame()
             else
                 iWRNameInput:SetText(playerName)
             end
-            if DebugMsg then
+            if iWRSettings.DebugMode then
                 print("|cffff9716[iWR]: DEBUG: Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was not found in Database")
             end
         end
@@ -524,7 +535,7 @@ function iWR:SetTargetingFrame()
                 iWRNameInput:SetText(playerName)
             end
             TargetFrameTextureFrameTexture:SetTexture(iWRBase.TargetFrames[iWRDatabase[tostring(GetUnitName("target", false))][2]]);
-            if DebugMsg then
+            if iWRSettings.DebugMode then
                 print("|cffff9716[iWR]: DEBUG: Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was found in Database")
             end
         end
@@ -532,18 +543,32 @@ function iWR:SetTargetingFrame()
 end
 
 local function AddRelationshipIconToChat(self, event, message, author, flags, ...)
-    -- Extract the base player name without the realm
-    local authorName = string.match(author, "^[^-]+") or author
 
-    -- Check if the author exists in your database
-    if iWRDatabase[authorName] then
-        local iconPath = iWRBase.Icons[iWRDatabase[authorName][2]] or "Interface\\Icons\\INV_Misc_QuestionMark"
-        local iconString = "|T" .. iconPath .. ":12|t"
-        flags = iconString
+    if iWRSettings.ShowChatIcons then
+            -- Extract the base player name without the realm
+        local authorName = string.match(author, "^[^-]+") or author
+
+        -- Check if the author exists in your database
+        if iWRDatabase[authorName] then
+            local iconPath = iWRBase.Icons[iWRDatabase[authorName][2]] or "Interface\\Icons\\INV_Misc_QuestionMark"
+            local iconString = "|T" .. iconPath .. ":12|t"
+            if iWRSettings.ChatIconSize == "Big" then
+                iconString = "|T" .. iconPath .. ":16|t"
+            elseif iWRSettings.ChatIconSize == "Medium" then
+                iconString = "|T" .. iconPath .. ":14|t"
+            elseif iWRSettings.ChatIconSize == "Small" then
+                iconString = "|T" .. iconPath .. ":12|t"
+            end
+            flags = iconString
+        end
+
+        -- Return the modified message and the original author
+        return false, message, author, flags, ...
+    else
+        -- Hide chat icons
     end
 
-    -- Return the modified message and the original author
-    return false, message, author, flags, ...
+
 end
 
 local function RegisterChatFilters()
@@ -684,7 +709,7 @@ function iWR:AddNewNote(Name, Note, Type)
         end
         iWR:PopulateDatabase()
     else
-        if DebugMsg then
+        if iWRSettings.DebugMode then
             print("|cffff9716[iWR]: DEBUG: NameInput error: [|r" .. (Name or "nil") .. "|cffff9716]")
         end
     end
@@ -714,7 +739,7 @@ function iWR:ClearNote(Name)
             print("|cffff9716[iWR]: Name [|r" .. Name .. "|cffff9716] does not exist in the database.")
         end
     else
-        if DebugMsg then
+        if iWRSettings.DebugMode then
             print("|cffff9716[iWR]: DEBUG: NameInput error: [|r" .. (Name or "nil") .. "|cffff9716]")
         end
     end
@@ -725,7 +750,7 @@ end
 -- │      Create New Note      │
 -- ╰───────────────────────────╯
 function iWR:CreateNote(Name, Note, Type)
-    if DebugMsg then
+    if iWRSettings.DebugMode then
         print("|cffff9716[iWR]: DEBUG: New note Name: [|r" .. Name .. "|cffff9716]")
         print("|cffff9716[iWR]: DEBUG: New note Note: [|r" .. Note .. "|cffff9716]")
         print("|cffff9716[iWR]: DEBUG: New note Type: [|r" .. Type .. "|cffff9716]")
@@ -935,7 +960,6 @@ helpIcon:SetScript("OnLeave", function(self)
     GameTooltip:Hide()
 end)
 
-
 -- Create a transparent frame to detect clicks outside the edit boxes
 local clickAwayFrame = CreateFrame("Frame", nil, UIParent)
 clickAwayFrame:SetAllPoints(UIParent) -- Cover the entire screen
@@ -1109,7 +1133,6 @@ iconTextureDB:SetTexture(iWRBase.Icons.Database)
 local openDatabaseButtonLabel = iWRPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 openDatabaseButtonLabel:SetPoint("TOP", openDatabaseButton, "BOTTOM", 0, -5)
 openDatabaseButtonLabel:SetText("Open DB")
-
 
 -- Create a new frame to display the database
 iWRDatabaseFrame = CreateFrame("Frame", "DatabaseFrame", UIParent, "BackdropTemplate")
@@ -1397,111 +1420,172 @@ function iWR:OnEnable()
     self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
     self:SecureHook("TargetFrame_Update", "SetTargetingFrame")
 
+    -- Print a message to the chat frame when the addon is loaded
+    print(L["iWRLoaded"] .. " v" .. Version)
+
     -- Activate DataSharing
     iWR:RegisterComm("iWRFullDBUpdate", "OnFullDBUpdate")
     iWR:RegisterComm("iWRNewDBUpdate", "OnNewDBUpdate")
     iWR:RegisterComm("iWRRemDBUpdate", "OnRemDBUpdate")
 
-    local playerName = GetUnitName("player")
+-- ╭───────────────────────────────────────────────────────────────────────────────╮
+-- │                                  Options Panel                                │
+-- ╰───────────────────────────────────────────────────────────────────────────────╯
+    local optionsPanel = CreateFrame("Frame", "iWROptionsPanel", UIParent)
+    optionsPanel.name = "iWillRemember"
+    optionsPanel:Hide() -- Hide initially; only shown by WoW's interface
 
-    if playerName == false then
-        DebugMsg = true
-        print(L["DevLoad"])
-    else
-        DebugMsg = false
+    -- Title
+    local title = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", 16, -16)
+    title:SetText("iWillRemember Options")
+
+    -- Debug Mode Checkbox
+    local debugCheckbox = CreateFrame("CheckButton", "iWRDebugCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+    debugCheckbox:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
+    debugCheckbox.Text:SetText("Enable Debug Mode")
+    debugCheckbox:SetChecked(false)
+    debugCheckbox:SetScript("OnClick", function(self)
+        local isDebugEnabled = self:GetChecked()
+        iWRSettings.DebugMode = isDebugEnabled
+    end)
+
+    -- Chat Icon Size Dropdown
+    local chatIconSizeLabel = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    chatIconSizeLabel:SetPoint("TOPLEFT", debugCheckbox, "BOTTOMLEFT", 0, -20)
+    chatIconSizeLabel:SetText("Chat Icon Size:")
+
+    local chatIconSizeDropdown = CreateFrame("Frame", "iWRChatIconSizeDropdown", optionsPanel, "UIDropDownMenuTemplate")
+    chatIconSizeDropdown:SetPoint("LEFT", chatIconSizeLabel, "RIGHT", -10, -3)
+
+    local sizes = { "Small", "Medium", "Large" }
+    local selectedSize = 2
+
+    local function OnSizeSelected(self, arg1, arg2, checked)
+        selectedSize = arg1
+        UIDropDownMenu_SetText(chatIconSizeDropdown, sizes[selectedSize])
+        iWRSettings.ChatIconSize = sizes[selectedSize]
     end
 
-    -- Print a message to the chat frame when the addon is loaded
-    print(L["iWRLoaded"] .. " v" .. Version)
+    UIDropDownMenu_Initialize(chatIconSizeDropdown, function(self, level, menuList)
+        local info = UIDropDownMenu_CreateInfo()
+        for i, size in ipairs(sizes) do
+            info.text = size
+            info.arg1 = i
+            info.checked = (i == selectedSize)
+            info.func = OnSizeSelected
+            UIDropDownMenu_AddButton(info)
+        end
+    end)
+    UIDropDownMenu_SetWidth(chatIconSizeDropdown, 100)
+    UIDropDownMenu_SetText(chatIconSizeDropdown, sizes[selectedSize])
 
-    -- Create the main launcher button
-    LDBroker:NewDataObject("iWillRemember_DataObject", {
-        type = "launcher",
+    -- Data Sharing Checkbox
+    local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+    dataSharingCheckbox:SetPoint("TOPLEFT", chatIconSizeLabel, "BOTTOMLEFT", 0, -20)
+    dataSharingCheckbox.Text:SetText("Enable Data Sharing")
+    dataSharingCheckbox:SetChecked(true)
+    dataSharingCheckbox:SetScript("OnClick", function(self)
+        local isSharingEnabled = self:GetChecked()
+        iWRSettings.DataSharing = isSharingEnabled
+    end)
+
+    -- Chat Icon Visibility Checkbox
+    local chatIconCheckbox = CreateFrame("CheckButton", "iWRChatIconCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+    chatIconCheckbox:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", 0, -20)
+    chatIconCheckbox.Text:SetText("Show Chat Icons")
+    chatIconCheckbox:SetChecked(true) -- Default to showing icons
+    chatIconCheckbox:SetScript("OnClick", function(self)
+        local isChatIconEnabled = self:GetChecked()
+        iWRSettings.ShowChatIcons = isChatIconEnabled
+    end)
+
+    -- Register the options panel
+    local optionsCategory = Settings.RegisterCanvasLayoutCategory(optionsPanel, "iWillRemember")
+    Settings.RegisterAddOnCategory(optionsCategory)
+
+
+-- ╭────────────────────────────────────────────────────────────────────────────────╮
+-- │                                  Minimap button                                │
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
+    local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
+        type = "data source",
         text = "iWillRemember",
         icon = iWRBase.Icons.iWRIcon,
-        OnClick = function(clickedframe, button)
-
+        OnClick = function(self, button)
+            if button == "LeftButton" and IsShiftKeyDown() then
+                iWR:DatabaseToggle()
+                iWR:PopulateDatabase()
+            elseif button == "LeftButton" then
+                iWR:MenuToggle()
+            elseif button == "RightButton" then
+                    -- Nothing
+            end
         end,
-    })
 
--- Create the minimap button (DataObject for the minimap button)
-local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
-    type = "data source",
-    text = "iWillRemember",
-    icon = iWRBase.Icons.iWRIcon,
-    OnClick = function(self, button)
-        if button == "LeftButton" and IsShiftKeyDown() then
-            iWR:DatabaseToggle()
-            iWR:PopulateDatabase()
-        elseif button == "LeftButton" then
-            iWR:MenuToggle()
-        elseif button == "RightButton" then
-            --Nothing
-        end
-    end,
+        -- Tooltip handling
+        OnTooltipShow = function(tooltip)
+            -- Name
+            tooltip:SetText("|cffff9716iWillRemember v" .. Version, 1, 1, 1)
 
-    -- Tooltip handling
-    OnTooltipShow = function(tooltip)
-        -- Name
-        tooltip:SetText("|cffff9716iWillRemember v" .. Version, 1, 1, 1)
+            -- Desc
+            tooltip:AddLine(" ", 1, 1, 1) 
+            tooltip:AddLine(L["MinimapButtonLeftClick"], 1, 1, 1)
+    --        tooltip:AddLine(L["MinimapButtonRightClick"], 1, 1, 1)
+            tooltip:AddLine(L["MinimapButtonShiftLeftClick"], 1, 1, 1)
 
-        -- Desc
-        tooltip:AddLine(" ", 1, 1, 1) 
-        tooltip:AddLine(L["MinimapButtonLeftClick"], 1, 1, 1)
-        tooltip:AddLine(L["MinimapButtonShiftLeftClick"], 1, 1, 1)
+            -- Make visible
+            tooltip:Show()  -- Make sure the tooltip is displayed
+        end,
+        })
 
-        -- Make visible
-        tooltip:Show()  -- Make sure the tooltip is displayed
-    end,
-    })
+        -- Register the minimap button with LibDBIcon
+        LDBIcon:Register("iWillRemember_MinimapButton", minimapButton, {
+            hide = false,
+            lock = false,
+            minimapPos = -30,
+            radius = 80,
+        })
 
-    -- Register the minimap button with LibDBIcon
-    LDBIcon:Register("iWillRemember_MinimapButton", minimapButton, {
-        hide = false,
-        lock = false,
-        minimapPos = -30,
-        radius = 80,
-    })
+    -- Function to modify the right-click menu for a given context
+    local function ModifyMenuForContext(menuType)
+        Menu.ModifyMenu(menuType, function(ownerRegion, rootDescription, contextData)
+            -- Retrieve the name of the player for whom the menu is opened
+            local playerName = contextData.name
+            local unitToken = contextData.unitToken
 
--- Function to modify the right-click menu for a given context
-local function ModifyMenuForContext(menuType)
-    Menu.ModifyMenu(menuType, function(ownerRegion, rootDescription, contextData)
-        -- Retrieve the name of the player for whom the menu is opened
-        local playerName = contextData.name
-        local unitToken = contextData.unitToken
-
-        -- Check if playerName is available and valid
-        if playerName then
-            if DebugMsg then
-                print("|cffff9716[iWR]: DEBUG: Right-click menu opened for:", playerName)
+            -- Check if playerName is available and valid
+            if playerName then
+                if iWRSettings.DebugMode then
+                    print("|cffff9716[iWR]: DEBUG: Right-click menu opened for:", playerName)
+                end
+            else
+                if iWRSettings.DebugMode then
+                    print("|cffff9716[iWR]: DEBUG: No player name found for menu type:", menuType)
+                end
             end
-        else
-            if DebugMsg then
-                print("|cffff9716[iWR]: DEBUG: No player name found for menu type:", menuType)
-            end
-        end
 
-        -- Create a divider to visually separate this custom section from other menu items
-        rootDescription:CreateDivider()
+            -- Create a divider to visually separate this custom section from other menu items
+            rootDescription:CreateDivider()
 
-        -- Create a title for the custom section of the menu, labeled "iWillRemember"
-        rootDescription:CreateTitle("iWillRemember")
+            -- Create a title for the custom section of the menu, labeled "iWillRemember"
+            rootDescription:CreateTitle("iWillRemember")
 
-        -- Add a new button to the menu with the text "Create Note"
-        rootDescription:CreateButton("Create Note", function()
-            -- Show the iWRPanel and pass the player's name
-            iWR:MenuOpen(playerName)
+            -- Add a new button to the menu with the text "Create Note"
+            rootDescription:CreateButton("Create Note", function()
+                -- Show the iWRPanel and pass the player's name
+                iWR:MenuOpen(playerName)
+            end)
         end)
-    end)
-end
+    end
 
--- Call to register filters
-RegisterChatFilters()
--- Modify the right-click menu for players
-ModifyMenuForContext("MENU_UNIT_PLAYER")
-ModifyMenuForContext("MENU_UNIT_PARTY")
-ModifyMenuForContext("MENU_UNIT_RAID_PLAYER")
-ModifyMenuForContext("MENU_UNIT_ENEMY_PLAYER")
+    -- Call to register filters
+    RegisterChatFilters()
+    -- Modify the right-click menu for players
+    ModifyMenuForContext("MENU_UNIT_PLAYER")
+    ModifyMenuForContext("MENU_UNIT_PARTY")
+    ModifyMenuForContext("MENU_UNIT_RAID_PLAYER")
+    ModifyMenuForContext("MENU_UNIT_ENEMY_PLAYER")
 end
 
 -- ╭────────────────────────────────────────────╮
@@ -1514,12 +1598,12 @@ combatEventFrame:SetScript("OnEvent", function(self, event)
         InCombat = true
         iWRPanel:Hide()
         iWRDatabaseFrame:Hide()
-        if DebugMsg then
+        if iWRSettings.DebugMode then
             print("|cffff9716[iWR]: DEBUG: Entered combat, UI interaction disabled.")
         end
     elseif event == "PLAYER_REGEN_ENABLED" then
         InCombat = false
-        if DebugMsg then
+        if iWRSettings.DebugMode then
             print("|cffff9716[iWR]: DEBUG: Left combat, UI interaction enabled.")
         end
     end
@@ -1542,3 +1626,4 @@ frame:SetScript("OnEvent", function(self, event, ...)
         iWR:SendFullDBUpdateToFriends()
     end
 end)
+
