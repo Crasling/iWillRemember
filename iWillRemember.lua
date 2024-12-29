@@ -36,9 +36,22 @@ local DataCacheTable = {}
 local FullTableToSend = {}
 local iWRBase = {}
 local InCombat
+local defaultSettings = {
+    DebugMode = false,
+    ChatIconSize = "Medium",
+    DataSharing = true,
+    ShowChatIcons = true,
+}
+
+local sizes = { "Small", "Medium", "Large" }
+local selectedSize = 2 -- Default to Medium
 
 iWRDatabase = {}
-iWRSettings = {}
+iWRBase = iWRBase or {}
+iWRBase.DebugMode = iWRBase.DebugMode or false
+iWRBase.ChatIconSize = iWRBase.ChatIconSize or "Medium"
+iWRBase.DataSharing = iWRBase.DataSharing ~= nil and iWRBase.DataSharing or true
+
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                     Colors                                     │
@@ -216,22 +229,24 @@ end
 -- │      Sending Remove Note to Friendslist      │
 -- ╰──────────────────────────────────────────────╯
 function iWR:SendRemoveRequestToFriends(name)
-    -- Loop through all friends in the friend list
-    for i = 1, C_FriendList.GetNumFriends() do
-        -- Get friend's info (which includes friendName)
-        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-        -- Extract the friend's name from the table
-        local friendName = friendInfo and friendInfo.name
-        DataCache = iWR:Serialize(name)
-        -- Ensure friendName is valid before printing
-        if friendName then
-            iWR:SendCommMessage("iWRRemDBUpdate", DataCache, "WHISPER", friendName)
-            if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: Successfully shared remove request to: " .. friendName)
-            end
-        else
-            if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: No friend found at index " .. i)
+    if iWRSettings.DataSharing ~= false then
+        -- Loop through all friends in the friend list
+        for i = 1, C_FriendList.GetNumFriends() do
+            -- Get friend's info (which includes friendName)
+            local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+            -- Extract the friend's name from the table
+            local friendName = friendInfo and friendInfo.name
+            DataCache = iWR:Serialize(name)
+            -- Ensure friendName is valid before printing
+            if friendName then
+                iWR:SendCommMessage("iWRRemDBUpdate", DataCache, "WHISPER", friendName)
+                if iWRSettings.DebugMode then
+                    print("|cffff9716[iWR]: DEBUG: Successfully shared remove request to: " .. friendName)
+                end
+            else
+                if iWRSettings.DebugMode then
+                    print("|cffff9716[iWR]: DEBUG: No friend found at index " .. i)
+                end
             end
         end
     end
@@ -464,7 +479,11 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
         return -- Exit if the player does not exist in the database
     end
 
+    -- Handle the target frame update if the target matches the NoteName
     local targetName = UnitName("target")
+    if targetName and targetName ~= "" and NoteName == targetName then
+        TargetFrame_Update(TargetFrame)
+    end
 
     -- Prompt the user with a confirmation dialog to remove the note
     StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
@@ -476,9 +495,6 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
             print(L["CharNoteStart"] .. NoteName .. "|cffff9716] removed from database.")
             iWR:PopulateDatabase()
             iWR:UpdateTooltip()
-            if targetName and targetName ~= "" and NoteName == targetName then
-                TargetFrame_Update(TargetFrame)
-            end
         end,
         timeout = 0,
         whileDead = true,
@@ -543,7 +559,6 @@ function iWR:SetTargetingFrame()
 end
 
 local function AddRelationshipIconToChat(self, event, message, author, flags, ...)
-
     if iWRSettings.ShowChatIcons then
             -- Extract the base player name without the realm
         local authorName = string.match(author, "^[^-]+") or author
@@ -567,8 +582,18 @@ local function AddRelationshipIconToChat(self, event, message, author, flags, ..
     else
         -- Hide chat icons
     end
+end
 
+local function InitializeSettings()
+    if not iWRSettings then
+        iWRSettings = {}
+    end
 
+    for key, value in pairs(defaultSettings) do
+        if iWRSettings[key] == nil then
+            iWRSettings[key] = value
+        end
+    end
 end
 
 local function RegisterChatFilters()
@@ -719,28 +744,30 @@ end
 -- │      Clear Note      │
 -- ╰──────────────────────╯
 function iWR:ClearNote(Name)
-    if iWR:InputNotEmpty(Name) then
-        -- Remove color codes from the name
-        local uncoloredName = StripColorCodes(Name)
+    if iWRSettings.DataSharing ~= false then
+        if iWR:InputNotEmpty(Name) then
+            -- Remove color codes from the name
+            local uncoloredName = StripColorCodes(Name)
 
-        if iWRDatabase[uncoloredName] then
-            -- Remove the entry from the database
-            iWRDatabase[uncoloredName] = nil
-            iWR:PopulateDatabase()
+            if iWRDatabase[uncoloredName] then
+                -- Remove the entry from the database
+                iWRDatabase[uncoloredName] = nil
+                iWR:PopulateDatabase()
 
-            local targetName = UnitName("target")
-            if uncoloredName == targetName then
-                TargetFrame_Update(TargetFrame)
+                local targetName = UnitName("target")
+                if uncoloredName == targetName then
+                    TargetFrame_Update(TargetFrame)
+                end
+                iWR:SendRemoveRequestToFriends(uncoloredName)
+                print(L["CharNoteStart"] .. Name .. "|cffff9716] removed from database.")
+            else
+                -- Notify that the name was not found in the database
+                print("|cffff9716[iWR]: Name [|r" .. Name .. "|cffff9716] does not exist in the database.")
             end
-            iWR:SendRemoveRequestToFriends(uncoloredName)
-            print(L["CharNoteStart"] .. Name .. "|cffff9716] removed from database.")
         else
-            -- Notify that the name was not found in the database
-            print("|cffff9716[iWR]: Name [|r" .. Name .. "|cffff9716] does not exist in the database.")
-        end
-    else
-        if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: NameInput error: [|r" .. (Name or "nil") .. "|cffff9716]")
+            if iWRSettings.DebugMode then
+                print("|cffff9716[iWR]: DEBUG: NameInput error: [|r" .. (Name or "nil") .. "|cffff9716]")
+            end
         end
     end
 end
@@ -1422,6 +1449,7 @@ function iWR:OnEnable()
 
     -- Print a message to the chat frame when the addon is loaded
     print(L["iWRLoaded"] .. " v" .. Version)
+    InitializeSettings()
 
     -- Activate DataSharing
     iWR:RegisterComm("iWRFullDBUpdate", "OnFullDBUpdate")
@@ -1431,78 +1459,77 @@ function iWR:OnEnable()
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Options Panel                                │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
-    local optionsPanel = CreateFrame("Frame", "iWROptionsPanel", UIParent)
-    optionsPanel.name = "iWillRemember"
-    optionsPanel:Hide() -- Hide initially; only shown by WoW's interface
+local optionsPanel = CreateFrame("Frame", "iWROptionsPanel", UIParent)
+optionsPanel.name = "iWillRemember"
+optionsPanel:Hide() -- Hide initially; only shown by WoW's interface
 
-    -- Title
-    local title = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("TOPLEFT", 16, -16)
-    title:SetText("iWillRemember Options")
+-- Title
+local title = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+title:SetPoint("TOPLEFT", 16, -16)
+title:SetText("iWillRemember Options")
 
-    -- Debug Mode Checkbox
-    local debugCheckbox = CreateFrame("CheckButton", "iWRDebugCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-    debugCheckbox:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
-    debugCheckbox.Text:SetText("Enable Debug Mode")
-    debugCheckbox:SetChecked(false)
-    debugCheckbox:SetScript("OnClick", function(self)
-        local isDebugEnabled = self:GetChecked()
-        iWRSettings.DebugMode = isDebugEnabled
-    end)
+-- Debug Mode Checkbox
+local debugCheckbox = CreateFrame("CheckButton", "iWRDebugCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+debugCheckbox:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
+debugCheckbox.Text:SetText("Enable Debug Mode")
+debugCheckbox:SetChecked(iWRSettings.DebugMode or false) -- Initialize from settings
+debugCheckbox:SetScript("OnClick", function(self)
+    local isDebugEnabled = self:GetChecked()
+    iWRSettings.DebugMode = isDebugEnabled
+    print("Debug Mode Updated: " .. tostring(isDebugEnabled)) -- Debug message
+end)
 
-    -- Chat Icon Size Dropdown
-    local chatIconSizeLabel = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    chatIconSizeLabel:SetPoint("TOPLEFT", debugCheckbox, "BOTTOMLEFT", 0, -20)
-    chatIconSizeLabel:SetText("Chat Icon Size:")
+-- Chat Icon Size Dropdown
+local chatIconSizeLabel = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+chatIconSizeLabel:SetPoint("TOPLEFT", debugCheckbox, "BOTTOMLEFT", 0, -20)
+chatIconSizeLabel:SetText("Chat Icon Size:")
 
-    local chatIconSizeDropdown = CreateFrame("Frame", "iWRChatIconSizeDropdown", optionsPanel, "UIDropDownMenuTemplate")
-    chatIconSizeDropdown:SetPoint("LEFT", chatIconSizeLabel, "RIGHT", -10, -3)
+local chatIconSizeDropdown = CreateFrame("Frame", "iWRChatIconSizeDropdown", optionsPanel, "UIDropDownMenuTemplate")
+chatIconSizeDropdown:SetPoint("LEFT", chatIconSizeLabel, "RIGHT", -10, -3)
 
-    local sizes = { "Small", "Medium", "Large" }
-    local selectedSize = 2
-
-    local function OnSizeSelected(self, arg1, arg2, checked)
-        selectedSize = arg1
-        UIDropDownMenu_SetText(chatIconSizeDropdown, sizes[selectedSize])
-        iWRSettings.ChatIconSize = sizes[selectedSize]
-    end
-
-    UIDropDownMenu_Initialize(chatIconSizeDropdown, function(self, level, menuList)
-        local info = UIDropDownMenu_CreateInfo()
-        for i, size in ipairs(sizes) do
-            info.text = size
-            info.arg1 = i
-            info.checked = (i == selectedSize)
-            info.func = OnSizeSelected
-            UIDropDownMenu_AddButton(info)
+-- Chat Icon Size Dropdown
+UIDropDownMenu_SetText(chatIconSizeDropdown, iWRSettings.ChatIconSize or "Medium")
+UIDropDownMenu_Initialize(chatIconSizeDropdown, function(self, level, menuList)
+    local info = UIDropDownMenu_CreateInfo()
+    for i, size in ipairs(sizes) do
+        info.text = size
+        info.arg1 = i
+        info.checked = (sizes[i] == iWRSettings.ChatIconSize)
+        info.func = function(self, arg1)
+            iWRSettings.ChatIconSize = sizes[arg1]
+            UIDropDownMenu_SetText(chatIconSizeDropdown, sizes[arg1])
         end
-    end)
-    UIDropDownMenu_SetWidth(chatIconSizeDropdown, 100)
-    UIDropDownMenu_SetText(chatIconSizeDropdown, sizes[selectedSize])
+        UIDropDownMenu_AddButton(info)
+    end
+end)
+UIDropDownMenu_SetWidth(chatIconSizeDropdown, 100)
+UIDropDownMenu_SetText(chatIconSizeDropdown, iWRSettings.ChatIconSize or sizes[selectedSize]) -- Initialize from settings
 
-    -- Data Sharing Checkbox
-    local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-    dataSharingCheckbox:SetPoint("TOPLEFT", chatIconSizeLabel, "BOTTOMLEFT", 0, -20)
-    dataSharingCheckbox.Text:SetText("Enable Data Sharing")
-    dataSharingCheckbox:SetChecked(true)
-    dataSharingCheckbox:SetScript("OnClick", function(self)
-        local isSharingEnabled = self:GetChecked()
-        iWRSettings.DataSharing = isSharingEnabled
-    end)
+-- Data Sharing Checkbox
+local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+dataSharingCheckbox:SetPoint("TOPLEFT", chatIconSizeLabel, "BOTTOMLEFT", 0, -20)
+dataSharingCheckbox.Text:SetText("Enable Data Sharing")
+-- Data Sharing Checkbox
+dataSharingCheckbox:SetChecked(iWRSettings.DataSharing)
+dataSharingCheckbox:SetScript("OnClick", function(self)
+    iWRSettings.DataSharing = self:GetChecked()
+end)
 
-    -- Chat Icon Visibility Checkbox
-    local chatIconCheckbox = CreateFrame("CheckButton", "iWRChatIconCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-    chatIconCheckbox:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", 0, -20)
-    chatIconCheckbox.Text:SetText("Show Chat Icons")
-    chatIconCheckbox:SetChecked(true) -- Default to showing icons
-    chatIconCheckbox:SetScript("OnClick", function(self)
-        local isChatIconEnabled = self:GetChecked()
-        iWRSettings.ShowChatIcons = isChatIconEnabled
-    end)
 
-    -- Register the options panel
-    local optionsCategory = Settings.RegisterCanvasLayoutCategory(optionsPanel, "iWillRemember")
-    Settings.RegisterAddOnCategory(optionsCategory)
+-- Chat Icon Visibility Checkbox
+local chatIconCheckbox = CreateFrame("CheckButton", "iWRChatIconCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+chatIconCheckbox:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", 0, -20)
+chatIconCheckbox.Text:SetText("Show Chat Icons")
+-- Chat Icon Visibility Checkbox
+chatIconCheckbox:SetChecked(iWRSettings.ShowChatIcons)
+chatIconCheckbox:SetScript("OnClick", function(self)
+    iWRSettings.ShowChatIcons = self:GetChecked()
+end)
+
+-- Register the options panel
+local optionsCategory = Settings.RegisterCanvasLayoutCategory(optionsPanel, "iWillRemember")
+Settings.RegisterAddOnCategory(optionsCategory)
+
 
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
