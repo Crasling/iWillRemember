@@ -26,7 +26,20 @@
         "UIDropDownMenu_SetWidth",
         "UIDropDownMenu_SetText",
         "UIDropDownMenu_Initialize",
-        "Settings"
+        "Settings",
+        "ReloadUI",
+        "CloseDropDownMenus",
+        "iWRDatabase",
+        "ChatFrame1",
+        "FRIENDS_BUTTON_TYPE_DIVIDER",
+        "FRIENDS_BUTTON_TYPE_BNET",
+        "FRIENDS_BUTTON_TYPE_WOW",
+        "FRIENDS_BUTTON_TYPE_INVITE",
+        "FRIENDS_BUTTON_TYPE_INVITE_HEADER",
+        "BNET_CLIENT_WOW",
+        "FONT_COLOR_CODE_CLOSE",
+        "iWRPanel",
+        "UISpecialFrames"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {

@@ -1,11 +1,9 @@
 ## Interface: 11505
-## Title: iWillRemember
-## Version: 0.7.2
-## Notes: Personalized Player Notes Addon
+## Title: |cffff9716iWillRemember |cFF00FF00v0.8.1|r
+## Version: 0.8.1
+## Notes: |cffff9716Personalized Player Notes Addon|n|cFFFF0000Never forget again.|r
 ## Author: Crasling
-
 ## X-Curse-Project-ID: 1160664
-
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
 ## SavedVariables: iWRDatabase, iWRSettings
