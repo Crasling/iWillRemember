@@ -26,8 +26,6 @@ local LDBIcon = LibStub("LibDBIcon-1.0")
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                     Variables                                  │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
-
--- Local Variables
 local Success
 local DataCache
 local addonpath = "Classic"
@@ -36,6 +34,8 @@ local DataCacheTable = {}
 local FullTableToSend = {}
 local iWRBase = {}
 local InCombat
+local removeRequestQueue = {}
+local isPopupActive = false
 local defaultSettings = {
     DebugMode = false,
     ChatIconSize = "Medium",
@@ -149,9 +149,9 @@ iWRBase.Icons = {
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                    Functions                                   │
--- ├───────────────────────┬────────────────────────────────────────────────────────╯
--- │      Create Note      │
--- ╰───────────────────────╯
+-- ├─────────────────────────────────┬──────────────────────────────────────────────╯
+-- │      Function: Create Note      │
+-- ╰─────────────────────────────────╯
 function iWR:InputNotEmpty(Text)
     if Text ~= L["DefaultNameInput"] and Text ~= L["DefaultNoteInput"] and Text ~= "" and Text ~= nil and not string.find(Text, "^%s+$") then
         return true
@@ -159,11 +159,27 @@ function iWR:InputNotEmpty(Text)
     return false
 end
 
--- Add Tooltip
+-- ╭────────────────────────────────────────╮
+-- │      Function: Add note to Tooltip     │
+-- ╰────────────────────────────────────────╯
 function iWR:AddNoteToGameTooltip(self, ...)
     local name, unit = self:GetUnit()
+
+    -- Check if the unit is valid and is a player
+    if not unit or not UnitIsPlayer(unit) then
+        return
+    end
+
     unit = unit or (GetMouseFocus() and GetMouseFocus().unit)
-    if not unit then return end
+    if not unit then
+        local mFocus = GetMouseFocus()
+        if mFocus and iWRSettings.DebugMode then
+            print("|cffff9716[iWR]: DEBUG: Mouse focus is on a frame but has no unit. Frame name: " .. (mFocus:GetName() or "Unknown"))
+        else
+            print("|cffff9716[iWR]: DEBUG: No unit and no valid mouse focus.")
+        end
+        return
+    end
 
     if UnitIsPlayer(unit) then
         local dbEntry = iWRDatabase[tostring(name)]
@@ -171,34 +187,41 @@ function iWR:AddNoteToGameTooltip(self, ...)
 
         local typeIndex = tonumber(dbEntry[2])
         local note = dbEntry[1]
+        local author = dbEntry[6]
+        local date = dbEntry[5]
         local typeText = iWRBase.Types[typeIndex]
         local iconPath = iWRBase.Icons[typeIndex]
 
         -- Add type and icon to the tooltip
         if typeText then
             local icon = iconPath and "|T" .. iconPath .. ":16:16:0:0|t" or ""
-            GameTooltip:AddLine(Colors.iWR .. L["NoteToolTip"] .. icon .. Colors[typeIndex] .. " " .. typeText .. "|r")
+            GameTooltip:AddLine(Colors.iWR .. L["NoteToolTip"] .. icon .. Colors[typeIndex] .. " " .. typeText .. "|r " .. icon)
         end
 
         -- Add note to the tooltip
         if note and note ~= "" then
             GameTooltip:AddLine(Colors.iWR .. "Note: " .. Colors[typeIndex] .. note .. "|r")
         end
+
+        -- Add author to the tooltip
+        if typeText then
+            GameTooltip:AddLine(Colors.iWR .. "Author: " .. Colors[typeIndex] .. author .. "|r (" .. date .. ")")
+        end
     end
 end
 
--- ╭───────────────────────────╮
--- │      Timestamp Compare    │
--- ╰───────────────────────────╯
+-- ╭─────────────────────────────────────╮
+-- │      Function: Timestamp Compare    │
+-- ╰─────────────────────────────────────╯
 local function IsNeedToUpdate(CurrDataTime, CompDataTime)
     if tonumber(CurrDataTime) < tonumber(CompDataTime) then
         return true
     end
 end
 
--- ╭────────────────────────────╮
--- │      Get Current Time      │
--- ╰────────────────────────────╯
+-- ╭──────────────────────────────────────╮
+-- │      Function: Get Current Time      │
+-- ╰──────────────────────────────────────╯
 local function GetCurrentTimeByHours()
     -- Extract current time components
     local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
@@ -210,9 +233,9 @@ local function GetCurrentTimeByHours()
     return tonumber(CurrentTime), CurrentDate
 end
 
--- ╭──────────────────────────────╮
--- │      Update the Tooltip      │
--- ╰──────────────────────────────╯
+-- ╭────────────────────────────────────────╮
+-- │      Function: Update the Tooltip      │
+-- ╰────────────────────────────────────────╯
 function iWR:UpdateTooltip()
     local tooltip = GameTooltip
     if tooltip:IsVisible() then
@@ -221,9 +244,9 @@ function iWR:UpdateTooltip()
     end
 end
 
--- ╭──────────────────────────────────────────────╮
--- │      Sending Remove Note to Friendslist      │
--- ╰──────────────────────────────────────────────╯
+-- ╭────────────────────────────────────────────────────────╮
+-- │      Function: Sending Remove Note to Friendslist      │
+-- ╰────────────────────────────────────────────────────────╯
 function iWR:SendRemoveRequestToFriends(name)
     iWR:UpdateTargetFrame()
     if iWRSettings.DataSharing ~= false then
@@ -249,9 +272,9 @@ function iWR:SendRemoveRequestToFriends(name)
     end
 end
 
--- ╭──────────────────────────────────────────────╮
--- │      Sending Latest Note to Friendslist      │
--- ╰──────────────────────────────────────────────╯
+-- ╭────────────────────────────────────────────────────────╮
+-- │      Function: Sending Latest Note to Friendslist      │
+-- ╰────────────────────────────────────────────────────────╯
 function iWR:SendNewDBUpdateToFriends()
     -- Loop through all friends in the friend list
     for i = 1, C_FriendList.GetNumFriends() do
@@ -273,9 +296,9 @@ function iWR:SendNewDBUpdateToFriends()
     end
 end
 
--- ╭────────────────────────────────────────────╮
--- │      Sending All Notes to Friendslist      │
--- ╰────────────────────────────────────────────╯
+-- ╭──────────────────────────────────────────────────────╮
+-- │      Function: Sending All Notes to Friendslist      │
+-- ╰──────────────────────────────────────────────────────╯
 function iWR:SendFullDBUpdateToFriends()
     if iWRSettings.DebugMode then
         print("|cffff9716[iWR]: DEBUG: Sending full database data.")
@@ -302,6 +325,9 @@ function iWR:SendFullDBUpdateToFriends()
     end
 end
 
+-- ╭────────────────────────────────────────╮
+-- │      Function: Add new line if long    │
+-- ╰────────────────────────────────────────╯
 local function splitOnSpace(text, maxLength)
     -- Find the position of the last space within the maxLength
     local spacePos = text:sub(1, maxLength):match(".*() ")
@@ -311,34 +337,41 @@ local function splitOnSpace(text, maxLength)
     return text:sub(1, spacePos), text:sub(spacePos + 1)
 end
 
--- ╭────────────────────────────────────╮
--- │      Strip Color Codes Function    │
--- ╰────────────────────────────────────╯
+-- ╭─────────────────────────────────╮
+-- │      Function: Verify Friend    │
+-- ╰─────────────────────────────────╯
+function iWR:VerifyFriend(friendName)
+    local numFriends = C_FriendList.GetNumFriends()
+    for i = 1, numFriends do
+        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+        if friendInfo and friendInfo.name == friendName then
+            return true
+        end
+    end
+    return false
+end
+
+-- ╭──────────────────────────────────────────────╮
+-- │      Function: Strip Color Codes Function    │
+-- ╰──────────────────────────────────────────────╯
 local function StripColorCodes(input)
     return input:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
 end
 
--- ╭──────────────────────────────────╮
--- │      Full Database Update        │
--- ╰──────────────────────────────────╯
+-- ╭────────────────────────────────────────────╮
+-- │      Function: Full Database Update        │
+-- ╰────────────────────────────────────────────╯
 function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
     if iWRSettings.DataSharing then
         -- Check if the sender is the player itself
         if GetUnitName("player", false) == sender then return end
 
-        -- Verify the sender is on the friends list
-        local isFriend = false
-        local numFriends = C_FriendList.GetNumFriends()
-        for i = 1, numFriends do
-            local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-            if friendInfo and friendInfo.name == sender then
-                isFriend = true
-                break
-            end
+        if iWRSettings.DebugMode then
+            print("|cffff9716[iWR]: DEBUG: Database full update request successfully received by " .. sender .. ".")
         end
 
         -- If the sender is not a friend, skip processing
-        if not isFriend then
+        if not iWR:VerifyFriend(sender) then
             if iWRSettings.DebugMode then
                 print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
             end
@@ -352,9 +385,6 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
                 print("|cffff9716[iWR]: DEBUG: OnFullDBUpdate Error.")
             end
         else
-            if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: Full database data received from: " .. sender .. ".")
-            end
             for k, v in pairs(FullNotesTable) do
                 if iWRDatabase[k] then
                     if IsNeedToUpdate((iWRDatabase[k][3]), v[3]) then
@@ -368,6 +398,10 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
             iWR:UpdateTargetFrame()
             iWR:PopulateDatabase()
             iWR:UpdateTooltip()
+
+            if iWRSettings.DebugMode then
+                print("|cffff9716[iWR]: DEBUG: Full database data received from: " .. sender .. ".")
+            end
         end
     end
 end
@@ -380,19 +414,12 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
         -- Check if the sender is the player itself
         if GetUnitName("player", false) == sender then return end
 
-        -- Verify the sender is on the friends list
-        local isFriend = false
-        local numFriends = C_FriendList.GetNumFriends()
-        for i = 1, numFriends do
-            local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-            if friendInfo and friendInfo.name == sender then
-                isFriend = true
-                break
-            end
+        if iWRSettings.DebugMode then
+            print("|cffff9716[iWR]: DEBUG: Database update request successfully received by " .. sender .. ".")
         end
 
         -- If the sender is not a friend, skip processing
-        if not isFriend then
+        if not iWR:VerifyFriend(sender) then
             if iWRSettings.DebugMode then
                 print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
             end
@@ -432,22 +459,11 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     if GetUnitName("player", false) == sender then return end
 
     if iWRSettings.DebugMode then
-        print("|cffff9716[iWR]: DEBUG: Remove request successfully received by " .. sender .. ".")
-    end
-
-    -- Verify the sender is on the friends list
-    local isFriend = false
-    local numFriends = C_FriendList.GetNumFriends()
-    for i = 1, numFriends do
-        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-        if friendInfo and friendInfo.name == sender then
-            isFriend = true
-            break
-        end
+        print("|cffff9716[iWR]: DEBUG: Remove request successfully received from " .. sender .. ".")
     end
 
     -- If the sender is not a friend, skip processing
-    if not isFriend then
+    if not iWR:VerifyFriend(sender) then
         if iWRSettings.DebugMode then
             print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
         end
@@ -455,8 +471,8 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     end
 
     -- Deserialize the message
-    Success, NoteName = iWR:Deserialize(message)
-    if not Success then
+    local success, noteName = iWR:Deserialize(message)
+    if not success then
         if iWRSettings.DebugMode then
             print("|cffff9716[iWR]: DEBUG: OnRemoveDBUpdate Error - Failed to deserialize message.")
         end
@@ -464,62 +480,101 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     end
 
     -- Ensure NoteName is valid and exists in the database
-    if not NoteName or not iWRDatabase[NoteName] then
+    if not noteName or not iWRDatabase[noteName] then
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: Received remove request for a non-existent player: " .. (NoteName or "nil") .. ".")
+            print("|cffff9716[iWR]: DEBUG: Received remove request for a non-existent player: " .. (noteName or "nil") .. ".")
         end
         return -- Exit if the player does not exist in the database
     end
 
-    iWR:UpdateTargetFrame()
+    -- Add the request to the queue
+    table.insert(removeRequestQueue, {NoteName = noteName, Sender = sender})
 
-    -- Function to show the confirmation popup
-    local function showConfirmationPopup()
-        StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
-            text = "Your friend " .. sender .. " removed [" .. NoteName .. "] from their iWR database. Do you also want to remove [" .. NoteName .. "] from your iWR database?",
-            button1 = "Yes",
-            button2 = "No",
-            OnAccept = function()
-                iWRDatabase[NoteName] = nil
-                print(L["CharNoteStart"] .. NoteName .. "|cffff9716] removed from database.")
-                iWR:PopulateDatabase()
-                iWR:UpdateTooltip()
-            end,
-            timeout = 0,
-            whileDead = true,
-            hideOnEscape = true,
-            preferredIndex = 3,
-        }
-
-        StaticPopup_Show("REMOVE_PLAYER_CONFIRM")
-    end
-
-    -- Check if the player is in combat
-    if InCombat then
-        if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: Player in combat, deferring popup.")
-        end
-
-        -- Register a one-time event for when combat ends
-        local eventFrame = CreateFrame("Frame")
-        eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-        eventFrame:SetScript("OnEvent", function(self, event)
-            if event == "PLAYER_REGEN_ENABLED" then
-                showConfirmationPopup()
-                self:UnregisterEvent("PLAYER_REGEN_ENABLED")
-            end
-        end)
-    else
-        -- Show the popup immediately if not in combat
-        showConfirmationPopup()
-    end
-
-    -- Debug message for successful handling
     if iWRSettings.DebugMode then
-        print("|cffff9716[iWR]: DEBUG: Remove request processed for player: " .. NoteName .. " from sender: " .. sender .. ".")
+        print("|cffff9716[iWR]: DEBUG: Added request to queue. Queue size: " .. #removeRequestQueue)
+    end
+
+    -- Process the queue if not in combat and no active popup
+    if not isPopupActive and not InCombatLockdown() then
+        iWR:ProcessRemoveRequestQueue()
     end
 end
 
+function iWR:ProcessRemoveRequestQueue()
+    if isPopupActive or #removeRequestQueue == 0 then
+        if iWRSettings.DebugMode then
+            print("|cffff9716[iWR]: DEBUG: Cannot process queue or queue is empty. Active popup: " .. tostring(isPopupActive) .. ", Queue size: " .. #removeRequestQueue)
+        end
+        return -- Exit if a popup is already active or queue is empty
+    end
+
+    -- Mark that a popup is active
+    isPopupActive = true
+
+    -- Get the next request from the queue
+    local request = table.remove(removeRequestQueue, 1)
+    local noteName, senderName = request.NoteName, request.Sender
+
+    if iWRSettings.DebugMode then
+        print("|cffff9716[iWR]: DEBUG: Processing request for: [" .. noteName .. "] from sender: " .. senderName .. ". Remaining queue size: " .. #removeRequestQueue)
+    end
+
+    -- Show the confirmation popup
+    StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
+        text = "Your friend " .. senderName .. " removed: [" .. noteName .. "] from their iWR database. Do you also want to remove: [" .. noteName .. "]?",
+        button1 = "Yes",
+        button2 = "No",
+        OnAccept = function()
+            iWRDatabase[noteName] = nil
+            print(L["CharNoteStart"] .. noteName .. "|cffff9716] removed from database.")
+            iWR:PopulateDatabase()
+            iWR:UpdateTooltip()
+            iWR:UpdateTargetFrame()
+        end,
+        OnCancel = function()
+            if iWRSettings.DebugMode then
+                print("|cffff9716[iWR]: DEBUG: User chose to keep: [" .. noteName .. "].")
+            end
+        end,
+        OnHide = function()
+            -- When the popup is hidden, mark the popup as inactive and process the next request
+            isPopupActive = false
+            if InCombat then
+                if iWRSettings.DebugMode then
+                    print("|cffff9716[iWR]: DEBUG: Cannot process next request due to combat.")
+                end
+            else
+                if iWRSettings.DebugMode then
+                    print("|cffff9716[iWR]: DEBUG: Popup closed. Processing next request.")
+                end
+                iWR:ProcessRemoveRequestQueue()
+            end
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+        preferredIndex = 3,
+    }
+
+    StaticPopup_Show("REMOVE_PLAYER_CONFIRM")
+end
+
+-- Combat handling to defer popups
+local combatEndFrame = CreateFrame("Frame")
+combatEndFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+combatEndFrame:SetScript("OnEvent", function()
+    if iWRSettings.DebugMode then
+        print("|cffff9716[iWR]: DEBUG: Combat ended, processing queued remove requests.")
+    end
+
+    if not isPopupActive then
+        iWR:ProcessRemoveRequestQueue()
+    else
+        if iWRSettings.DebugMode then
+            print("|cffff9716[iWR]: DEBUG: Popup already active. Queue size: " .. #removeRequestQueue)
+        end
+    end
+end)
 
 -- ╭────────────────────────────────────────╮
 -- │      Colorize Player Name by Class     │
@@ -1007,6 +1062,7 @@ helpIcon:SetScript("OnEnter", function(self)
     GameTooltip:AddLine(L["HelpUse"], 1, 0.82, 0, true)
     GameTooltip:AddLine(L["HelpSync"], 1, 0.82, 0, true)
     GameTooltip:AddLine(L["HelpClear"], 1, 0.82, 0, true)
+    GameTooltip:AddLine(L["HelpSettings"], 1, 0.82, 0, true)
     GameTooltip:Show()
 end)
 
@@ -1731,10 +1787,10 @@ function iWR:OnEnable()
     self:SecureHook("TargetFrame_Update", "SetTargetingFrame")
 
     -- Print a message to the chat frame when the addon is loaded
-    print(L["iWRLoaded"] .. " v" .. Version)
+    print(L["iWRLoaded"] .. Version)
     InitializeSettings()
 
-    -- Activate DataSharing
+    -- Register DataSharing
     iWR:RegisterComm("iWRFullDBUpdate", "OnFullDBUpdate")
     iWR:RegisterComm("iWRNewDBUpdate", "OnNewDBUpdate")
     iWR:RegisterComm("iWRRemDBUpdate", "OnRemDBUpdate")
@@ -1796,15 +1852,14 @@ dataSharingCheckbox:SetScript("OnClick", function(self)
     iWRSettings.DataSharing = self:GetChecked()
 end)
 
--- Chat Icon Visibility Checkbox
+-- Target Frames Visibility Checkbox
 local targetFrameCheckbox = CreateFrame("CheckButton", "iWRTargetFrameCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
 targetFrameCheckbox:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", 0, -20)
-targetFrameCheckbox.Text:SetText("Show Relationship on Targetframe")
+targetFrameCheckbox.Text:SetText("Enable TargetFrame Update")
 targetFrameCheckbox:SetChecked(iWRSettings.ShowChatIcons)
 targetFrameCheckbox:SetScript("OnClick", function(self)
     iWRSettings.UpdateTargetFrame = self:GetChecked()
 end)
-
 
 -- Chat Icon Visibility Checkbox
 local chatIconCheckbox = CreateFrame("CheckButton", "iWRChatIconCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
@@ -1819,49 +1874,47 @@ end)
 local optionsCategory = Settings.RegisterCanvasLayoutCategory(optionsPanel, "iWillRemember")
 Settings.RegisterAddOnCategory(optionsCategory)
 
-
-
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Minimap button                                │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
-    local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
-        type = "data source",
-        text = "iWillRemember",
-        icon = iWRBase.Icons.iWRIcon,
-        OnClick = function(self, button)
-            if button == "LeftButton" and IsShiftKeyDown() then
-                iWR:DatabaseToggle()
-                iWR:PopulateDatabase()
-            elseif button == "LeftButton" then
-                iWR:MenuToggle()
-            elseif button == "RightButton" then
-                    -- Nothing
-            end
-        end,
+local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
+    type = "data source",
+    text = "iWillRemember",
+    icon = iWRBase.Icons.iWRIcon,
+    OnClick = function(self, button)
+        if button == "LeftButton" and IsShiftKeyDown() then
+            iWR:DatabaseToggle()
+            iWR:PopulateDatabase()
+        elseif button == "LeftButton" then
+            iWR:MenuToggle()
+        elseif button == "RightButton" then
+                -- Nothing
+        end
+    end,
 
-        -- Tooltip handling
-        OnTooltipShow = function(tooltip)
-            -- Name
-            tooltip:SetText("|cffff9716iWillRemember v" .. Version, 1, 1, 1)
+    -- Tooltip handling
+    OnTooltipShow = function(tooltip)
+        -- Name
+        tooltip:SetText("|cffff9716iWillRemember v" .. Version, 1, 1, 1)
 
-            -- Desc
-            tooltip:AddLine(" ", 1, 1, 1) 
-            tooltip:AddLine(L["MinimapButtonLeftClick"], 1, 1, 1)
-    --        tooltip:AddLine(L["MinimapButtonRightClick"], 1, 1, 1)
-            tooltip:AddLine(L["MinimapButtonShiftLeftClick"], 1, 1, 1)
+        -- Desc
+        tooltip:AddLine(" ", 1, 1, 1) 
+        tooltip:AddLine(L["MinimapButtonLeftClick"], 1, 1, 1)
+--        tooltip:AddLine(L["MinimapButtonRightClick"], 1, 1, 1)
+        tooltip:AddLine(L["MinimapButtonShiftLeftClick"], 1, 1, 1)
 
-            -- Make visible
-            tooltip:Show()  -- Make sure the tooltip is displayed
-        end,
-        })
+        -- Make visible
+        tooltip:Show()  -- Make sure the tooltip is displayed
+    end,
+    })
 
-        -- Register the minimap button with LibDBIcon
-        LDBIcon:Register("iWillRemember_MinimapButton", minimapButton, {
-            hide = false,
-            lock = false,
-            minimapPos = -30,
-            radius = 80,
-        })
+    -- Register the minimap button with LibDBIcon
+    LDBIcon:Register("iWillRemember_MinimapButton", minimapButton, {
+        hide = false,
+        lock = false,
+        minimapPos = -30,
+        radius = 80,
+    })
 
     -- Function to modify the right-click menu for a given context
     local function ModifyMenuForContext(menuType)
