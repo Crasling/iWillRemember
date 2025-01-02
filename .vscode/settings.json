@@ -39,7 +39,8 @@
         "BNET_CLIENT_WOW",
         "FONT_COLOR_CODE_CLOSE",
         "iWRPanel",
-        "UISpecialFrames"
+        "UISpecialFrames",
+        "SetItemRef"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {

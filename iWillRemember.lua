@@ -56,6 +56,7 @@ iWRSettings = {}
 local Colors = {
     -- Standard Colors
     iWR = "|cffff9716",
+    Default = "|cffffd200",
     White = "|cFFFFFFFF",
     Black = "|cFF000000",
     Red = "|cFFFF0000",
@@ -71,7 +72,7 @@ local Colors = {
     [5]     = "|cff80f451", -- Respected Colour
     [3]     = "|cff80f451", -- Liked Colour
     [1]     = "|cff80f451", -- Neutral Colour
-    [-3]    = "|cfffb9038", -- Disliked Colour
+    [-3]    = "|cfffd7030", -- Disliked Colour
     [-5]    = "|cffff2121", -- Hated Colour
 
     -- WoW Class Colors
@@ -152,6 +153,27 @@ iWRBase.Icons = {
 -- ├─────────────────────────────────┬──────────────────────────────────────────────╯
 -- │      Function: Create Note      │
 -- ╰─────────────────────────────────╯
+if not _G["Blizzard_ItemRef"] then
+    _G["Blizzard_ItemRef"] = SetItemRef
+end
+SetItemRef = function(link, text, button, chatFrame)
+    local linkType, playerName = string.split(":", link)
+    if linkType == "iWRPlayer" and playerName then
+        -- Handle the custom hyperlink for iWRPlayer
+        if iWRDatabase[playerName] then
+            iWR:ShowDetailWindow(playerName)
+        else
+            if iWRSettings.DebugMode then
+                print("|cffff9716[iWR]: DEBUG: No data found for player: " .. playerName)
+            end
+        end
+        return -- Prevent further processing
+    end
+
+    -- Call the original SetItemRef for other link types
+    return _G["Blizzard_ItemRef"](link, text, button, chatFrame)
+end
+
 function iWR:InputNotEmpty(Text)
     if Text ~= L["DefaultNameInput"] and Text ~= L["DefaultNoteInput"] and Text ~= "" and Text ~= nil and not string.find(Text, "^%s+$") then
         return true
@@ -200,12 +222,12 @@ function iWR:AddNoteToGameTooltip(self, ...)
 
         -- Add note to the tooltip
         if note and note ~= "" then
-            GameTooltip:AddLine(Colors.iWR .. "Note: " .. Colors[typeIndex] .. note .. "|r")
+            GameTooltip:AddLine(Colors.Default .. "Note: " .. Colors[typeIndex] .. note)
         end
 
         -- Add author to the tooltip
         if typeText then
-            GameTooltip:AddLine(Colors.iWR .. "Author: " .. Colors[typeIndex] .. author .. "|r (" .. date .. ")")
+            GameTooltip:AddLine(Colors.Default .. "Author: " .. Colors[typeIndex] .. author .. Colors.Default .." (" .. date .. ")")
         end
     end
 end
@@ -628,27 +650,166 @@ end
 
 local function AddRelationshipIconToChat(self, event, message, author, flags, ...)
     if iWRSettings.ShowChatIcons then
-            -- Extract the base player name without the realm
         local authorName = string.match(author, "^[^-]+") or author
-
-        -- Check if the author exists in your database
         if iWRDatabase[authorName] then
             local iconPath = iWRBase.Icons[iWRDatabase[authorName][2]] or "Interface\\Icons\\INV_Misc_QuestionMark"
-            local iconString = "|T" .. iconPath .. ":12|t"
-            if iWRSettings.ChatIconSize == "Big" then
-                iconString = "|T" .. iconPath .. ":16|t"
-            elseif iWRSettings.ChatIconSize == "Medium" then
-                iconString = "|T" .. iconPath .. ":14|t"
-            elseif iWRSettings.ChatIconSize == "Small" then
-                iconString = "|T" .. iconPath .. ":12|t"
-            end
-            flags = iconString
+            local iconSize = (iWRSettings.ChatIconSize == "Big" and 16) or
+                             (iWRSettings.ChatIconSize == "Medium" and 14) or 12
+            local iconString = "|T" .. iconPath .. ":" .. iconSize .. "|t"
+            local clickableLink = "|HiWRPlayer:" .. authorName .. "|h" .. iconString .. "|h"
+            flags = clickableLink
         end
-
-        -- Return the modified message and the original author
         return false, message, author, flags, ...
     else
-        -- Hide chat icons
+        return false, message, author, flags, ...
+    end
+end
+
+function iWR:HandleHyperlink(link, text, button, chatFrame)
+    local linkType, playerName = string.split(":", link)
+    if linkType == "iWRPlayer" and playerName then
+        -- Handle the custom hyperlink for iWRPlayer
+        if iWRDatabase[playerName] then
+            self:ShowDetailWindow(playerName)
+        else
+            if iWRSettings.DebugMode then
+                print("|cffff9716[iWR]: DEBUG: No data found for player: " .. playerName)
+            end
+        end
+        return -- Prevent further processing
+    end
+end
+
+function iWR:ShowDetailWindow(playerName)
+    -- Store row elements for easy updates
+    self.detailRows = self.detailRows or {}
+
+    -- Check if the player exists in the database
+    local dbEntry = iWRDatabase[playerName]
+    if not dbEntry then
+        if iWRSettings.DebugMode then
+            print("|cffff9716[iWR]: DEBUG: No data found for player: " .. playerName)
+        end
+        return
+    end
+
+    -- Create the detail frame if it doesn't exist
+    if not self.detailFrame then
+        self.detailFrame = CreateFrame("Frame", "iWRDetailFrame", UIParent, "BackdropTemplate")
+        self.detailFrame:SetSize(300, 250)
+        self.detailFrame:SetPoint("CENTER", UIParent, "CENTER")
+        self.detailFrame:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            edgeSize = 16,
+            insets = {left = 5, right = 5, top = 5, bottom = 5},
+        })
+        self.detailFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.9) -- Subtle dark blue background
+        self.detailFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1) -- Slightly lighter border
+        self.detailFrame:EnableMouse(true)
+        self.detailFrame:SetMovable(true)
+        self.detailFrame:SetClampedToScreen(true)
+        self.detailFrame:SetScript("OnDragStart", function(self) self:StartMoving() end)
+        self.detailFrame:SetScript("OnMouseDown", function(self) self:StartMoving() end)
+        self.detailFrame:SetScript("OnMouseUp", function(self) self:StopMovingOrSizing(); self:SetUserPlaced(true) end)
+        self.detailFrame:RegisterForDrag("LeftButton", "RightButton")
+
+        -- Add a shadow effect
+        local shadow = CreateFrame("Frame", nil, self.detailFrame, "BackdropTemplate")
+        shadow:SetPoint("TOPLEFT", self.detailFrame, -1, 1)
+        shadow:SetPoint("BOTTOMRIGHT", self.detailFrame, 1, -1)
+        shadow:SetBackdrop({
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            edgeSize = 5,
+        })
+        shadow:SetBackdropBorderColor(0, 0, 0, 0.8) -- Subtle black shadow
+
+        -- Add a close button
+        local closeButton = CreateFrame("Button", nil, self.detailFrame, "UIPanelCloseButton")
+        closeButton:SetPoint("TOPRIGHT", self.detailFrame, "TOPRIGHT", 0, 0)
+        closeButton:SetScript("OnClick", function()
+            self.detailFrame:Hide()
+        end)
+
+        -- Add a title bar
+        local titleBar = CreateFrame("Frame", nil, self.detailFrame, "BackdropTemplate")
+        titleBar:SetHeight(31)
+        titleBar:SetPoint("TOP", self.detailFrame, "TOP", 0, 0)
+        titleBar:SetWidth(self.detailFrame:GetWidth())
+        titleBar:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            edgeSize = 16,
+            insets = {left = 5, right = 5, top = 5, bottom = 5},
+        })
+        titleBar:SetBackdropColor(0.07, 0.07, 0.12, 1) -- Slightly darker than the main panel
+
+        -- Add a title text
+        local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+        titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
+        titleText:SetText(Colors.iWR .. "iWR: Player Details")
+        titleText:SetTextColor(0.9, 0.9, 1, 1) -- Subtle lighter color
+
+        -- Add a content frame for labels
+        self.detailContent = CreateFrame("Frame", nil, self.detailFrame)
+        self.detailContent:SetSize(280, 180) -- Slightly smaller than the parent frame
+        self.detailContent:SetPoint("TOPLEFT", self.detailFrame, "TOPLEFT", 0, -40)
+    end
+
+    -- Add tinterest for ESC key handling
+    tinsert(UISpecialFrames, "iWRDetailFrame")
+
+    -- Clear and reset rows
+    for _, row in ipairs(self.detailRows) do
+        row:Hide()
+    end
+    self.detailRows = {}
+
+    -- Populate new content
+    local yOffset = -5
+    local detailsContent = {
+        {label = Colors.Default .. "Name:" .. Colors.Reset, value = dbEntry[4]},
+        {label = Colors.Default .. "Type:" .. Colors[dbEntry[2]], value = iWRBase.Types[tonumber(dbEntry[2])]},
+        {label = Colors.Default .. "Note:" .. Colors[dbEntry[2]], value = dbEntry[1], isNote = true},
+        {label = Colors.Default .. "Author:" .. Colors.Reset, value = dbEntry[6]},
+        {label = Colors.Default .. "Date:", value = dbEntry[5]},
+    }
+
+    for _, item in ipairs(detailsContent) do
+        local row = self.detailContent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        row:SetPoint("TOPLEFT", self.detailContent, "TOPLEFT", 10, yOffset)
+        row:SetWidth(270) -- Set the width to control wrapping
+        row:SetWordWrap(true) -- Enable word wrapping
+        row:SetText(item.label .. " " .. (item.value or "N/A"))
+        row:Show()
+        table.insert(self.detailRows, row) -- Store the row for updates
+
+        -- Adjust yOffset dynamically based on whether the row is the "Note" row
+        if item.isNote then
+            local noteHeight = row:GetStringHeight()
+            yOffset = yOffset - noteHeight - 10 -- Add spacing after the wrapped note
+        else
+            yOffset = yOffset - 20
+        end
+    end
+
+    -- Adjust frame height based on content
+    local frameHeight = math.abs(yOffset) + 60
+    self.detailFrame:SetHeight(frameHeight)
+
+    -- Show the frame
+    self.detailFrame:Show()
+end
+
+function iWR:UpdateDetailWindow(updatedData)
+    -- Update rows dynamically if the detail frame is visible
+    if self.detailFrame and self.detailFrame:IsVisible() and self.detailRows then
+        for index, row in ipairs(self.detailRows) do
+            local item = updatedData[index]
+            if item then
+                row:SetText(item.label .. " " .. (item.value or "N/A"))
+            end
+        end
     end
 end
 
@@ -957,7 +1118,7 @@ iWRPanel:RegisterForDrag("LeftButton", "RightButton")
 -- │      Create Main Panel title     │
 -- ╰──────────────────────────────────╯
 local titleBar = CreateFrame("Frame", nil, iWRPanel, "BackdropTemplate")
-titleBar:SetHeight(30)
+titleBar:SetHeight(31)
 titleBar:SetPoint("TOP", iWRPanel, "TOP", 0, 0)
 titleBar:SetWidth(iWRPanel:GetWidth())
 titleBar:SetBackdrop({
@@ -973,15 +1134,14 @@ titleBar:SetBackdropColor(0.07, 0.07, 0.12, 1) -- Slightly darker than the main 
 -- ╰─────────────────────────────────╯
 local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
-titleText:SetText("iWillRemember Menu v" .. Version)
+titleText:SetText(Colors.iWR .. "iWillRemember Menu".. Colors.Green.. " v" .. Version)
 titleText:SetTextColor(0.9, 0.9, 1, 1) -- Subtle lighter color
 
 -- ╭───────────────────────────────────╮
 -- │      Main Panel close button      │
 -- ╰───────────────────────────────────╯
 local closeButton = CreateFrame("Button", nil, iWRPanel, "UIPanelCloseButton")
-closeButton:SetSize(25, 25)
-closeButton:SetPoint("TOPRIGHT", iWRPanel, "TOPRIGHT", -2, -2)
+closeButton:SetPoint("TOPRIGHT", iWRPanel, "TOPRIGHT", 0, 0)
 closeButton:SetScript("OnClick", function()
     iWR:MenuClose()
 end)
@@ -1285,7 +1445,7 @@ iWRDatabaseFrame:RegisterForDrag("LeftButton", "RightButton")
 
 -- Create the title bar for the database frame
 local dbTitleBar = CreateFrame("Frame", nil, iWRDatabaseFrame, "BackdropTemplate")
-dbTitleBar:SetHeight(30)
+dbTitleBar:SetHeight(31)
 dbTitleBar:SetPoint("TOP", iWRDatabaseFrame, "TOP", 0, 0)
 dbTitleBar:SetWidth(iWRDatabaseFrame:GetWidth())
 dbTitleBar:SetBackdrop({
@@ -1299,7 +1459,7 @@ dbTitleBar:SetBackdropColor(0.07, 0.07, 0.12, 1) -- Slightly darker than the mai
 -- Add title text to the database title bar
 local dbTitleText = dbTitleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 dbTitleText:SetPoint("CENTER", dbTitleBar, "CENTER", 0, 0)
-dbTitleText:SetText("iWillRemember Personal Database")
+dbTitleText:SetText(Colors.iWR .. "iWillRemember Personal Database")
 dbTitleText:SetTextColor(0.9, 0.9, 1, 1) -- Subtle lighter color
 
 -- Create a scrollable frame to list database entries
@@ -1314,8 +1474,7 @@ dbScrollFrame:SetScrollChild(dbContainer)
 
 -- Create a close button for the database frame
 local dbCloseButton = CreateFrame("Button", nil, iWRDatabaseFrame, "UIPanelCloseButton")
-dbCloseButton:SetSize(25, 25)
-dbCloseButton:SetPoint("TOPRIGHT", iWRDatabaseFrame, "TOPRIGHT", -2, -2)
+dbCloseButton:SetPoint("TOPRIGHT", iWRDatabaseFrame, "TOPRIGHT", 0, 0)
 dbCloseButton:SetScript("OnClick", function()
     iWR:DatabaseClose()
 end)
@@ -1419,6 +1578,11 @@ function iWR:PopulateDatabase()
             end)
             entryFrame:SetScript("OnLeave", function()
                 GameTooltip:Hide()
+            end)
+            
+            -- Add OnClick event to open the detail window
+            entryFrame:SetScript("OnMouseDown", function()
+                iWR:ShowDetailWindow(playerName)
             end)
 
             -- Create the Edit button for each player
@@ -1785,6 +1949,13 @@ function iWR:OnEnable()
     -- Secure hooks to add custom behavior
     self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
     self:SecureHook("TargetFrame_Update", "SetTargetingFrame")
+    hooksecurefunc("SetItemRef", function(link, text, button, chatFrame)
+        iWR:HandleHyperlink(link, text, button, chatFrame)
+    end)
+
+    if iWRSettings.DebugMode then
+        print("|cffff9716[iWR]: DEBUG: All hooks successfully added.")
+    end
 
     -- Print a message to the chat frame when the addon is loaded
     print(L["iWRLoaded"] .. Version)
