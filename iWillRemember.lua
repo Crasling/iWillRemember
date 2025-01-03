@@ -28,7 +28,7 @@ local LDBIcon = LibStub("LibDBIcon-1.0")
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 local Success
 local DataCache
-local addonpath = "Classic"
+local imagePath = "Classic"
 local TempTable = {}
 local DataCacheTable = {}
 local FullTableToSend = {}
@@ -98,19 +98,21 @@ local Colors = {
 -- │      Check what UI       │
 -- ╰──────────────────────────╯
 if C_AddOns.IsAddOnLoaded("EasyFrames") then
-    addonpath = "EasyFrames"    -- EasyFrames path
+    imagePath = "EasyFrames"
+elseif C_AddOns.IsAddOnLoaded("DragonFlightUI") then
+    imagePath = "DragonFlightUI"
 end
 
 -- ╭───────────────────────────────────╮
 -- │      List of Targeting Frames     │
 -- ╰───────────────────────────────────╯
 iWRBase.TargetFrames = {
-    [10]    = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. addonpath .. "\\Superior.blp",
-    [5]     = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. addonpath .. "\\Respected.blp",
-    [3]     = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. addonpath .. "\\Liked.blp",
-    [1]     = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. addonpath .. "\\Neutral.blp",
-    [-3]    = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. addonpath .. "\\Disliked.blp",
-    [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. addonpath .. "\\Hated.blp",
+--    [10]    = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. imagePath .. "\\Superior.blp",
+    [5]     = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. imagePath .. "\\Respected.blp",
+    [3]     = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. imagePath .. "\\Liked.blp",
+--    [1]     = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. imagePath .. "\\Neutral.blp",
+    [-3]    = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. imagePath .. "\\Disliked.blp",
+    [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. imagePath .. "\\Hated.blp",
 }
 
 -- ╭────────────────────────╮
@@ -164,7 +166,7 @@ SetItemRef = function(link, text, button, chatFrame)
             iWR:ShowDetailWindow(playerName)
         else
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: No data found for player: " .. playerName)
+                print(L["Debug"] .. "No data found for player: " .. playerName)
             end
         end
         return -- Prevent further processing
@@ -196,9 +198,9 @@ function iWR:AddNoteToGameTooltip(self, ...)
     if not unit then
         local mFocus = GetMouseFocus()
         if mFocus and iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: Mouse focus is on a frame but has no unit. Frame name: " .. (mFocus:GetName() or "Unknown"))
+            print(L["Debug"] .. "Mouse focus is on a frame but has no unit. Frame name: " .. (mFocus:GetName() or "Unknown"))
         else
-            print("|cffff9716[iWR]: DEBUG: No unit and no valid mouse focus.")
+            print(L["Debug"] .. "No unit and no valid mouse focus.")
         end
         return
     end
@@ -283,13 +285,59 @@ function iWR:SendRemoveRequestToFriends(name)
             if friendName then
                 iWR:SendCommMessage("iWRRemDBUpdate", DataCache, "WHISPER", friendName)
                 if iWRSettings.DebugMode then
-                    print("|cffff9716[iWR]: DEBUG: Successfully shared remove request to: " .. friendName .. ".")
+                    print(L["Debug"] .. "Successfully shared remove request to: " .. friendName .. ".")
                 end
             else
                 if iWRSettings.DebugMode then
-                    print("|cffff9716[iWR]: DEBUG: No friend found at index " .. i .. ".")
+                    print(L["Debug"] .. "No friend found at index " .. i .. ".")
                 end
             end
+        end
+    end
+end
+
+function iWR:TargetFrameDragonFlightUI()
+    local portraitFrame = _G["DragonflightUITargetFrameBackground"] or _G["DragonflightUITargetFrameBorder"]
+    if portraitFrame then
+        local parent = portraitFrame:GetParent()
+        if parent and type(parent.CreateTexture) == "function" then
+            if not iWR.customFrame then
+                iWR.customFrame = parent:CreateTexture(nil, "OVERLAY")
+            end
+
+            local customFrame = iWR.customFrame
+            customFrame:SetTexture(iWRBase.TargetFrames[iWRDatabase[tostring(GetUnitName("target", false))][2]])
+            customFrame:SetSize(100, 81)
+            customFrame:ClearAllPoints()
+            customFrame:SetPoint("CENTER", parent, "CENTER", 54, 8)
+            customFrame:Show()
+
+            if iWRSettings.DebugMode then
+                print(L["Debug"] .. "Custom frame successfully anchored to DragonFlightUI frame")
+            end
+        else
+            if iWRSettings.DebugMode then
+                print(L["Debug"] .. "Parent frame not found or unsupported.")
+                print(L["Debug"] .. "Parent frame value: " .. tostring(parent))
+            end
+        end
+    else
+        if iWRSettings.DebugMode then
+            print(L["Debug"] .. "DragonFlightUI portrait frame not found or unsupported.")
+            print(L["Debug"] .. "PortraitFrame value: " .. tostring(portraitFrame))
+        end
+    end
+end
+
+function iWR:TargetFrameDefault()
+    if TargetFrameTextureFrameTexture then
+        TargetFrameTextureFrameTexture:SetTexture(iWRBase.TargetFrames[iWRDatabase[tostring(GetUnitName("target", false))][2]])
+        if iWRSettings.DebugMode then
+            print(L["Debug"] .. "Default frame updated.")
+        end
+    else
+        if iWRSettings.DebugMode then
+            print(L["Debug"] .. "Default TargetFrameTextureFrameTexture not found.")
         end
     end
 end
@@ -308,11 +356,11 @@ function iWR:SendNewDBUpdateToFriends()
         if friendName then
             iWR:SendCommMessage("iWRNewDBUpdate", DataCache, "WHISPER", friendName)
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: Successfully shared new note to: " .. friendName .. ".")
+                print(L["Debug"] .. "Successfully shared new note to: " .. friendName .. ".")
             end
         else
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: No friend found at index " .. i .. ".")
+                print(L["Debug"] .. "No friend found at index " .. i .. ".")
             end
         end
     end
@@ -323,7 +371,7 @@ end
 -- ╰──────────────────────────────────────────────────────╯
 function iWR:SendFullDBUpdateToFriends()
     if iWRSettings.DebugMode then
-        print("|cffff9716[iWR]: DEBUG: Sending full database data.")
+        print(L["Debug"] .. "Sending full database data.")
     end
     -- Loop through all friends in the friend list
     for i = 1, C_FriendList.GetNumFriends() do
@@ -389,13 +437,13 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
         if GetUnitName("player", false) == sender then return end
 
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: Database full update request successfully received by " .. sender .. ".")
+            print(L["Debug"] .. "Database full update request successfully received by " .. sender .. ".")
         end
 
         -- If the sender is not a friend, skip processing
         if not iWR:VerifyFriend(sender) then
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
+                print(L["Debug"] .. "Sender " .. sender .. " is not on the friends list. Ignoring update.")
             end
             return
         end
@@ -404,7 +452,7 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
         Success, FullNotesTable = iWR:Deserialize(message)
         if not Success then
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: OnFullDBUpdate Error.")
+                print(L["Debug"] .. "OnFullDBUpdate Error.")
             end
         else
             for k, v in pairs(FullNotesTable) do
@@ -422,7 +470,7 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
             iWR:UpdateTooltip()
 
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: Full database data received from: " .. sender .. ".")
+                print(L["Debug"] .. "Full database data received from: " .. sender .. ".")
             end
         end
     end
@@ -437,13 +485,13 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
         if GetUnitName("player", false) == sender then return end
 
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: Database update request successfully received by " .. sender .. ".")
+            print(L["Debug"] .. "Database update request successfully received by " .. sender .. ".")
         end
 
         -- If the sender is not a friend, skip processing
         if not iWR:VerifyFriend(sender) then
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
+                print(L["Debug"] .. "Sender " .. sender .. " is not on the friends list. Ignoring update.")
             end
             return
         end
@@ -452,7 +500,7 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
         Success, TempTable = iWR:Deserialize(message)
         if not Success then
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: OnNewDBUpdate Error.")
+                print(L["Debug"] .. "OnNewDBUpdate Error.")
             end
         else
             for k, v in pairs(TempTable) do
@@ -464,7 +512,7 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
             iWR:UpdateTooltip()
 
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: New database data received from: " .. sender .. ".")
+                print(L["Debug"] .. "New database data received from: " .. sender .. ".")
             end
         end
 
@@ -481,13 +529,13 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     if GetUnitName("player", false) == sender then return end
 
     if iWRSettings.DebugMode then
-        print("|cffff9716[iWR]: DEBUG: Remove request successfully received from " .. sender .. ".")
+        print(L["Debug"] .. "Remove request successfully received from " .. sender .. ".")
     end
 
     -- If the sender is not a friend, skip processing
     if not iWR:VerifyFriend(sender) then
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: Sender " .. sender .. " is not on the friends list. Ignoring update.")
+            print(L["Debug"] .. "Sender " .. sender .. " is not on the friends list. Ignoring update.")
         end
         return
     end
@@ -496,7 +544,7 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     local success, noteName = iWR:Deserialize(message)
     if not success then
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: OnRemoveDBUpdate Error - Failed to deserialize message.")
+            print(L["Debug"] .. "OnRemoveDBUpdate Error - Failed to deserialize message.")
         end
         return -- Exit early on failure
     end
@@ -504,7 +552,7 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     -- Ensure NoteName is valid and exists in the database
     if not noteName or not iWRDatabase[noteName] then
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: Received remove request for a non-existent player: " .. (noteName or "nil") .. ".")
+            print(L["Debug"] .. "Received remove request for a non-existent player: " .. (noteName or "nil") .. ".")
         end
         return -- Exit if the player does not exist in the database
     end
@@ -513,7 +561,7 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     table.insert(removeRequestQueue, {NoteName = noteName, Sender = sender})
 
     if iWRSettings.DebugMode then
-        print("|cffff9716[iWR]: DEBUG: Added request to queue. Queue size: " .. #removeRequestQueue)
+        print(L["Debug"] .. "Added request to queue. Queue size: " .. #removeRequestQueue)
     end
 
     -- Process the queue if not in combat and no active popup
@@ -525,7 +573,7 @@ end
 function iWR:ProcessRemoveRequestQueue()
     if isPopupActive or #removeRequestQueue == 0 then
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: Cannot process queue or queue is empty. Active popup: " .. tostring(isPopupActive) .. ", Queue size: " .. #removeRequestQueue)
+            print(L["Debug"] .. "Cannot process queue or queue is empty. Active popup: " .. tostring(isPopupActive) .. ", Queue size: " .. #removeRequestQueue)
         end
         return -- Exit if a popup is already active or queue is empty
     end
@@ -538,7 +586,7 @@ function iWR:ProcessRemoveRequestQueue()
     local noteName, senderName = request.NoteName, request.Sender
 
     if iWRSettings.DebugMode then
-        print("|cffff9716[iWR]: DEBUG: Processing request for: [" .. noteName .. "] from sender: " .. senderName .. ". Remaining queue size: " .. #removeRequestQueue)
+        print(L["Debug"] .. "Processing request for: [" .. noteName .. "] from sender: " .. senderName .. ". Remaining queue size: " .. #removeRequestQueue)
     end
 
     -- Show the confirmation popup
@@ -555,7 +603,7 @@ function iWR:ProcessRemoveRequestQueue()
         end,
         OnCancel = function()
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: User chose to keep: [" .. noteName .. "].")
+                print(L["Debug"] .. "User chose to keep: [" .. noteName .. "].")
             end
         end,
         OnHide = function()
@@ -563,11 +611,11 @@ function iWR:ProcessRemoveRequestQueue()
             isPopupActive = false
             if InCombat then
                 if iWRSettings.DebugMode then
-                    print("|cffff9716[iWR]: DEBUG: Cannot process next request due to combat.")
+                    print(L["Debug"] .. "Cannot process next request due to combat.")
                 end
             else
                 if iWRSettings.DebugMode then
-                    print("|cffff9716[iWR]: DEBUG: Popup closed. Processing next request.")
+                    print(L["Debug"] .. "Popup closed. Processing next request.")
                 end
                 iWR:ProcessRemoveRequestQueue()
             end
@@ -586,14 +634,14 @@ local combatEndFrame = CreateFrame("Frame")
 combatEndFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 combatEndFrame:SetScript("OnEvent", function()
     if iWRSettings.DebugMode then
-        print("|cffff9716[iWR]: DEBUG: Combat ended, processing queued remove requests.")
+        print(L["Debug"] .. "Combat ended, processing queued remove requests.")
     end
 
     if not isPopupActive then
         iWR:ProcessRemoveRequestQueue()
     else
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: Popup already active. Queue size: " .. #removeRequestQueue)
+            print(L["Debug"] .. "Popup already active. Queue size: " .. #removeRequestQueue)
         end
     end
 end)
@@ -613,37 +661,49 @@ end
 -- │      Set New Targeting Frame     │
 -- ╰──────────────────────────────────╯
 function iWR:SetTargetingFrame()
-    if not iWRDatabase[GetUnitName("target", false)] then
-        if UnitExists("target") and UnitIsPlayer("target") then
-            local playerName = UnitName("target")
-            local _, class = UnitClass("target")
-            if class then
-                iWRNameInput:SetText(ColorizePlayerNameByClass(playerName, class))
-            else
-                iWRNameInput:SetText(playerName)
-            end
-            if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was not found in Database.")
-            end
+    local targetName = GetUnitName("target", false)
+
+    -- Clear the custom texture if no target or target is not a player
+    if not UnitExists("target") or not UnitIsPlayer("target") then
+        if iWR.customFrame then
+            iWR.customFrame:Hide()
         end
         return
     end
 
-    if iWRDatabase[tostring(GetUnitName("target", false))][2] ~= 0 then
-        if UnitExists("target") and UnitIsPlayer("target") then
-            local playerName = UnitName("target")
-            local _, class = UnitClass("target")
-            if class then
-                iWRNameInput:SetText(ColorizePlayerNameByClass(playerName, class))
-            else
-                iWRNameInput:SetText(playerName)
-            end
-            if iWRSettings.UpdateTargetFrame then
-                TargetFrameTextureFrameTexture:SetTexture(iWRBase.TargetFrames[iWRDatabase[tostring(GetUnitName("target", false))][2]]);
-            end
+    -- Check if the target is in the database
+    if not iWRDatabase[targetName] then
+        local playerName = UnitName("target")
+        local _, class = UnitClass("target")
+        iWRNameInput:SetText(class and ColorizePlayerNameByClass(playerName, class) or playerName)
+        if iWR.customFrame then
+            iWR.customFrame:Hide()
+        end
+        if iWRSettings.DebugMode then
+            print(L["Debug"] .. "Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was not found in Database.")
+        end
+        return
+    end
+
+    -- If the target is in the database and has a valid type
+    if iWRDatabase[targetName][2] ~= 0 then
+        local playerName = UnitName("target")
+        local _, class = UnitClass("target")
+        iWRNameInput:SetText(class and ColorizePlayerNameByClass(playerName, class) or playerName)
+
+        if iWRSettings.UpdateTargetFrame then
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was found in Database.")
+                print(L["Debug"] .. "TargetFrameType = " .. (imagePath or "nil"))
             end
+
+            if imagePath == "DragonFlightUI" then 
+                iWR:TargetFrameDragonFlightUI()
+            else
+                iWR:TargetFrameDefault()
+            end
+        end
+        if iWRSettings.DebugMode then
+            print(L["Debug"] .. "Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was found in Database.")
         end
     end
 end
@@ -673,7 +733,7 @@ function iWR:HandleHyperlink(link, text, button, chatFrame)
             self:ShowDetailWindow(playerName)
         else
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: No data found for player: " .. playerName)
+                print(L["Debug"] .. "No data found for player: " .. playerName)
             end
         end
         return -- Prevent further processing
@@ -688,7 +748,7 @@ function iWR:ShowDetailWindow(playerName)
     local dbEntry = iWRDatabase[playerName]
     if not dbEntry then
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: No data found for player: " .. playerName)
+            print(L["Debug"] .. "No data found for player: " .. playerName)
         end
         return
     end
@@ -973,7 +1033,7 @@ function iWR:AddNewNote(Name, Note, Type)
         iWR:PopulateDatabase()
     else
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: NameInput error: [|r" .. (Name or "nil") .. "|cffff9716].")
+            print(L["Debug"] .. "NameInput error: [|r" .. (Name or "nil") .. "|cffff9716].")
         end
     end
 end
@@ -1000,7 +1060,7 @@ function iWR:ClearNote(Name)
             end
         else
             if iWRSettings.DebugMode then
-                print("|cffff9716[iWR]: DEBUG: NameInput error: [|r" .. (Name or "nil") .. "|cffff9716].")
+                print(L["Debug"] .. "NameInput error: [|r" .. (Name or "nil") .. "|cffff9716].")
             end
         end
     end
@@ -1012,9 +1072,9 @@ end
 -- ╰───────────────────────────╯
 function iWR:CreateNote(Name, Note, Type)
     if iWRSettings.DebugMode then
-        print("|cffff9716[iWR]: DEBUG: New note Name: [|r" .. Name .. "|cffff9716].")
-        print("|cffff9716[iWR]: DEBUG: New note Note: [|r" .. Note .. "|cffff9716].")
-        print("|cffff9716[iWR]: DEBUG: New note Type: [|r" .. Type .. "|cffff9716].")
+        print(L["Debug"] .. "New note Name: [|r" .. Name .. "|cffff9716].")
+        print(L["Debug"] .. "New note Note: [|r" .. Note .. "|cffff9716].")
+        print(L["Debug"] .. "New note Type: [|r" .. Type .. "|cffff9716].")
     end
 
     local colorCode = string.match(Name, "|c%x%x%x%x%x%x%x%x")
@@ -1954,7 +2014,7 @@ function iWR:OnEnable()
     end)
 
     if iWRSettings.DebugMode then
-        print("|cffff9716[iWR]: DEBUG: All hooks successfully added.")
+        print(L["Debug"] .. "All hooks successfully added.")
     end
 
     -- Print a message to the chat frame when the addon is loaded
@@ -2097,11 +2157,11 @@ local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
             -- Check if playerName is available and valid
             if playerName then
                 if iWRSettings.DebugMode then
-                    print("|cffff9716[iWR]: DEBUG: Right-click menu opened for:", playerName .. ".")
+                    print(L["Debug"] .. "Right-click menu opened for:", playerName .. ".")
                 end
             else
                 if iWRSettings.DebugMode then
-                    print("|cffff9716[iWR]: DEBUG: No player name found for menu type:", menuType .. ".")
+                    print(L["Debug"] .. "No player name found for menu type:", menuType .. ".")
                 end
             end
 
@@ -2139,12 +2199,12 @@ combatEventFrame:SetScript("OnEvent", function(self, event)
         iWRPanel:Hide()
         iWRDatabaseFrame:Hide()
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: Entered combat, UI interaction disabled.")
+            print(L["Debug"] .. "Entered combat, UI interaction disabled.")
         end
     elseif event == "PLAYER_REGEN_ENABLED" then
         InCombat = false
         if iWRSettings.DebugMode then
-            print("|cffff9716[iWR]: DEBUG: Left combat, UI interaction enabled.")
+            print(L["Debug"] .. "Left combat, UI interaction enabled.")
         end
     end
 end)

@@ -68,3 +68,4 @@ L["InvalidTarget"] = Msg("Target must be a player")
 L["InCombat"] = Msg("Cannot be used in combat")
 L["CharNoteStart"] = Msg("Character note: [")
 L["CharNoteEnd"] = "|cffff9716] created.|r"
+L["Debug"] = Msg(Colors.Red .. "DEBUG: " .. Colors.iWR)
