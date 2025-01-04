@@ -50,22 +50,27 @@ end
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                 Text Templates                                 │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
-L["NoteToolTip"] = "[iWR]: "
+L["NoteToolTip"] = Colors.iWR .. "[iWR]: "
 L["DefaultNameInput"] = "Enter player name..."
 L["DefaultNoteInput"] = "Enter note..."
 L["MinimapButtonLeftClick"] = (Colors.Yellow .. "Left Click: " .. Colors.Orange .. "Open iWR Menu")
 L["MinimapButtonShiftLeftClick"] = (Colors.Yellow .. "Shift-Left Click: " .. Colors.Orange .. "Open iWR Database")
 L["MinimapButtonRightClick"] = (Colors.Yellow .. "Right Click: " .. Colors.Orange .. "Open Settings")
+L["CharNoteCreated"] = Colors.iWR .."] added to the iWR Database.|r"
+L["CharNoteUpdated"] = Colors.iWR .."] was updated in the iWR Database.|r"
+L["CharNoteRemoved"] = Colors.iWR .."] was removed from the iWR Database|r"
+L["CharNoteColorUpdate"] = Colors.iWR .."] was found with missing class information in the iWR Database. Class color was added to the iWR Database."
 
 L["HelpSync"] = Colors.Yellow .. "How to sync: " .. Colors.iWR .. "Add your friends in the social panel in-game, It will not share to Battle.Net friends(REAL ID), only the friends added to the World of Warcraft friendslist"
 L["HelpUse"] = Colors.Yellow .. "How to use: " .. Colors.iWR .. "Target a player or write their name manually, optionally add a note and then press Respected, Liked, Disliked or Hated to save the player in the database"
 L["HelpClear"] = Colors.Yellow .. "How to clear: " .. Colors.iWR .. "When pressing the Clear button the name in the player name text box will be removed from the database, you can also remove them from the database using the remove button, or just edit it from the database."
-L["HelpSettings"] = Colors.Yellow .. "Settings Menu: " .. Colors.iWR .. "You will find the settings menu in ESC > Options > addOns > iWillRemember"
+L["HelpSettings"] = Colors.Yellow .. "Settings Menu: " .. Colors.iWR .. "You will find the settings menu in ESC > Options > addOns > iWillRemember, or by right clicking the minimap icon to open settings menu and go to addOns > iWillRemember"
 
 L["iWRLoaded"] = Msg("iWillRemember Version v")
 L["InvalidTarget"] = Msg("Target must be a player")
 L["InCombat"] = Msg("Cannot be used in combat")
-L["CharNoteStart"] = Msg("Character note: [")
-L["CharNoteEnd"] = "|cffff9716] created.|r"
-L["Debug"] = Msg(Colors.Red .. "DEBUG: " .. Colors.iWR)
-L["NameInputError"] = Msg("Name input includes not allowed characters")
+L["CharNoteStart"] = Msg("Character note [")
+L["DebugError"] = Msg(Colors.Red .. "ERROR: " .. Colors.iWR)
+L["DebugWarning"] = Msg(Colors.Yellow .. "WARNING: " .. Colors.iWR)
+L["DebugInfo"] = Msg(Colors.White .. "INFO: " .. Colors.iWR)
+L["NameInputError"] = Msg("The name contains invalid characters or is empty. Please remove spaces, numbers, or special symbols and try again.")

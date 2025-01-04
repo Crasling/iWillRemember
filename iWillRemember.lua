@@ -34,6 +34,7 @@ local DataCacheTable = {}
 local FullTableToSend = {}
 local iWRBase = {}
 local InCombat
+local addonPath = "Interface\\AddOns\\iWillRemember\\"
 local removeRequestQueue = {}
 local isPopupActive = false
 local warnedPlayers = {}
@@ -113,12 +114,10 @@ end
 -- │      List of Targeting Frames     │
 -- ╰───────────────────────────────────╯
 iWRBase.TargetFrames = {
---    [10]    = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. imagePath .. "\\Superior.blp",
-    [5]     = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. imagePath .. "\\Respected.blp",
-    [3]     = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. imagePath .. "\\Liked.blp",
---    [1]     = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. imagePath .. "\\Neutral.blp",
-    [-3]    = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. imagePath .. "\\Disliked.blp",
-    [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\TargetFrames\\" .. imagePath .. "\\Hated.blp",
+    [5]     = addonPath .. "Images\\TargetFrames\\" .. imagePath .. "\\Respected.blp",
+    [3]     = addonPath .. "Images\\TargetFrames\\" .. imagePath .. "\\Liked.blp",
+    [-3]    = addonPath .. "Images\\TargetFrames\\" .. imagePath .. "\\Disliked.blp",
+    [-5]    = addonPath .. "Images\\TargetFrames\\" .. imagePath .. "\\Hated.blp",
 }
 
 -- ╭────────────────────────╮
@@ -145,23 +144,22 @@ iWRBase.Types = {
 -- │      List of Icons     │
 -- ╰────────────────────────╯
 iWRBase.Icons = {
-    iWRIcon = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\iWRIcon.blp",
-    Database = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Database.blp",
-    GlowBorder = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\GlowBorder.blp",
-    [10]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Superior.blp",
-    [5]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Respected.blp",
-    [3]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Liked.blp",
-    [1]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Neutral.blp",
-    [0]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Clear.blp",
-    [-3]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Disliked.blp",
-    [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Hated.blp",
+    iWRIcon = addonPath     .. "Images\\Icons\\iWRIcon.blp",
+    Database = addonPath    .. "Images\\Icons\\Database.blp",
+    [10]    = addonPath     .. "Images\\Icons\\Superior.blp",
+    [5]     = addonPath     .. "Images\\Icons\\Respected.blp",
+    [3]     = addonPath     .. "Images\\Icons\\Liked.blp",
+    [1]     = addonPath     .. "Images\\Icons\\Neutral.blp",
+    [0]     = addonPath     .. "Images\\Icons\\Clear.blp",
+    [-3]    = addonPath     .. "Images\\Icons\\Disliked.blp",
+    [-5]    = addonPath     .. "Images\\Icons\\Hated.blp",
 }
 
 iWRBase.ChatIcons = {
-    [5]     = "Interface\\AddOns\\iWillRemember\\Images\\ChatIcons\\Respected.blp",
-    [3]     = "Interface\\AddOns\\iWillRemember\\Images\\ChatIcons\\Liked.blp",
-    [-3]    = "Interface\\AddOns\\iWillRemember\\Images\\ChatIcons\\Disliked.blp",
-    [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\ChatIcons\\Hated.blp",
+    [5]     = addonPath .. "Images\\ChatIcons\\Respected.blp",
+    [3]     = addonPath .. "Images\\ChatIcons\\Liked.blp",
+    [-3]    = addonPath .. "Images\\ChatIcons\\Disliked.blp",
+    [-5]    = addonPath .. "Images\\ChatIcons\\Hated.blp",
 }
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
@@ -177,13 +175,29 @@ SetItemRef = function(link, text, button, chatFrame)
         if iWRDatabase[playerName] then
             iWR:ShowDetailWindow(playerName)
         else
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "No data found for player: " .. playerName)
-            end
+            iWR:DebugMsg("No data found for player: [" .. playerName .. "].")
         end
         return
     end
     return _G["Blizzard_ItemRef"](link, text, button, chatFrame)
+end
+
+-- Print debug message if Debug mode is active
+function iWR:DebugMsg(message,level)
+    if iWRSettings.DebugMode then
+        if level == 3 then
+            print(L["DebugInfo"] .. message)
+        elseif level == 2 then
+            print(L["DebugWarning"] .. message)
+        else
+            print(L["DebugError"] .. message)
+        end
+    end
+end
+
+-- Get player data
+function GetDatabaseEntry(playerName)
+    return iWRDatabase[playerName] or {}
 end
 
 function iWR:VerifyInputNote(Note)
@@ -197,6 +211,26 @@ function iWR:VerifyInputNote(Note)
     return false
 end
 
+function iWR:CreateiWRStyleFrame(parent, width, height, point, backdrop)
+    local frameName = "iWRFrame_" .. tostring(math.random(1, 100000))
+    local frame = CreateFrame("Frame", frameName, parent, "BackdropTemplate")
+    frame:SetSize(width, height)
+    frame:SetPoint(unpack(point))
+    frame:SetBackdrop(backdrop or {
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        edgeSize = 16,
+        insets = {left = 5, right = 5, top = 5, bottom = 5},
+    })
+    -- Add to UISpecialFrames for ESC functionality
+    if not tContains(UISpecialFrames, frame:GetName()) then
+        tinsert(UISpecialFrames, frame:GetName())
+    end
+    return frame
+end
+
+
+
 function iWR:VerifyInputName(Name)
     local verifyName = StripColorCodes(Name)
     if verifyName ~= L["DefaultNameInput"]
@@ -206,11 +240,14 @@ function iWR:VerifyInputName(Name)
         and not string.find(verifyName, "^%s+$")
         and not string.find(verifyName, "%d")
         and not string.find(verifyName, " ")
+        and #verifyName >= 3
+        and #verifyName <= 15
     then
         return true
     end
     return false
 end
+
 
 -- ╭────────────────────────────────────────╮
 -- │      Function: Add note to Tooltip     │
@@ -223,45 +260,33 @@ function iWR:AddNoteToGameTooltip(self, ...)
         return
     end
 
-    unit = unit or (GetMouseFocus() and GetMouseFocus().unit)
-    if not unit then
-        local mFocus = GetMouseFocus()
-        if mFocus and iWRSettings.DebugMode then
-            print(L["Debug"] .. "Mouse focus is on a frame but has no unit. Frame name: " .. (mFocus:GetName() or "Unknown"))
-        else
-            print(L["Debug"] .. "No unit and no valid mouse focus.")
-        end
+    -- Get player data
+    local data = GetDatabaseEntry(name)
+    if next(data) == nil then
         return
     end
 
-    if UnitIsPlayer(unit) then
-        local data = iWRDatabase[tostring(name)]
-        if not data then return end
+    local typeIndex = tonumber(data[2])
+    local note = data[1]
+    local author = data[6]
+    local date = data[5]
+    local typeText = iWRBase.Types[typeIndex]
+    local iconPath = iWRBase.ChatIcons[typeIndex] or "Interface\\Icons\\INV_Misc_QuestionMark"
 
-        local typeIndex = tonumber(data[2])
-        local note = data[1]
-        local author = data[6]
-        local date = data[5]
-        local typeText = iWRBase.Types[typeIndex]
-        local iconPath = iWRBase.ChatIcons[typeIndex] or "Interface\\Icons\\INV_Misc_QuestionMark"
+    if typeText then
+        local icon = iconPath and "|T" .. iconPath .. ":16:16:0:0|t" or ""
+        GameTooltip:AddLine(L["NoteToolTip"] .. icon .. Colors[typeIndex] .. " " .. typeText .. "|r " .. icon)
+    end
 
-        -- Add type and icon to the tooltip
-        if typeText then
-            local icon = iconPath and "|T" .. iconPath .. ":16:16:0:0|t" or ""
-            GameTooltip:AddLine(Colors.iWR .. L["NoteToolTip"] .. icon .. Colors[typeIndex] .. " " .. typeText .. "|r " .. icon)
-        end
+    if note and note ~= "" then
+        GameTooltip:AddLine(Colors.Default .. "Note: " .. Colors[typeIndex] .. note)
+    end
 
-        -- Add note to the tooltip
-        if note and note ~= "" then
-            GameTooltip:AddLine(Colors.Default .. "Note: " .. Colors[typeIndex] .. note)
-        end
-
-        -- Add author to the tooltip
-        if typeText then
-            GameTooltip:AddLine(Colors.Default .. "Author: " .. Colors[typeIndex] .. author .. Colors.Default .." (" .. date .. ")")
-        end
+    if author and date then
+        GameTooltip:AddLine(Colors.Default .. "Author: " .. Colors[typeIndex] .. author .. Colors.Default .." (" .. date .. ")")
     end
 end
+
 
 -- ╭─────────────────────────────────────╮
 -- │      Function: Timestamp Compare    │
@@ -346,16 +371,14 @@ local function ShowNotificationPopup(matches)
 
         if iWRSettings.SoundWarnings then
             PlayNotificationSound()
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "Warning sound was played.")
-            end
+            iWR:DebugMsg("Warning sound was played.")
         end
 
         notificationFrame:Show()
     end
 end
 
-local function CheckGroupMembersAgainstDatabase()
+function iWR:CheckGroupMembersAgainstDatabase()
     wipe(warnedPlayers)
 
     local numGroupMembers = GetNumGroupMembers()
@@ -365,14 +388,17 @@ local function CheckGroupMembersAgainstDatabase()
     for i = 1, numGroupMembers do
         local unitID = isInRaid and "raid" .. i or "party" .. i
         local name, realm = UnitName(unitID)
-        if name and iWRDatabase[name] and not warnedPlayers[name] then
-            -- Only process if the relationship value is below 0
-            local relationValue = iWRDatabase[name][2]
+        if name and not warnedPlayers[name] then
+            -- Get player data
+            local data = GetDatabaseEntry(name)
+            if next(data) == nil then
+                iWR:DebugMsg("No data found for player: [" .. name .. "]")
+                return
+            end
+            local relationValue = data[2]
             if relationValue and relationValue < 0 then
-                local note = iWRDatabase[name][1] or ""
-                local relation = relationValue -- Assuming the value below 0 is the relation
-
-                table.insert(matches, { name = name, relation = relation, note = note })
+                local note = data[1] or ""
+                table.insert(matches, { name = name, relation = relationValue, note = note })
                 warnedPlayers[name] = true
             end
         end
@@ -382,7 +408,6 @@ local function CheckGroupMembersAgainstDatabase()
         ShowNotificationPopup(matches)
     end
 end
-
 
 -- ╭────────────────────────────────────────╮
 -- │      Function: Update the Tooltip      │
@@ -411,13 +436,9 @@ function iWR:SendRemoveRequestToFriends(name)
             -- Ensure friendName is valid before printing
             if friendName then
                 iWR:SendCommMessage("iWRRemDBUpdate", DataCache, "WHISPER", friendName)
-                if iWRSettings.DebugMode then
-                    print(L["Debug"] .. "Successfully shared remove request to: " .. friendName .. ".")
-                end
+                iWR:DebugMsg("Successfully shared remove request to: " .. friendName .. ".",3)
             else
-                if iWRSettings.DebugMode then
-                    print(L["Debug"] .. "No friend found at index " .. i .. ".")
-                end
+                iWR:DebugMsg("No friend found at index " .. i .. ".")
             end
         end
     end
@@ -439,33 +460,23 @@ function iWR:SetTargetFrameDragonFlightUI()
             customFrame:SetPoint("CENTER", parent, "CENTER", 54, 8)
             customFrame:Show()
 
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "Custom frame successfully anchored to DragonFlightUI frame")
-            end
+            iWR:DebugMsg("Custom frame successfully anchored to DragonFlightUI frame",3)
         else
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "Parent frame not found or unsupported.")
-                print(L["Debug"] .. "Parent frame value: " .. tostring(parent))
-            end
+            iWR:DebugMsg("Parent frame not found or unsupported.")
+            iWR:DebugMsg("Parent frame value: " .. tostring(parent))
         end
     else
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "DragonFlightUI portrait frame not found or unsupported.")
-            print(L["Debug"] .. "PortraitFrame value: " .. tostring(portraitFrame))
-        end
+        iWR:DebugMsg("DragonFlightUI portrait frame not found or unsupported.")
+        iWR:DebugMsg("PortraitFrame value: " .. tostring(portraitFrame))
     end
 end
 
 function iWR:SetTargetFrameDefault()
     if TargetFrameTextureFrameTexture then
         TargetFrameTextureFrameTexture:SetTexture(iWRBase.TargetFrames[iWRDatabase[tostring(GetUnitName("target", false))][2]])
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "Default frame updated.")
-        end
+        iWR:DebugMsg("Default frame updated.",3)
     else
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "Default TargetFrameTextureFrameTexture not found.")
-        end
+        iWR:DebugMsg("Default TargetFrameTextureFrameTexture not found.")
     end
 end
 
@@ -482,13 +493,9 @@ function iWR:SendNewDBUpdateToFriends()
         -- Ensure friendName is valid before printing
         if friendName then
             iWR:SendCommMessage("iWRNewDBUpdate", DataCache, "WHISPER", friendName)
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "Successfully shared new note to: " .. friendName .. ".")
-            end
+            iWR:DebugMsg("Successfully shared new note to: " .. friendName .. ".",3)
         else
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "No friend found at index " .. i .. ".")
-            end
+            iWR:DebugMsg("No friend found at index " .. i .. ".")
         end
     end
 end
@@ -497,9 +504,7 @@ end
 -- │      Function: Sending All Notes to Friendslist      │
 -- ╰──────────────────────────────────────────────────────╯
 function iWR:SendFullDBUpdateToFriends()
-    if iWRSettings.DebugMode then
-        print(L["Debug"] .. "Sending full database data.")
-    end
+    iWR:DebugMsg("Sending full database data.",3)
     -- Loop through all friends in the friend list
     for i = 1, C_FriendList.GetNumFriends() do
         -- Get friend's info (which includes friendName)
@@ -563,24 +568,18 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
         -- Check if the sender is the player itself
         if GetUnitName("player", false) == sender then return end
 
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "Database full update request successfully received by " .. sender .. ".")
-        end
+        iWR:DebugMsg("Database full update request successfully received by " .. sender .. ".",3)
 
         -- If the sender is not a friend, skip processing
         if not iWR:VerifyFriend(sender) then
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "Sender " .. sender .. " is not on the friends list. Ignoring update.")
-            end
+            iWR:DebugMsg("Sender " .. sender .. " is not on the friends list. Ignoring update.",3)
             return
         end
 
         -- Deserialize the message
         Success, FullNotesTable = iWR:Deserialize(message)
         if not Success then
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "OnFullDBUpdate Error.")
-            end
+            iWR:DebugMsg("OnFullDBUpdate Error.")
         else
             for k, v in pairs(FullNotesTable) do
                 if iWRDatabase[k] then
@@ -596,9 +595,7 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
             iWR:PopulateDatabase()
             iWR:UpdateTooltip()
 
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "Full database data received from: " .. sender .. ".")
-            end
+            iWR:DebugMsg("Full database data received from: " .. sender .. ".",3)
         end
     end
 end
@@ -611,24 +608,18 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
         -- Check if the sender is the player itself
         if GetUnitName("player", false) == sender then return end
 
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "Database update request successfully received by " .. sender .. ".")
-        end
+        iWR:DebugMsg("Database update request successfully received by " .. sender .. ".",3)
 
         -- If the sender is not a friend, skip processing
         if not iWR:VerifyFriend(sender) then
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "Sender " .. sender .. " is not on the friends list. Ignoring update.")
-            end
+            iWR:DebugMsg("Sender " .. sender .. " is not on the friends list. Ignoring update.",3)
             return
         end
 
         -- Deserialize the message
         Success, TempTable = iWR:Deserialize(message)
         if not Success then
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "OnNewDBUpdate Error.")
-            end
+            iWR:DebugMsg("OnNewDBUpdate Error.")
         else
             for k, v in pairs(TempTable) do
                 iWRDatabase[k] = v
@@ -638,9 +629,7 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
             iWR:PopulateDatabase()
             iWR:UpdateTooltip()
 
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "New database data received from: " .. sender .. ".")
-            end
+            iWR:DebugMsg("New database data received from: " .. sender .. ".",3)
         end
 
         -- Clean up the temporary table
@@ -655,41 +644,31 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     -- Check if the sender is the player itself
     if GetUnitName("player", false) == sender then return end
 
-    if iWRSettings.DebugMode then
-        print(L["Debug"] .. "Remove request successfully received from " .. sender .. ".")
-    end
+    iWR:DebugMsg("Remove request successfully received from " .. sender .. ".",3)
 
     -- If the sender is not a friend, skip processing
     if not iWR:VerifyFriend(sender) then
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "Sender " .. sender .. " is not on the friends list. Ignoring update.")
-        end
+        iWR:DebugMsg("Sender " .. sender .. " is not on the friends list. Ignoring update.",3)
         return
     end
 
     -- Deserialize the message
     local success, noteName = iWR:Deserialize(message)
     if not success then
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "OnRemoveDBUpdate Error - Failed to deserialize message.")
-        end
+        iWR:DebugMsg("OnRemoveDBUpdate Error - Failed to deserialize message.")
         return -- Exit early on failure
     end
 
     -- Ensure NoteName is valid and exists in the database
     if not noteName or not iWRDatabase[noteName] then
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "Received remove request for a non-existent player: " .. (noteName or "nil") .. ".")
-        end
+        iWR:DebugMsg("Received remove request for a non-existent player: " .. (noteName or "nil") .. ".",3)
         return -- Exit if the player does not exist in the database
     end
 
     -- Add the request to the queue
     table.insert(removeRequestQueue, {NoteName = noteName, Sender = sender})
 
-    if iWRSettings.DebugMode then
-        print(L["Debug"] .. "Added request to queue. Queue size: " .. #removeRequestQueue)
-    end
+    iWR:DebugMsg("Added request to queue. Queue size: " .. #removeRequestQueue,3)
 
     -- Process the queue if not in combat and no active popup
     if not isPopupActive and not InCombatLockdown() then
@@ -699,9 +678,7 @@ end
 
 function iWR:ProcessRemoveRequestQueue()
     if isPopupActive or #removeRequestQueue == 0 then
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "Cannot process queue or queue is empty. Active popup: " .. tostring(isPopupActive) .. ", Queue size: " .. #removeRequestQueue)
-        end
+        iWR:DebugMsg("Cannot process queue or queue is empty. Active popup: " .. tostring(isPopupActive) .. ", Queue size: " .. #removeRequestQueue,3)
         return -- Exit if a popup is already active or queue is empty
     end
 
@@ -712,38 +689,29 @@ function iWR:ProcessRemoveRequestQueue()
     local request = table.remove(removeRequestQueue, 1)
     local noteName, senderName = request.NoteName, request.Sender
 
-    if iWRSettings.DebugMode then
-        print(L["Debug"] .. "Processing request for: [" .. noteName .. "] from sender: " .. senderName .. ". Remaining queue size: " .. #removeRequestQueue)
-    end
+    iWR:DebugMsg("Processing request for: [" .. iWRDatabase[noteName][4] .. Colors.iWR .. "] from sender " .. Colors.Green .. senderName .. Colors.iWR .. ". Remaining queue size: " .. #removeRequestQueue,3)
 
     -- Show the confirmation popup
     StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
-        text = "Your friend " .. senderName .. " removed: [" .. noteName .. "] from their iWR database. Do you also want to remove: [" .. noteName .. "]?",
+        text = Colors.iWR .. "Your friend " .. Colors.Green .. senderName .. Colors.iWR .. " removed |n|n[" .. iWRDatabase[noteName][4] .. Colors.iWR .."]|n|n from their iWR database. Do you also want to remove [" .. iWRDatabase[noteName][4] .. Colors.iWR .."]?",
         button1 = "Yes",
         button2 = "No",
         OnAccept = function()
-            print(L["CharNoteStart"] .. iWRDatabase[noteName][4]  .. "|cffff9716] removed from database.")
+            print(L["CharNoteStart"] .. iWRDatabase[noteName][4] .. L["CharNoteRemoved"])
             iWRDatabase[noteName] = nil
             iWR:PopulateDatabase()
             iWR:UpdateTooltip()
             iWR:UpdateTargetFrame()
         end,
         OnCancel = function()
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "User chose to keep: [" .. noteName .. "].")
-            end
+            iWR:DebugMsg("User chose to keep: [" .. iWRDatabase[noteName][4] .. Colors.iWR .. "], if not removed it will be synced back to friend",3)
         end,
         OnHide = function()
-            -- When the popup is hidden, mark the popup as inactive and process the next request
             isPopupActive = false
             if InCombat then
-                if iWRSettings.DebugMode then
-                    print(L["Debug"] .. "Cannot process next request due to combat.")
-                end
+                iWR:DebugMsg("Cannot process next request due to combat.",3)
             else
-                if iWRSettings.DebugMode then
-                    print(L["Debug"] .. "Popup closed. Processing next request.")
-                end
+                iWR:DebugMsg("Popup closed. Processing next request.",3)
                 iWR:ProcessRemoveRequestQueue()
             end
         end,
@@ -752,7 +720,6 @@ function iWR:ProcessRemoveRequestQueue()
         hideOnEscape = true,
         preferredIndex = 3,
     }
-
     StaticPopup_Show("REMOVE_PLAYER_CONFIRM")
 end
 
@@ -760,16 +727,11 @@ end
 local combatEndFrame = CreateFrame("Frame")
 combatEndFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 combatEndFrame:SetScript("OnEvent", function()
-    if iWRSettings.DebugMode then
-        print(L["Debug"] .. "Combat ended, processing queued remove requests.")
-    end
-
+    iWR:DebugMsg("Combat ended, processing queued remove requests.",3)
     if not isPopupActive then
         iWR:ProcessRemoveRequestQueue()
     else
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "Popup already active. Queue size: " .. #removeRequestQueue)
-        end
+        iWR:DebugMsg("Popup already active. Queue size: " .. #removeRequestQueue,3)
     end
 end)
 
@@ -806,9 +768,7 @@ function iWR:SetTargetingFrame()
         if iWR.customFrame then
             iWR.customFrame:Hide()
         end
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was not found in Database.")
-        end
+        iWR:DebugMsg("Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was not found in Database.",3)
         return
     end
 
@@ -822,9 +782,7 @@ function iWR:SetTargetingFrame()
         iWRNameInput:SetText(class and ColorizePlayerNameByClass(playerName, class) or playerName)
 
         if iWRSettings.UpdateTargetFrame then
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "TargetFrameType = " .. (imagePath or "nil"))
-            end
+            iWR:DebugMsg("TargetFrameType = " .. (imagePath or "nil"),3)
 
             if imagePath == "DragonFlightUI" then 
                 iWR:SetTargetFrameDragonFlightUI()
@@ -832,9 +790,7 @@ function iWR:SetTargetingFrame()
                 iWR:SetTargetFrameDefault()
             end
         end
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was found in Database.")
-        end
+        iWR:DebugMsg("Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was found in Database.",3)
     end
 end
 
@@ -866,9 +822,7 @@ function iWR:HandleHyperlink(link, text, button, chatFrame)
         if iWRDatabase[playerName] then
             self:ShowDetailWindow(playerName)
         else
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "No data found for player: " .. playerName)
-            end
+            iWR:DebugMsg("No data found for player: [" .. playerName .. "]",3)
         end
         return -- Prevent further processing
     end
@@ -878,28 +832,18 @@ function iWR:ShowDetailWindow(playerName)
     -- Store row elements for easy updates
     self.detailRows = self.detailRows or {}
 
-    -- Check if the player exists in the database
-    local data = iWRDatabase[playerName]
-    if not data then
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "No data found for player: " .. playerName)
-        end
+    -- Get player data
+    local data = GetDatabaseEntry(playerName)
+    if next(data) == nil then
+        iWR:DebugMsg("No data found for player: [" .. playerName .. "]",3)
         return
     end
 
     -- Create the detail frame if it doesn't exist
     if not self.detailFrame then
-        self.detailFrame = CreateFrame("Frame", "iWRDetailFrame", UIParent, "BackdropTemplate")
-        self.detailFrame:SetSize(300, 250)
-        self.detailFrame:SetPoint("CENTER", UIParent, "CENTER")
-        self.detailFrame:SetBackdrop({
-            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-            edgeSize = 16,
-            insets = {left = 5, right = 5, top = 5, bottom = 5},
-        })
-        self.detailFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.9) -- Subtle dark blue background
-        self.detailFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1) -- Slightly lighter border
+        self.detailFrame = iWR:CreateiWRStyleFrame(UIParent, 300, 250, {"CENTER", UIParent, "CENTER"})
+        self.detailFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.9)
+        self.detailFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1)
         self.detailFrame:EnableMouse(true)
         self.detailFrame:SetMovable(true)
         self.detailFrame:SetClampedToScreen(true)
@@ -916,7 +860,7 @@ function iWR:ShowDetailWindow(playerName)
             edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
             edgeSize = 5,
         })
-        shadow:SetBackdropBorderColor(0, 0, 0, 0.8) -- Subtle black shadow
+        shadow:SetBackdropBorderColor(0, 0, 0, 0.8)
 
         -- Add a close button
         local closeButton = CreateFrame("Button", nil, self.detailFrame, "UIPanelCloseButton")
@@ -936,22 +880,19 @@ function iWR:ShowDetailWindow(playerName)
             edgeSize = 16,
             insets = {left = 5, right = 5, top = 5, bottom = 5},
         })
-        titleBar:SetBackdropColor(0.07, 0.07, 0.12, 1) -- Slightly darker than the main panel
+        titleBar:SetBackdropColor(0.07, 0.07, 0.12, 1)
 
         -- Add a title text
         local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
         titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
         titleText:SetText(Colors.iWR .. "iWR: Player Details")
-        titleText:SetTextColor(0.9, 0.9, 1, 1) -- Subtle lighter color
+        titleText:SetTextColor(0.9, 0.9, 1, 1)
 
         -- Add a content frame for labels
         self.detailContent = CreateFrame("Frame", nil, self.detailFrame)
-        self.detailContent:SetSize(280, 180) -- Slightly smaller than the parent frame
+        self.detailContent:SetSize(280, 180)
         self.detailContent:SetPoint("TOPLEFT", self.detailFrame, "TOPLEFT", 0, -40)
     end
-
-    -- Add tinterest for ESC key handling
-    tinsert(UISpecialFrames, "iWRDetailFrame")
 
     -- Clear and reset rows
     for _, row in ipairs(self.detailRows) do
@@ -1063,9 +1004,7 @@ function iWR:VerifyTargetClassinDB(targetName, targetClass)
     if iWRDatabase[targetName][2] ~= 0 then
         if Colors.Gray .. targetName == iWRDatabase[targetName][4] or targetName == iWRDatabase[targetName][4] then
             iWRDatabase[targetName][4] = ColorizePlayerNameByClass(targetName, targetClass)
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .."[" .. iWRDatabase[targetName][4] .. "] was found with missing class information. Class color was added to database.")
-            end
+            print(L["CharNoteStart"] .. iWRDatabase[targetName][4] .. L["CharNoteColorUpdate"])
             iWR:PopulateDatabase()
             if iWRSettings.DataSharing ~= false then
                 wipe(DataCacheTable)
@@ -1200,9 +1139,7 @@ function iWR:AddNewNote(Name, Note, Type)
         iWR:PopulateDatabase()
     else
         print(L["NameInputError"])
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "NameInput error: [|r" .. (Name or "nil") .. "|cffff9716].")
-        end
+        iWR:DebugMsg("NameInput error: [|r" .. (Name or "nil") .. Colors.iWR .. ".")
     end
 end
 
@@ -1210,34 +1147,27 @@ end
 -- │      Clear Note      │
 -- ╰──────────────────────╯
 function iWR:ClearNote(Name)
-    if iWRSettings.DataSharing ~= false then
-        if iWR:VerifyInputName(Name) then
-            local uncoloredName = StripColorCodes(Name)
+    if iWR:VerifyInputName(Name) then
+        local uncoloredName = StripColorCodes(Name)
 
-            local upperName = uncoloredName:upper()
-            local lowerName = uncoloredName:lower()
-            local capitalizedName = upperName:sub(1, 1) .. lowerName:sub(2)
-            local colorCode = string.match(iWRDatabase[capitalizedName][4], "|c%x%x%x%x%x%x%x%x") or nil
-            if iWRDatabase[capitalizedName] then
-                -- Remove the entry from the database
-                iWRDatabase[capitalizedName] = nil
-                iWR:PopulateDatabase()
-                iWR:UpdateTargetFrame()
+        local upperName = uncoloredName:upper()
+        local lowerName = uncoloredName:lower()
+        local capitalizedName = upperName:sub(1, 1) .. lowerName:sub(2)
+        if iWRDatabase[capitalizedName] then
+            -- Remove the entry from the iWR database
+            print(L["CharNoteStart"] .. iWRDatabase[capitalizedName][4] .. L["CharNoteRemoved"])
+            iWRDatabase[capitalizedName] = nil
+            iWR:PopulateDatabase()
+            iWR:UpdateTargetFrame()
+            if iWRSettings.DataSharing ~= false then
                 iWR:SendRemoveRequestToFriends(capitalizedName)
-                if colorCode ~= "" and colorCode ~= nil then
-                    print(L["CharNoteStart"] .. colorCode .. capitalizedName .. "|cffff9716] removed from database.")
-                else
-                    print(L["CharNoteStart"] .. capitalizedName .. "|cffff9716] removed from database.")
-                end
-            else
-                -- Notify that the name was not found in the database
-                print("|cffff9716[iWR]: Name [|r" .. capitalizedName .. "|cffff9716] does not exist in the database.")
             end
         else
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "NameInput error: [|r" .. (Name or "nil") .. "|cffff9716].")
-            end
+            -- Notify that the name was not found in the database
+            print("|cffff9716[iWR]: Name [|r" .. capitalizedName .. Colors.iWR .. " does not exist in the database.")
         end
+    else
+        iWR:DebugMsg("NameInput error: [|r" .. (Name or "nil") .. Colors.iWR .. ".")
     end
 end
 
@@ -1245,20 +1175,25 @@ end
 -- │      Create New Note      │
 -- ╰───────────────────────────╯
 function iWR:CreateNote(Name, Note, Type)
-    if iWRSettings.DebugMode then
-        print(L["Debug"] .. "New note Name: [|r" .. Name .. "|cffff9716].")
-        print(L["Debug"] .. "New note Note: [|r" .. Note .. "|cffff9716].")
-        print(L["Debug"] .. "New note Type: [|r" .. Type .. "|cffff9716].")
-    end
+    iWR:DebugMsg("New note Name: [|r" .. Name .. Colors.iWR .. ".",3)
+    iWR:DebugMsg("New note Note: [|r" .. Note .. Colors.iWR .. ".",3)
+    iWR:DebugMsg("New note Type: [|r" .. Type .. Colors.iWR .. ".",3)
 
     local colorCode = string.match(Name, "|c%x%x%x%x%x%x%x%x")
-    local NoteAuthor 
+    local playerUpdate = false
+    local NoteAuthor
     local playerName = UnitName("player")
     local _, class = UnitClass("player")
     if class then
         NoteAuthor = ColorizePlayerNameByClass(playerName, class)
     else
         NoteAuthor = playerName
+    end
+
+    -- Get player data
+    local data = GetDatabaseEntry(playerName)
+    if next(data) ~= nil then
+        playerUpdate = true
     end
 
     -- Remove color codes from the name
@@ -1311,10 +1246,18 @@ function iWR:CreateNote(Name, Note, Type)
         DataCache = iWR:Serialize(DataCacheTable)
         iWR:SendNewDBUpdateToFriends()
     end
-    if colorCode ~= nil then 
-        print(L["CharNoteStart"] .. dbName .. L["CharNoteEnd"])
+    if colorCode ~= nil then
+        if playerUpdate then
+            print(L["CharNoteStart"] .. dbName .. L["CharNoteUpdated"])
+        else
+            print(L["CharNoteStart"] .. dbName .. L["CharNoteCreated"])
+        end
     else
-        print(L["CharNoteStart"] .. dbName .. L["CharNoteEnd"] .. Colors.Gray .. " Class unknown.")
+        if playerUpdate then
+            print(L["CharNoteStart"] .. dbName .. L["CharNoteUpdated"] .. Colors.Gray .. " Class unknown." .. Colors.iWR .. " Class will be updated automatically when the player is targeted")
+        else
+            print(L["CharNoteStart"] .. dbName .. L["CharNoteCreated"] .. Colors.Gray .. " Class unknown." .. Colors.iWR .. " Class will be updated automatically when the player is targeted")
+        end
     end
     colorCode = nil
 end
@@ -1322,32 +1265,15 @@ end
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                      Frames                                    │
--- ├─────────────────────────────┬──────────────────────────────────────────────────╯
--- │      Create Main Panel      │
--- ╰─────────────────────────────╯
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
 -- Main Panel
-iWRPanel = CreateFrame("Frame", "SettingsMenu", UIParent, "BackdropTemplate")
-iWRPanel:SetSize(350, 250)
+iWRPanel = iWR:CreateiWRStyleFrame(UIParent, 350, 250, {"CENTER", UIParent, "CENTER"})
 iWRPanel:Hide()
-iWRPanel:SetPoint("CENTER", UIParent, "CENTER")
 iWRPanel:EnableMouse(true)
 iWRPanel:SetMovable(true)
 iWRPanel:SetFrameStrata("MEDIUM")
 iWRPanel:SetClampedToScreen(true)
-iWRPanel:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    edgeSize = 16,
-    insets = {left = 5, right = 5, top = 5, bottom = 5},
-})
-iWRPanel:SetBackdropColor(0.05, 0.05, 0.1, 0.9) -- Subtle dark blue background
-iWRPanel:SetBackdropBorderColor(0.8, 0.8, 0.9, 1) -- Slightly lighter border
-tinsert(UISpecialFrames, iWRPanel:GetName())
-iWRPanel:HookScript("OnShow", function(self)
-    if not tContains(UISpecialFrames, self:GetName()) then
-        tinsert(UISpecialFrames, self:GetName())
-    end
-end)
+
 -- Add a shadow effect
 local shadow = CreateFrame("Frame", nil, iWRPanel, "BackdropTemplate")
 shadow:SetPoint("TOPLEFT", iWRPanel, -1, 1)
@@ -1356,7 +1282,7 @@ shadow:SetBackdrop({
     edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
     edgeSize = 5,
 })
-shadow:SetBackdropBorderColor(0, 0, 0, 0.8) -- Subtle black shadow
+shadow:SetBackdropBorderColor(0, 0, 0, 0.8)
 
 -- Drag and Drop functionality
 iWRPanel:SetScript("OnDragStart", function(self) self:StartMoving() end)
@@ -1368,24 +1294,22 @@ iWRPanel:RegisterForDrag("LeftButton", "RightButton")
 -- │      Create Main Panel title     │
 -- ╰──────────────────────────────────╯
 local titleBar = CreateFrame("Frame", nil, iWRPanel, "BackdropTemplate")
-titleBar:SetHeight(31)
+titleBar:SetSize(iWRPanel:GetWidth(), 31)
 titleBar:SetPoint("TOP", iWRPanel, "TOP", 0, 0)
-titleBar:SetWidth(iWRPanel:GetWidth())
 titleBar:SetBackdrop({
     bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
     edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
     edgeSize = 16,
     insets = {left = 5, right = 5, top = 5, bottom = 5},
 })
-titleBar:SetBackdropColor(0.07, 0.07, 0.12, 1) -- Slightly darker than the main panel
+titleBar:SetBackdropColor(0.07, 0.07, 0.12, 1)
 
--- ╭─────────────────────────────────╮
--- │      Main Panel title text      │
--- ╰─────────────────────────────────╯
+-- Add title text
 local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
-titleText:SetText(Colors.iWR .. "iWillRemember Menu".. Colors.Green.. " v" .. Version)
-titleText:SetTextColor(0.9, 0.9, 1, 1) -- Subtle lighter color
+titleText:SetText(Colors.iWR .. "iWillRemember Menu" .. Colors.Green .. " v" .. Version)
+titleText:SetTextColor(0.9, 0.9, 1, 1)
+
 
 -- ╭───────────────────────────────────╮
 -- │      Main Panel close button      │
@@ -1666,28 +1590,15 @@ openDatabaseButtonLabel:SetPoint("TOP", openDatabaseButton, "BOTTOM", 0, -5)
 openDatabaseButtonLabel:SetText("Open DB")
 
 -- Create a new frame to display the database
-iWRDatabaseFrame = CreateFrame("Frame", "DatabaseFrame", UIParent, "BackdropTemplate")
-iWRDatabaseFrame:SetSize(400, 500)
+iWRDatabaseFrame = iWR:CreateiWRStyleFrame(UIParent, 400, 500, {"CENTER", UIParent, "CENTER"})
 iWRDatabaseFrame:Hide()
-iWRDatabaseFrame:SetPoint("CENTER", UIParent, "CENTER")
 iWRDatabaseFrame:EnableMouse(true)
 iWRDatabaseFrame:SetMovable(true)
 iWRDatabaseFrame:SetFrameStrata("MEDIUM")
 iWRDatabaseFrame:SetClampedToScreen(true)
-iWRDatabaseFrame:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    edgeSize = 16,
-    insets = {left = 5, right = 5, top = 5, bottom = 5},
-})
-iWRDatabaseFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.9) -- Subtle dark blue background
-iWRDatabaseFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1) -- Slightly lighter border
-tinsert(UISpecialFrames, iWRDatabaseFrame:GetName())
-iWRDatabaseFrame:HookScript("OnShow", function(self)
-    if not tContains(UISpecialFrames, self:GetName()) then
-        tinsert(UISpecialFrames, self:GetName())
-    end
-end)
+iWRDatabaseFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.9)
+iWRDatabaseFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1)
+
 -- Add a shadow effect
 local dbShadow = CreateFrame("Frame", nil, iWRDatabaseFrame, "BackdropTemplate")
 dbShadow:SetPoint("TOPLEFT", iWRDatabaseFrame, -1, 1)
@@ -1696,7 +1607,7 @@ dbShadow:SetBackdrop({
     edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
     edgeSize = 5,
 })
-dbShadow:SetBackdropBorderColor(0, 0, 0, 0.8) -- Subtle black shadow
+dbShadow:SetBackdropBorderColor(0, 0, 0, 0.8)
 
 -- Drag and Drop functionality
 iWRDatabaseFrame:SetScript("OnDragStart", function(self) self:StartMoving() end)
@@ -1706,22 +1617,21 @@ iWRDatabaseFrame:RegisterForDrag("LeftButton", "RightButton")
 
 -- Create the title bar for the database frame
 local dbTitleBar = CreateFrame("Frame", nil, iWRDatabaseFrame, "BackdropTemplate")
-dbTitleBar:SetHeight(31)
+dbTitleBar:SetSize(iWRDatabaseFrame:GetWidth(), 31)
 dbTitleBar:SetPoint("TOP", iWRDatabaseFrame, "TOP", 0, 0)
-dbTitleBar:SetWidth(iWRDatabaseFrame:GetWidth())
 dbTitleBar:SetBackdrop({
     bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
     edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
     edgeSize = 16,
     insets = {left = 5, right = 5, top = 5, bottom = 5},
 })
-dbTitleBar:SetBackdropColor(0.07, 0.07, 0.12, 1) -- Slightly darker than the main panel
+dbTitleBar:SetBackdropColor(0.07, 0.07, 0.12, 1)
 
--- Add title text to the database title bar
+-- Add title text
 local dbTitleText = dbTitleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 dbTitleText:SetPoint("CENTER", dbTitleBar, "CENTER", 0, 0)
 dbTitleText:SetText(Colors.iWR .. "iWillRemember Personal Database")
-dbTitleText:SetTextColor(0.9, 0.9, 1, 1) -- Subtle lighter color
+dbTitleText:SetTextColor(0.9, 0.9, 1, 1)
 
 -- Create a scrollable frame to list database entries
 local dbScrollFrame = CreateFrame("ScrollFrame", nil, iWRDatabaseFrame, "UIPanelScrollFrameTemplate")
@@ -1757,15 +1667,14 @@ function iWR:PopulateDatabase()
         table.insert(categorizedData[category], { name = playerName, data = data })
     end
 
-    -- Sort categories and entries alphabetically (descending)
+    -- Sort categories
     local sortedCategories = {}
     for category in pairs(categorizedData) do
         table.insert(sortedCategories, category)
     end
     table.sort(sortedCategories, function(a, b)
-        return a > b -- Reverse alphabetical for categories
+        return a > b
     end)
-
     for _, category in ipairs(sortedCategories) do
         table.sort(categorizedData[category], function(a, b)
             return a.name < b.name
@@ -1828,7 +1737,7 @@ function iWR:PopulateDatabase()
                     GameTooltip:AddLine("Note: " .. Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
                     GameTooltip:AddLine(Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
                 end
-                
+
                 if data[6] ~= "" and data[6] ~= nil then
                     GameTooltip:AddLine("Author: " .. data[6], 1, 0.82, 0) -- Add author in tooltip
                 end
@@ -1840,7 +1749,7 @@ function iWR:PopulateDatabase()
             entryFrame:SetScript("OnLeave", function()
                 GameTooltip:Hide()
             end)
-            
+
             -- Add OnClick event to open the detail window
             entryFrame:SetScript("OnMouseDown", function()
                 iWR:ShowDetailWindow(playerName)
@@ -1870,11 +1779,11 @@ function iWR:PopulateDatabase()
             removeButton:SetText("Remove")
             removeButton:SetScript("OnClick", function()
                 StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
-                    text = "Are you sure you want to remove " .. playerName .. " from the database?",
+                    text = Colors.iWR .. "Are you sure you want to remove" .. Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. Colors.iWR .. "]|n|n from the iWR database?",
                     button1 = "Yes",
                     button2 = "No",
                     OnAccept = function()
-                        print(L["CharNoteStart"] .. iWRDatabase[playerName][4]  .. "|cffff9716] removed from database.")
+                        print(L["CharNoteStart"] .. iWRDatabase[playerName][4] .. L["CharNoteRemoved"])
                         iWRDatabase[playerName] = nil
                         iWR:PopulateDatabase()
                         iWR:SendRemoveRequestToFriends(playerName)
@@ -1909,7 +1818,7 @@ clearDatabaseButton:SetText("Clear All")
 clearDatabaseButton:SetScript("OnClick", function()
     -- Confirm before clearing the database
     StaticPopupDialogs["CLEAR_DATABASE_CONFIRM"] = {
-        text = "Are you sure you want to clear all data in the database?",
+        text = Colors.iWR .. "Are you sure you want to" .. Colors.Red ..  "|n clear all data" .. Colors.iWR .. "|n in the database?",
         button1 = "Yes",
         button2 = "No",
         OnAccept = function()
@@ -2015,15 +1924,7 @@ searchDatabaseButton:SetScript("OnClick", function()
 
                 -- Create the searchResultsFrame if it doesn't already exist
                 if not searchResultsFrame then
-                    searchResultsFrame = CreateFrame("Frame", nil, iWRDatabaseFrame, "BackdropTemplate")
-                    searchResultsFrame:SetSize(280, 400)
-                    searchResultsFrame:SetPoint("RIGHT", iWRDatabaseFrame, "RIGHT", 280, 0)
-                    searchResultsFrame:SetBackdrop({
-                        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-                        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-                        edgeSize = 16,
-                        insets = {left = 5, right = 5, top = 5, bottom = 5},
-                    })
+                    searchResultsFrame = iWR:CreateiWRStyleFrame(iWRDatabaseFrame, 280, 400, {"RIGHT", iWRDatabaseFrame, "RIGHT", 280, 0})
                     searchResultsFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.9)
                     searchResultsFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1)
                 end
@@ -2054,12 +1955,7 @@ searchDatabaseButton:SetScript("OnClick", function()
                 searchTitle = searchResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
                 searchTitle:SetPoint("TOP", searchResultsFrame, "TOP", 0, -10)
                 searchTitle:SetText("Search Results for: " .. searchQuery)
-                tinsert(UISpecialFrames, searchResultsFrame:GetName())
-                searchResultsFrame:HookScript("OnShow", function(self)
-                    if not tContains(UISpecialFrames, self:GetName()) then
-                        tinsert(UISpecialFrames, self:GetName())
-                    end
-                end)
+
                 if #foundEntries > 0 then
                     local maxEntries = 7
                     for index, entry in ipairs(foundEntries) do
@@ -2138,12 +2034,13 @@ searchDatabaseButton:SetScript("OnClick", function()
                         removeButton:SetText("Remove")
                         removeButton:SetScript("OnClick", function()
                             StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
-                                text = "Are you sure you want to remove " .. playerName .. " from the database?",
+                                text = Colors.iWR .. "Are you sure you want to remove" .. Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. Colors.iWR .. "]|n|n from the iWR database?",
                                 button1 = "Yes",
                                 button2 = "No",
                                 OnAccept = function()
-                                    print(L["CharNoteStart"] .. iWRDatabase[playerName][4]  .. "|cffff9716] removed from database.")
+                                    print(L["CharNoteStart"] .. iWRDatabase[playerName][4]  .. L["CharNoteRemoved"])
                                     iWRDatabase[playerName] = nil
+                                    searchResultsFrame:Hide()
                                     iWR:PopulateDatabase()
                                     iWR:SendRemoveRequestToFriends(playerName)
                                 end,
@@ -2200,7 +2097,6 @@ searchDatabaseButton:SetScript("OnClick", function()
     StaticPopup_Show("SEARCH_DATABASE")
 end)
 
-
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Event Handlers                                │
 -- ├──────────────────────┬─────────────────────────────────────────────────────────╯
@@ -2214,15 +2110,14 @@ function iWR:OnEnable()
         iWR:HandleHyperlink(link, text, button, chatFrame)
     end)
 
-    if iWRSettings.DebugMode then
-        print(L["Debug"] .. "All initialization hooks added.")
-    end
+    iWR:DebugMsg("All initialization hooks added.",3)
 
     -- Initialize
     InitializeSettings()
     InitializeDatabase()
 
     -- Print a message to the chat frame when the addon is loaded
+    iWR:DebugMsg("Debug Mode is activated." .. Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
     print(L["iWRLoaded"] .. Version)
 
     -- Register DataSharing
@@ -2255,6 +2150,7 @@ function iWR:OnEnable()
     debugCheckbox:SetScript("OnClick", function(self)
         local isDebugEnabled = self:GetChecked()
         iWRSettings.DebugMode = isDebugEnabled
+        iWR:DebugMsg("Debug Mode is activated." .. Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
     end)
 
     -- Data Sharing Category Title
@@ -2370,37 +2266,33 @@ function iWR:OnEnable()
         radius = 80,
     })
 
-    -- Function to modify the right-click menu for a given context
-    local function ModifyMenuForContext(menuType)
-        Menu.ModifyMenu(menuType, function(ownerRegion, rootDescription, contextData)
-            -- Retrieve the name of the player for whom the menu is opened
-            local playerName = contextData.name
-            local unitToken = contextData.unitToken
+-- Function to modify the right-click menu for a given context
+local function ModifyMenuForContext(menuType)
+    Menu.ModifyMenu(menuType, function(ownerRegion, rootDescription, contextData)
+        -- Retrieve the name of the player for whom the menu is opened
+        local playerName = contextData and contextData.name
 
-            -- Check if playerName is available and valid
-            if playerName then
-                if iWRSettings.DebugMode then
-                    print(L["Debug"] .. "Right-click menu opened for:", playerName .. ".")
-                end
-            else
-                if iWRSettings.DebugMode then
-                    print(L["Debug"] .. "No player name found for menu type:", menuType .. ".")
-                end
-            end
+        -- Check if playerName is available and valid
+        if playerName then
+            iWR:DebugMsg("Right-click menu opened for: [" .. playerName .. "].",3)
+        else
+            iWR:DebugMsg("No player name found for menu type: [" .. menuType .. "].",2)
+        end
 
-            -- Create a divider to visually separate this custom section from other menu items
-            rootDescription:CreateDivider()
+        -- Create a divider to visually separate this custom section from other menu items
+        rootDescription:CreateDivider()
 
-            -- Create a title for the custom section of the menu, labeled "iWillRemember"
-            rootDescription:CreateTitle("iWillRemember")
+        -- Create a title for the custom section of the menu, labeled "iWillRemember"
+        rootDescription:CreateTitle("iWillRemember")
 
-            -- Add a new button to the menu with the text "Create Note"
-            rootDescription:CreateButton("Create Note", function()
-                -- Show the iWRPanel and pass the player's name
-                iWR:MenuOpen(playerName)
-            end)
+        -- Add a new button to the menu with the text "Create Note"
+        rootDescription:CreateButton("Create Note", function()
+            -- Show the iWRPanel and pass the player's name
+            iWR:MenuOpen(playerName)
         end)
-    end
+    end)
+end
+
 
     -- Call to register filters
     RegisterChatFilters()
@@ -2409,6 +2301,7 @@ function iWR:OnEnable()
     ModifyMenuForContext("MENU_UNIT_PARTY")
     ModifyMenuForContext("MENU_UNIT_RAID_PLAYER")
     ModifyMenuForContext("MENU_UNIT_ENEMY_PLAYER")
+    ModifyMenuForContext("MENU_UNIT_FRIEND")
 end
 
 -- ╭───────────────────────────────────────────╮
@@ -2421,14 +2314,10 @@ combatEventFrame:SetScript("OnEvent", function(self, event)
         InCombat = true
         iWRPanel:Hide()
         iWRDatabaseFrame:Hide()
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "Entered combat, UI interaction disabled.")
-        end
+        iWR:DebugMsg("Entered combat, UI interaction disabled.",3)
     elseif event == "PLAYER_REGEN_ENABLED" then
         InCombat = false
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "Left combat, UI interaction enabled.")
-        end
+        iWR:DebugMsg("Left combat, UI interaction enabled.",3)
     end
 end)
 combatEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
@@ -2457,10 +2346,12 @@ eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
 eventFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "GROUP_ROSTER_UPDATE" or event == "RAID_ROSTER_UPDATE" then
-        CheckGroupMembersAgainstDatabase()
+        iWR:CheckGroupMembersAgainstDatabase()
     elseif event == "PLAYER_ENTERING_WORLD" then
-        C_Timer.After(2, CheckGroupMembersAgainstDatabase)
-    end
+        C_Timer.After(2, function()
+            iWR:CheckGroupMembersAgainstDatabase()
+        end)
+    end    
 end)
 
 -- ╭─────────────────────────────────────────────────────╮
@@ -2469,12 +2360,10 @@ end)
 local lastScanTime = 0
 local scanCooldown = 0.1 -- Cooldown time in seconds
 
-local function AddChatIconToLFGResults()
+function iWR:AddChatIconToLFGResults()
     local currentTime = GetTime() -- Get the current time in seconds
     if currentTime - lastScanTime < scanCooldown then
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "Skipping scan due to cooldown.")
-        end
+        iWR:DebugMsg("Skipping scan due to cooldown.",3)
         return
     end
 
@@ -2482,9 +2371,7 @@ local function AddChatIconToLFGResults()
 
     local scrollBox = LFGBrowseFrameScrollBox
     if not scrollBox or not scrollBox.ScrollTarget then
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "LFGBrowseFrameScrollBox or ScrollTarget not found.")
-        end
+        iWR:DebugMsg("LFGBrowseFrameScrollBox or ScrollTarget not found.")
         return
     end
 
@@ -2507,9 +2394,7 @@ local function AddChatIconToLFGResults()
 
             if playerName and iWRDatabase[playerName] then
                 if not child.chatIcon then
-                    if iWRSettings.DebugMode then
-                        print(L["Debug"] .. "Adding icon for player: " .. playerName)
-                    end
+                    iWR:DebugMsg("Adding icon for player: [" .. iWRDatabase[playerName][4] .. "].",3)
                     child.chatIcon = child:CreateTexture(nil, "OVERLAY")
                     child.chatIcon:SetSize(18, 18)
                     child.chatIcon:SetPoint("LEFT", child, "LEFT", 154, 0)
@@ -2520,9 +2405,7 @@ local function AddChatIconToLFGResults()
                 child.chatIcon:Hide()
             end
         else
-            if iWRSettings.DebugMode then
-                print(L["Debug"] .. "No FontString found for this child.")
-            end
+            iWR:DebugMsg("No FontString found for this child.",2)
         end
     end
 end
@@ -2533,14 +2416,12 @@ local function HookLFGScrollBox()
         local lastUpdate = 0
         LFGBrowseFrame:HookScript("OnUpdate", function()
             if GetTime() - lastUpdate >= scanCooldown then
-                AddChatIconToLFGResults()
+                iWR:AddChatIconToLFGResults()
                 lastUpdate = GetTime()
             end
         end)
     else
-        if iWRSettings.DebugMode then
-            print(L["Debug"] .. "LFGBrowseFrameScrollBox not available yet.")
-        end
+        iWR:DebugMsg("LFGBrowseFrameScrollBox not available yet.",2)
     end
 end
 

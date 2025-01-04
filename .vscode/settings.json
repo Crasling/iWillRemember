@@ -57,7 +57,8 @@
         "LE_LFG_CATEGORY_LFD",
         "HybridScrollFrame_GetOffset",
         "ToggleDropDownMenu",
-        "iWRCustomFlagsMenu"
+        "iWRCustomFlagsMenu",
+        "LFGBrowseFrameScrollBox"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {
