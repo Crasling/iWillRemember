@@ -10,10 +10,10 @@
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                     Namespace                                  │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
-local Name, AddOn = ...
-local Title = select(2, C_AddOns.GetAddOnInfo(Name)):gsub("%s*v?[%d%.]+$", "")
-local Version = C_AddOns.GetAddOnMetadata(Name, "Version")
-local Author = C_AddOns.GetAddOnMetadata(Name, "Author")
+local addonName, AddOn = ...
+local Title = select(2, C_AddOns.GetAddOnInfo(addonName)):gsub("%s*v?[%d%.]+$", "")
+local Version = C_AddOns.GetAddOnMetadata(addonName, "Version")
+local Author = C_AddOns.GetAddOnMetadata(addonName, "Author")
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                        Libs                                    │
@@ -36,19 +36,25 @@ local iWRBase = {}
 local InCombat
 local removeRequestQueue = {}
 local isPopupActive = false
+local warnedPlayers = {}
 local defaultSettings = {
     DebugMode = false,
     ChatIconSize = "Medium",
     DataSharing = true,
     ShowChatIcons = true,
     UpdateTargetFrame = true,
+    SoundWarnings = true,
+    GroupWarnings = true,
 }
 
-local sizes = { "Small", "Medium", "Large" }
-local selectedSize = 2 -- Default to Medium
-
-iWRDatabase = {}
-iWRSettings = {}
+local iWRDatabaseDefault = {
+    "",
+    0,
+    0,
+    "",
+    "",
+    "",
+}
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                     Colors                                     │
@@ -66,7 +72,7 @@ local Colors = {
     Cyan = "|cFF00FFFF",
     Magenta = "|cFFFF00FF",
     Orange = "|cFFFFA500",
-    Gray = "|cFF808080",
+    Gray = "|cFFC0C0C0",
 
     [10]    = "|cff80f451", -- Superior Colour
     [5]     = "|cff80f451", -- Respected Colour
@@ -141,6 +147,7 @@ iWRBase.Types = {
 iWRBase.Icons = {
     iWRIcon = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\iWRIcon.blp",
     Database = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Database.blp",
+    GlowBorder = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\GlowBorder.blp",
     [10]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Superior.blp",
     [5]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Respected.blp",
     [3]     = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Liked.blp",
@@ -150,18 +157,23 @@ iWRBase.Icons = {
     [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\Icons\\Hated.blp",
 }
 
+iWRBase.ChatIcons = {
+    [5]     = "Interface\\AddOns\\iWillRemember\\Images\\ChatIcons\\Respected.blp",
+    [3]     = "Interface\\AddOns\\iWillRemember\\Images\\ChatIcons\\Liked.blp",
+    [-3]    = "Interface\\AddOns\\iWillRemember\\Images\\ChatIcons\\Disliked.blp",
+    [-5]    = "Interface\\AddOns\\iWillRemember\\Images\\ChatIcons\\Hated.blp",
+}
+
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                    Functions                                   │
--- ├─────────────────────────────────┬──────────────────────────────────────────────╯
--- │      Function: Create Note      │
--- ╰─────────────────────────────────╯
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
 if not _G["Blizzard_ItemRef"] then
     _G["Blizzard_ItemRef"] = SetItemRef
 end
+
 SetItemRef = function(link, text, button, chatFrame)
     local linkType, playerName = string.split(":", link)
     if linkType == "iWRPlayer" and playerName then
-        -- Handle the custom hyperlink for iWRPlayer
         if iWRDatabase[playerName] then
             iWR:ShowDetailWindow(playerName)
         else
@@ -169,15 +181,32 @@ SetItemRef = function(link, text, button, chatFrame)
                 print(L["Debug"] .. "No data found for player: " .. playerName)
             end
         end
-        return -- Prevent further processing
+        return
     end
-
-    -- Call the original SetItemRef for other link types
     return _G["Blizzard_ItemRef"](link, text, button, chatFrame)
 end
 
-function iWR:InputNotEmpty(Text)
-    if Text ~= L["DefaultNameInput"] and Text ~= L["DefaultNoteInput"] and Text ~= "" and Text ~= nil and not string.find(Text, "^%s+$") then
+function iWR:VerifyInputNote(Note)
+    if Note ~= L["DefaultNameInput"]
+        and Note ~= L["DefaultNoteInput"]
+        and Note ~= ""
+        and Note ~= nil
+    then
+        return true
+    end
+    return false
+end
+
+function iWR:VerifyInputName(Name)
+    local verifyName = StripColorCodes(Name)
+    if verifyName ~= L["DefaultNameInput"]
+        and verifyName ~= L["DefaultNoteInput"]
+        and verifyName ~= ""
+        and verifyName ~= nil
+        and not string.find(verifyName, "^%s+$")
+        and not string.find(verifyName, "%d")
+        and not string.find(verifyName, " ")
+    then
         return true
     end
     return false
@@ -206,15 +235,15 @@ function iWR:AddNoteToGameTooltip(self, ...)
     end
 
     if UnitIsPlayer(unit) then
-        local dbEntry = iWRDatabase[tostring(name)]
-        if not dbEntry then return end
+        local data = iWRDatabase[tostring(name)]
+        if not data then return end
 
-        local typeIndex = tonumber(dbEntry[2])
-        local note = dbEntry[1]
-        local author = dbEntry[6]
-        local date = dbEntry[5]
+        local typeIndex = tonumber(data[2])
+        local note = data[1]
+        local author = data[6]
+        local date = data[5]
         local typeText = iWRBase.Types[typeIndex]
-        local iconPath = iWRBase.Icons[typeIndex]
+        local iconPath = iWRBase.ChatIcons[typeIndex] or "Interface\\Icons\\INV_Misc_QuestionMark"
 
         -- Add type and icon to the tooltip
         if typeText then
@@ -243,6 +272,18 @@ local function IsNeedToUpdate(CurrDataTime, CompDataTime)
     end
 end
 
+function iWR:ExtractDataBase(Entry)
+    local data = iWRDatabase[tostring(Entry)]
+    if not data then return end
+
+    local note = data[1]
+    local type = tonumber(data[2])
+    local name = data[4]
+    local date = data[5]
+    local author = data[6]
+    return note, type, name, date, author
+end
+
 -- ╭──────────────────────────────────────╮
 -- │      Function: Get Current Time      │
 -- ╰──────────────────────────────────────╯
@@ -256,6 +297,92 @@ local function GetCurrentTimeByHours()
     -- Return both the current time in hours and the formatted current date
     return tonumber(CurrentTime), CurrentDate
 end
+
+local function PlayNotificationSound()
+    PlaySound(SOUNDKIT.RAID_WARNING, "Master")
+end
+
+local function ShowNotificationPopup(matches)
+    if iWRSettings.GroupWarnings and #matches > 0 then
+        -- Create a notification frame
+        local notificationFrame = CreateFrame("Frame", nil, UIParent)
+        notificationFrame:SetSize(300, 100 + (#matches - 1) * 20) -- Adjust height for multiple matches
+        notificationFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 300)
+
+        -- Add title text
+        local title = notificationFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+        title:SetPoint("TOP", notificationFrame, "TOP", 0, -10)
+        title:SetText("|cffff9716iWR: |cffff0000Warning: Database Matches in group.|r")
+        title:SetFont("Fonts\\FRIZQT__.TTF", 20, "OUTLINE")
+
+        -- Add information for each match
+        local lastElement = title
+        for _, match in ipairs(matches) do
+            local playerInfo = notificationFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            playerInfo:SetPoint("TOP", lastElement, "BOTTOM", 0, -10)
+            playerInfo:SetText("|cffff9716" .. match.name .. "|r" .. Colors.iWR .. " (" .. Colors[match.relation] .. iWRBase.Types[match.relation] .. Colors.iWR .. ")")
+            playerInfo:SetFont("Fonts\\FRIZQT__.TTF", 16, "OUTLINE")
+
+            -- Add note text
+            local noteText = notificationFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            noteText:SetPoint("TOP", playerInfo, "BOTTOM", 0, -5)
+            noteText:SetText("Note: |cffffff00" .. match.note .. "|r")
+            noteText:SetFont("Fonts\\FRIZQT__.TTF", 14, "OUTLINE")
+
+            lastElement = noteText
+        end
+
+        -- Fade the frame over 10 seconds
+        C_Timer.After(2, function()
+            UIFrameFadeOut(notificationFrame, 10, 1, 0)
+        end)
+
+        -- Hide the frame once the fade is complete
+        C_Timer.After(10, function()
+            if notificationFrame:IsShown() then
+                notificationFrame:Hide()
+            end
+        end)
+
+        if iWRSettings.SoundWarnings then
+            PlayNotificationSound()
+            if iWRSettings.DebugMode then
+                print(L["Debug"] .. "Warning sound was played.")
+            end
+        end
+
+        notificationFrame:Show()
+    end
+end
+
+local function CheckGroupMembersAgainstDatabase()
+    wipe(warnedPlayers)
+
+    local numGroupMembers = GetNumGroupMembers()
+    local isInRaid = IsInRaid()
+    local matches = {}
+
+    for i = 1, numGroupMembers do
+        local unitID = isInRaid and "raid" .. i or "party" .. i
+        local name, realm = UnitName(unitID)
+        if name and iWRDatabase[name] and not warnedPlayers[name] then
+            -- Only process if the relationship value is below 0
+            local relationValue = iWRDatabase[name][2]
+            if relationValue and relationValue < 0 then
+                local note = iWRDatabase[name][1] or ""
+                local relation = relationValue -- Assuming the value below 0 is the relation
+
+                table.insert(matches, { name = name, relation = relation, note = note })
+                warnedPlayers[name] = true
+            end
+        end
+    end
+
+    if #matches > 0 then
+        ShowNotificationPopup(matches)
+    end
+end
+
 
 -- ╭────────────────────────────────────────╮
 -- │      Function: Update the Tooltip      │
@@ -296,7 +423,7 @@ function iWR:SendRemoveRequestToFriends(name)
     end
 end
 
-function iWR:TargetFrameDragonFlightUI()
+function iWR:SetTargetFrameDragonFlightUI()
     local portraitFrame = _G["DragonflightUITargetFrameBackground"] or _G["DragonflightUITargetFrameBorder"]
     if portraitFrame then
         local parent = portraitFrame:GetParent()
@@ -329,7 +456,7 @@ function iWR:TargetFrameDragonFlightUI()
     end
 end
 
-function iWR:TargetFrameDefault()
+function iWR:SetTargetFrameDefault()
     if TargetFrameTextureFrameTexture then
         TargetFrameTextureFrameTexture:SetTexture(iWRBase.TargetFrames[iWRDatabase[tostring(GetUnitName("target", false))][2]])
         if iWRSettings.DebugMode then
@@ -424,7 +551,7 @@ end
 -- ╭──────────────────────────────────────────────╮
 -- │      Function: Strip Color Codes Function    │
 -- ╰──────────────────────────────────────────────╯
-local function StripColorCodes(input)
+function StripColorCodes(input)
     return input:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
 end
 
@@ -595,8 +722,8 @@ function iWR:ProcessRemoveRequestQueue()
         button1 = "Yes",
         button2 = "No",
         OnAccept = function()
+            print(L["CharNoteStart"] .. iWRDatabase[noteName][4]  .. "|cffff9716] removed from database.")
             iWRDatabase[noteName] = nil
-            print(L["CharNoteStart"] .. noteName .. "|cffff9716] removed from database.")
             iWR:PopulateDatabase()
             iWR:UpdateTooltip()
             iWR:UpdateTargetFrame()
@@ -689,6 +816,9 @@ function iWR:SetTargetingFrame()
     if iWRDatabase[targetName][2] ~= 0 then
         local playerName = UnitName("target")
         local _, class = UnitClass("target")
+
+        iWR:VerifyTargetClassinDB(targetName, class)
+
         iWRNameInput:SetText(class and ColorizePlayerNameByClass(playerName, class) or playerName)
 
         if iWRSettings.UpdateTargetFrame then
@@ -697,9 +827,9 @@ function iWR:SetTargetingFrame()
             end
 
             if imagePath == "DragonFlightUI" then 
-                iWR:TargetFrameDragonFlightUI()
+                iWR:SetTargetFrameDragonFlightUI()
             else
-                iWR:TargetFrameDefault()
+                iWR:SetTargetFrameDefault()
             end
         end
         if iWRSettings.DebugMode then
@@ -712,18 +842,22 @@ local function AddRelationshipIconToChat(self, event, message, author, flags, ..
     if iWRSettings.ShowChatIcons then
         local authorName = string.match(author, "^[^-]+") or author
         if iWRDatabase[authorName] then
-            local iconPath = iWRBase.Icons[iWRDatabase[authorName][2]] or "Interface\\Icons\\INV_Misc_QuestionMark"
-            local iconSize = (iWRSettings.ChatIconSize == "Big" and 16) or
-                             (iWRSettings.ChatIconSize == "Medium" and 14) or 12
+            -- Get the font size from the current chat frame
+            local font, fontSize, fontFlags = self:GetFont()
+            local iconSize = math.floor(fontSize * 1.2)
+            local iconPath = iWRBase.ChatIcons[iWRDatabase[authorName][2]] or "Interface\\Icons\\INV_Misc_QuestionMark"
             local iconString = "|T" .. iconPath .. ":" .. iconSize .. "|t"
             local clickableLink = "|HiWRPlayer:" .. authorName .. "|h" .. iconString .. "|h"
-            flags = clickableLink
+
+            message = clickableLink .. " " .. message
         end
+
         return false, message, author, flags, ...
     else
         return false, message, author, flags, ...
     end
 end
+
 
 function iWR:HandleHyperlink(link, text, button, chatFrame)
     local linkType, playerName = string.split(":", link)
@@ -745,8 +879,8 @@ function iWR:ShowDetailWindow(playerName)
     self.detailRows = self.detailRows or {}
 
     -- Check if the player exists in the database
-    local dbEntry = iWRDatabase[playerName]
-    if not dbEntry then
+    local data = iWRDatabase[playerName]
+    if not data then
         if iWRSettings.DebugMode then
             print(L["Debug"] .. "No data found for player: " .. playerName)
         end
@@ -828,11 +962,11 @@ function iWR:ShowDetailWindow(playerName)
     -- Populate new content
     local yOffset = -5
     local detailsContent = {
-        {label = Colors.Default .. "Name:" .. Colors.Reset, value = dbEntry[4]},
-        {label = Colors.Default .. "Type:" .. Colors[dbEntry[2]], value = iWRBase.Types[tonumber(dbEntry[2])]},
-        {label = Colors.Default .. "Note:" .. Colors[dbEntry[2]], value = dbEntry[1], isNote = true},
-        {label = Colors.Default .. "Author:" .. Colors.Reset, value = dbEntry[6]},
-        {label = Colors.Default .. "Date:", value = dbEntry[5]},
+        {label = Colors.Default .. "Name:" .. Colors.Reset, value = data[4]},
+        {label = Colors.Default .. "Type:" .. Colors[data[2]], value = iWRBase.Types[tonumber(data[2])]},
+        {label = Colors.Default .. "Note:" .. Colors[data[2]], value = data[1], isNote = true},
+        {label = Colors.Default .. "Author:" .. Colors.Reset, value = data[6]},
+        {label = Colors.Default .. "Date:", value = data[5]},
     }
 
     for _, item in ipairs(detailsContent) do
@@ -885,6 +1019,20 @@ local function InitializeSettings()
     end
 end
 
+local function InitializeDatabase()
+    if not iWRDatabase then
+        iWRDatabase = {}
+    end
+
+    for playerName, data in pairs(iWRDatabase) do
+        for index, defaultValue in ipairs(iWRDatabaseDefault) do
+            if data[index] == nil then
+                data[index] = defaultValue
+            end
+        end
+    end
+end
+
 local function RegisterChatFilters()
     local chatEvents = {
         "CHAT_MSG_CHANNEL",
@@ -901,8 +1049,6 @@ local function RegisterChatFilters()
         "CHAT_MSG_WHISPER_INFORM",
         "CHAT_MSG_INSTANCE_CHAT",
         "CHAT_MSG_INSTANCE_CHAT_LEADER",
-        "CHAT_MSG_EMOTE",
-        "CHAT_MSG_TEXT_EMOTE",
         "CHAT_MSG_IGNORED",
         "CHAT_MSG_DND",
         "CHAT_MSG_AFK",
@@ -913,12 +1059,34 @@ local function RegisterChatFilters()
     end
 end
 
-function iWR:UpdateTargetFrame()
-    local targetName = UnitName("target")
-    if iWRSettings.UpdateTargetFrame then
-        if targetName and targetName ~= "" and NoteName == targetName then
-            TargetFrame_Update(TargetFrame)
+function iWR:VerifyTargetClassinDB(targetName, targetClass)
+    if iWRDatabase[targetName][2] ~= 0 then
+        if Colors.Gray .. targetName == iWRDatabase[targetName][4] or targetName == iWRDatabase[targetName][4] then
+            iWRDatabase[targetName][4] = ColorizePlayerNameByClass(targetName, targetClass)
+            if iWRSettings.DebugMode then
+                print(L["Debug"] .."[" .. iWRDatabase[targetName][4] .. "] was found with missing class information. Class color was added to database.")
+            end
+            iWR:PopulateDatabase()
+            if iWRSettings.DataSharing ~= false then
+                wipe(DataCacheTable)
+                DataCacheTable[tostring(targetName)] = {
+                    iWRDatabase[targetName][1],     --Data[1]
+                    iWRDatabase[targetName][2],     --Data[2]
+                    iWRDatabase[targetName][3],     --Data[3]
+                    iWRDatabase[targetName][4],     --Data[4]
+                    iWRDatabase[targetName][5],     --Data[5]
+                    iWRDatabase[targetName][6],     --Data[6]
+                }
+                DataCache = iWR:Serialize(DataCacheTable)
+                iWR:SendNewDBUpdateToFriends()
+            end
         end
+    end
+end
+
+function iWR:UpdateTargetFrame()
+    if iWRSettings.UpdateTargetFrame then
+        TargetFrame_Update(TargetFrame)
     end
 end
 
@@ -1023,15 +1191,15 @@ end
 function iWR:AddNewNote(Name, Note, Type)
     iWRNameInput:ClearFocus()
     iWRNoteInput:ClearFocus()
-    if iWR:InputNotEmpty(Name) then
-        if iWR:InputNotEmpty(Note) then
-            local playerName = GetUnitName("player")
+    if iWR:VerifyInputName(Name) then
+        if iWR:VerifyInputNote(Note) then
             iWR:CreateNote(Name, tostring(Note), Type)
         else
             iWR:CreateNote(Name, "", Type)
         end
         iWR:PopulateDatabase()
     else
+        print(L["NameInputError"])
         if iWRSettings.DebugMode then
             print(L["Debug"] .. "NameInput error: [|r" .. (Name or "nil") .. "|cffff9716].")
         end
@@ -1043,20 +1211,27 @@ end
 -- ╰──────────────────────╯
 function iWR:ClearNote(Name)
     if iWRSettings.DataSharing ~= false then
-        if iWR:InputNotEmpty(Name) then
-            -- Remove color codes from the name
+        if iWR:VerifyInputName(Name) then
             local uncoloredName = StripColorCodes(Name)
 
-            if iWRDatabase[uncoloredName] then
+            local upperName = uncoloredName:upper()
+            local lowerName = uncoloredName:lower()
+            local capitalizedName = upperName:sub(1, 1) .. lowerName:sub(2)
+            local colorCode = string.match(iWRDatabase[capitalizedName][4], "|c%x%x%x%x%x%x%x%x") or nil
+            if iWRDatabase[capitalizedName] then
                 -- Remove the entry from the database
-                iWRDatabase[uncoloredName] = nil
+                iWRDatabase[capitalizedName] = nil
                 iWR:PopulateDatabase()
                 iWR:UpdateTargetFrame()
-                iWR:SendRemoveRequestToFriends(uncoloredName)
-                print(L["CharNoteStart"] .. Name .. "|cffff9716] removed from database.")
+                iWR:SendRemoveRequestToFriends(capitalizedName)
+                if colorCode ~= "" and colorCode ~= nil then
+                    print(L["CharNoteStart"] .. colorCode .. capitalizedName .. "|cffff9716] removed from database.")
+                else
+                    print(L["CharNoteStart"] .. capitalizedName .. "|cffff9716] removed from database.")
+                end
             else
                 -- Notify that the name was not found in the database
-                print("|cffff9716[iWR]: Name [|r" .. Name .. "|cffff9716] does not exist in the database.")
+                print("|cffff9716[iWR]: Name [|r" .. capitalizedName .. "|cffff9716] does not exist in the database.")
             end
         else
             if iWRSettings.DebugMode then
@@ -1065,7 +1240,6 @@ function iWR:ClearNote(Name)
         end
     end
 end
-
 
 -- ╭───────────────────────────╮
 -- │      Create New Note      │
@@ -1086,23 +1260,38 @@ function iWR:CreateNote(Name, Note, Type)
     else
         NoteAuthor = playerName
     end
+
     -- Remove color codes from the name
     local uncoloredName = StripColorCodes(Name)
 
-        local upperName = uncoloredName:upper()
-        local lowerName = uncoloredName:lower()
-        local capitalizedName = upperName:sub(1, 1) .. lowerName:sub(2)
+    local upperName = uncoloredName:upper()
+    local lowerName = uncoloredName:lower()
+    local capitalizedName = upperName:sub(1, 1) .. lowerName:sub(2)
 
-        -- Use the modified name
-        NoteName = capitalizedName
+    local targetName = UnitName("target")
+    local _, targetClass = UnitClass("target")
 
-        local currentTime, currentDate = GetCurrentTimeByHours()
+    NoteName = capitalizedName
+
+    local currentTime, currentDate = GetCurrentTimeByHours()
+    local dbName = ""
+    if colorCode ~= "" and colorCode ~= nil then
+        dbName = colorCode .. NoteName
+    else
+        if targetName == capitalizedName then
+            colorCode = Colors.Classes[targetClass]
+            dbName = colorCode .. NoteName
+        else
+            dbName = Colors.Gray .. NoteName
+        end
+    end
+
     -- Save to database using uncolored name
     iWRDatabase[NoteName] = {
         Note,           --Data[1]
         Type,           --Data[2]
         currentTime,    --Data[3]
-        Name,           --Data[4]
+        dbName,         --Data[4]
         currentDate,    --Data[5]
         NoteAuthor,     --Data[6]
     }
@@ -1115,7 +1304,7 @@ function iWR:CreateNote(Name, Note, Type)
             Note,           --Data[1]
             Type,           --Data[2]
             currentTime,    --Data[3]
-            Name,           --Data[4]
+            dbName,         --Data[4]
             currentDate,    --Data[5]
             NoteAuthor,     --Data[6]
         }
@@ -1123,10 +1312,11 @@ function iWR:CreateNote(Name, Note, Type)
         iWR:SendNewDBUpdateToFriends()
     end
     if colorCode ~= nil then 
-        print(L["CharNoteStart"] .. colorCode .. NoteName .. L["CharNoteEnd"])
+        print(L["CharNoteStart"] .. dbName .. L["CharNoteEnd"])
     else
-        print(L["CharNoteStart"] .. NoteName .. L["CharNoteEnd"])
+        print(L["CharNoteStart"] .. dbName .. L["CharNoteEnd"] .. Colors.Gray .. " Class unknown.")
     end
+    colorCode = nil
 end
 
 
@@ -1227,7 +1417,7 @@ iWRNameInput:SetJustifyH("CENTER")
 -- Clear the text when focused and it matches the default text
 iWRNameInput:SetScript("OnEditFocusGained", function(self)
     if self:GetText() == L["DefaultNameInput"] then
-        self:SetText("") -- Clear the default text
+        self:SetText("")
     end
 end)
 
@@ -1235,6 +1425,17 @@ end)
 iWRNameInput:SetScript("OnEditFocusLost", function(self)
     if self:GetText() == "" then
         self:SetText(L["DefaultNameInput"]) -- Reset to default text
+    end
+end)
+
+-- Remove color codes when the text changes
+iWRNameInput:SetScript("OnTextChanged", function(self, userInput)
+    if userInput then
+        local text = self:GetText()
+        local cleanedText = StripColorCodes(text)
+        if text ~= cleanedText then
+            self:SetText(cleanedText)
+        end
     end
 end)
 
@@ -1673,8 +1874,8 @@ function iWR:PopulateDatabase()
                     button1 = "Yes",
                     button2 = "No",
                     OnAccept = function()
+                        print(L["CharNoteStart"] .. iWRDatabase[playerName][4]  .. "|cffff9716] removed from database.")
                         iWRDatabase[playerName] = nil
-                        print(L["CharNoteStart"] .. playerName .. "|cffff9716] removed from database.")
                         iWR:PopulateDatabase()
                         iWR:SendRemoveRequestToFriends(playerName)
                     end,
@@ -1941,8 +2142,8 @@ searchDatabaseButton:SetScript("OnClick", function()
                                 button1 = "Yes",
                                 button2 = "No",
                                 OnAccept = function()
+                                    print(L["CharNoteStart"] .. iWRDatabase[playerName][4]  .. "|cffff9716] removed from database.")
                                     iWRDatabase[playerName] = nil
-                                    print(L["CharNoteStart"] .. playerName .. "|cffff9716] removed from database.")
                                     iWR:PopulateDatabase()
                                     iWR:SendRemoveRequestToFriends(playerName)
                                 end,
@@ -2014,12 +2215,15 @@ function iWR:OnEnable()
     end)
 
     if iWRSettings.DebugMode then
-        print(L["Debug"] .. "All hooks successfully added.")
+        print(L["Debug"] .. "All initialization hooks added.")
     end
+
+    -- Initialize
+    InitializeSettings()
+    InitializeDatabase()
 
     -- Print a message to the chat frame when the addon is loaded
     print(L["iWRLoaded"] .. Version)
-    InitializeSettings()
 
     -- Register DataSharing
     iWR:RegisterComm("iWRFullDBUpdate", "OnFullDBUpdate")
@@ -2029,114 +2233,133 @@ function iWR:OnEnable()
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Options Panel                                │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
-local optionsPanel = CreateFrame("Frame", "iWROptionsPanel", UIParent)
-optionsPanel.name = "iWillRemember"
-optionsPanel:Hide() -- Hide initially; only shown by WoW's interface
+    local optionsPanel = CreateFrame("Frame", "iWROptionsPanel", UIParent)
+    optionsPanel.name = "iWillRemember"
+    optionsPanel:Hide() -- Hide initially; only shown by WoW's interface
 
--- Title
-local title = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-title:SetPoint("TOPLEFT", 16, -16)
-title:SetText("iWillRemember Options")
+    -- Title
+    local title = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", 16, -16)
+    title:SetText(Colors.iWR .. "iWillRemember" .. Colors.Green .. " v" .. Version .. Colors.iWR .. " Options")
 
--- Debug Mode Checkbox
-local debugCheckbox = CreateFrame("CheckButton", "iWRDebugCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-debugCheckbox:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
-debugCheckbox.Text:SetText("Enable Debug Mode")
-debugCheckbox:SetChecked(iWRSettings.DebugMode or false) -- Initialize from settings
-debugCheckbox:SetScript("OnClick", function(self)
-    local isDebugEnabled = self:GetChecked()
-    iWRSettings.DebugMode = isDebugEnabled
-end)
+    -- Debug Mode Category Title
+    local debugCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    debugCategoryTitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
+    debugCategoryTitle:SetText(Colors.iWR .. "Developer Settings")
 
--- Chat Icon Size Dropdown
-local chatIconSizeLabel = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-chatIconSizeLabel:SetPoint("TOPLEFT", debugCheckbox, "BOTTOMLEFT", 0, -20)
-chatIconSizeLabel:SetText("Chat Icon Size:")
+    -- Debug Mode Checkbox
+    local debugCheckbox = CreateFrame("CheckButton", "iWRDebugCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+    debugCheckbox:SetPoint("TOPLEFT", debugCategoryTitle, "BOTTOMLEFT", 0, -5)
+    debugCheckbox.Text:SetText("Enable Debug Mode")
+    debugCheckbox:SetChecked(iWRSettings.DebugMode or false) -- Initialize from settings
+    debugCheckbox:SetScript("OnClick", function(self)
+        local isDebugEnabled = self:GetChecked()
+        iWRSettings.DebugMode = isDebugEnabled
+    end)
 
-local chatIconSizeDropdown = CreateFrame("Frame", "iWRChatIconSizeDropdown", optionsPanel, "UIDropDownMenuTemplate")
-chatIconSizeDropdown:SetPoint("LEFT", chatIconSizeLabel, "RIGHT", -10, -3)
+    -- Data Sharing Category Title
+    local dataSharingCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    dataSharingCategoryTitle:SetPoint("TOPLEFT", debugCheckbox, "BOTTOMLEFT", 0, -15)
+    dataSharingCategoryTitle:SetText(Colors.iWR .. "Data Sharing Settings")
 
--- Chat Icon Size Dropdown
-UIDropDownMenu_SetText(chatIconSizeDropdown, iWRSettings.ChatIconSize or "Medium")
-UIDropDownMenu_Initialize(chatIconSizeDropdown, function(self, level, menuList)
-    local info = UIDropDownMenu_CreateInfo()
-    for i, size in ipairs(sizes) do
-        info.text = size
-        info.arg1 = i
-        info.checked = (sizes[i] == iWRSettings.ChatIconSize)
-        info.func = function(self, arg1)
-            iWRSettings.ChatIconSize = sizes[arg1]
-            UIDropDownMenu_SetText(chatIconSizeDropdown, sizes[arg1])
-        end
-        UIDropDownMenu_AddButton(info)
-    end
-end)
-UIDropDownMenu_SetWidth(chatIconSizeDropdown, 100)
-UIDropDownMenu_SetText(chatIconSizeDropdown, iWRSettings.ChatIconSize or sizes[selectedSize]) -- Initialize from settings
+    -- Data Sharing Checkbox
+    local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+    dataSharingCheckbox:SetPoint("TOPLEFT", dataSharingCategoryTitle, "BOTTOMLEFT", 0, -5)
+    dataSharingCheckbox.Text:SetText("Enable Data Sharing")
+    dataSharingCheckbox:SetChecked(iWRSettings.DataSharing)
+    dataSharingCheckbox:SetScript("OnClick", function(self)
+        iWRSettings.DataSharing = self:GetChecked()
+    end)
 
--- Data Sharing Checkbox
-local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-dataSharingCheckbox:SetPoint("TOPLEFT", chatIconSizeLabel, "BOTTOMLEFT", 0, -20)
-dataSharingCheckbox.Text:SetText("Enable Data Sharing")
-dataSharingCheckbox:SetChecked(iWRSettings.DataSharing)
-dataSharingCheckbox:SetScript("OnClick", function(self)
-    iWRSettings.DataSharing = self:GetChecked()
-end)
+    -- Target Frame and Chat Icons Category Title
+    local targetChatCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    targetChatCategoryTitle:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", 0, -15)
+    targetChatCategoryTitle:SetText(Colors.iWR .. "Display Settings")
 
--- Target Frames Visibility Checkbox
-local targetFrameCheckbox = CreateFrame("CheckButton", "iWRTargetFrameCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-targetFrameCheckbox:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", 0, -20)
-targetFrameCheckbox.Text:SetText("Enable TargetFrame Update")
-targetFrameCheckbox:SetChecked(iWRSettings.ShowChatIcons)
-targetFrameCheckbox:SetScript("OnClick", function(self)
-    iWRSettings.UpdateTargetFrame = self:GetChecked()
-end)
+    -- Target Frames Visibility Checkbox
+    local targetFrameCheckbox = CreateFrame("CheckButton", "iWRTargetFrameCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+    targetFrameCheckbox:SetPoint("TOPLEFT", targetChatCategoryTitle, "BOTTOMLEFT", 0, -5)
+    targetFrameCheckbox.Text:SetText("Enable TargetFrame Update")
+    targetFrameCheckbox:SetChecked(iWRSettings.ShowChatIcons)
+    targetFrameCheckbox:SetScript("OnClick", function(self)
+        iWRSettings.UpdateTargetFrame = self:GetChecked()
+    end)
 
--- Chat Icon Visibility Checkbox
-local chatIconCheckbox = CreateFrame("CheckButton", "iWRChatIconCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-chatIconCheckbox:SetPoint("TOPLEFT", targetFrameCheckbox, "BOTTOMLEFT", 0, -20)
-chatIconCheckbox.Text:SetText("Show Chat Icons")
-chatIconCheckbox:SetChecked(iWRSettings.ShowChatIcons)
-chatIconCheckbox:SetScript("OnClick", function(self)
-    iWRSettings.ShowChatIcons = self:GetChecked()
-end)
+    -- Chat Icon Visibility Checkbox
+    local chatIconCheckbox = CreateFrame("CheckButton", "iWRChatIconCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+    chatIconCheckbox:SetPoint("TOPLEFT", targetFrameCheckbox, "BOTTOMLEFT", 0, -10)
+    chatIconCheckbox.Text:SetText("Show Chat Icons")
+    chatIconCheckbox:SetChecked(iWRSettings.ShowChatIcons)
+    chatIconCheckbox:SetScript("OnClick", function(self)
+        iWRSettings.ShowChatIcons = self:GetChecked()
+    end)
 
--- Register the options panel
-local optionsCategory = Settings.RegisterCanvasLayoutCategory(optionsPanel, "iWillRemember")
-Settings.RegisterAddOnCategory(optionsCategory)
+    -- Group Warnings Category Title
+    local groupWarningCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    groupWarningCategoryTitle:SetPoint("TOPLEFT", chatIconCheckbox, "BOTTOMLEFT", 0, -15)
+    groupWarningCategoryTitle:SetText(Colors.iWR .. "Warning Settings")
+
+    -- Group Warning Checkbox
+    local groupWarningCheckbox = CreateFrame("CheckButton", "iWRGroupWarningCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+    groupWarningCheckbox:SetPoint("TOPLEFT", groupWarningCategoryTitle, "BOTTOMLEFT", 0, -5)
+    groupWarningCheckbox.Text:SetText("Enable Group Warnings")
+    groupWarningCheckbox:SetChecked(iWRSettings.GroupWarnings)
+    groupWarningCheckbox:SetScript("OnClick", function(self)
+        local isEnabled = self:GetChecked()
+        iWRSettings.GroupWarnings = isEnabled
+        soundWarningCheckbox:SetEnabled(isEnabled) -- Enable or disable the Sound Warning checkbox
+    end)
+
+    -- Sound Warning Checkbox
+    soundWarningCheckbox = CreateFrame("CheckButton", "iWRSoundWarningCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+    soundWarningCheckbox:SetPoint("TOPLEFT", groupWarningCheckbox, "BOTTOMLEFT", 30, -5)
+    soundWarningCheckbox.Text:SetText("Enable Sound Warnings")
+    soundWarningCheckbox:SetChecked(iWRSettings.SoundWarnings)
+    soundWarningCheckbox:SetScript("OnClick", function(self)
+        iWRSettings.SoundWarnings = self:GetChecked()
+    end)
+
+
+    -- Register the options panel
+    local optionsCategory = Settings.RegisterCanvasLayoutCategory(optionsPanel, "iWillRemember")
+    Settings.RegisterAddOnCategory(optionsCategory)
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Minimap button                                │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
-local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
-    type = "data source",
-    text = "iWillRemember",
-    icon = iWRBase.Icons.iWRIcon,
-    OnClick = function(self, button)
-        if button == "LeftButton" and IsShiftKeyDown() then
-            iWR:DatabaseToggle()
-            iWR:PopulateDatabase()
-        elseif button == "LeftButton" then
-            iWR:MenuToggle()
-        elseif button == "RightButton" then
-                -- Nothing
-        end
-    end,
+    local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
+        type = "data source",
+        text = "iWillRemember",
+        icon = iWRBase.Icons.iWRIcon,
+        OnClick = function(self, button)
+            if button == "LeftButton" and IsShiftKeyDown() then
+                iWR:DatabaseToggle()
+                iWR:PopulateDatabase()
+            elseif button == "LeftButton" then
+                iWR:MenuToggle()
+            elseif button == "RightButton" then
+                -- Open the settings menu directly to the addon category
+                local success = pcall(function()
+                    Settings.OpenToCategory("iWillRemember")
+                end)
+                if not success and iWRSettings.DebugMode then
+                    print("|cffff9716[iWR]: DEBUG: Failed to open settings. Make sure it is registered.")
+                end
+            end
+        end,
 
-    -- Tooltip handling
-    OnTooltipShow = function(tooltip)
-        -- Name
-        tooltip:SetText("|cffff9716iWillRemember v" .. Version, 1, 1, 1)
+        -- Tooltip handling
+        OnTooltipShow = function(tooltip)
+            -- Name
+            tooltip:SetText("|cffff9716iWillRemember v" .. Version, 1, 1, 1)
 
-        -- Desc
-        tooltip:AddLine(" ", 1, 1, 1) 
-        tooltip:AddLine(L["MinimapButtonLeftClick"], 1, 1, 1)
---        tooltip:AddLine(L["MinimapButtonRightClick"], 1, 1, 1)
-        tooltip:AddLine(L["MinimapButtonShiftLeftClick"], 1, 1, 1)
-
-        -- Make visible
-        tooltip:Show()  -- Make sure the tooltip is displayed
-    end,
+            -- Desc
+            tooltip:AddLine(" ", 1, 1, 1) 
+            tooltip:AddLine(L["MinimapButtonLeftClick"], 1, 1, 1)
+            tooltip:AddLine(L["MinimapButtonRightClick"], 1, 1, 1)
+            tooltip:AddLine(L["MinimapButtonShiftLeftClick"], 1, 1, 1)
+            tooltip:Show()  -- Make sure the tooltip is displayed
+        end,
     })
 
     -- Register the minimap button with LibDBIcon
@@ -2223,3 +2446,118 @@ frame:SetScript("OnEvent", function(self, event, ...)
         iWR:SendFullDBUpdateToFriends()
     end
 end)
+
+-- ╭──────────────────────────────────────────────────╮
+-- │      Event Handler for Party or Raid Changes     │
+-- ╰──────────────────────────────────────────────────╯
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+eventFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+
+eventFrame:SetScript("OnEvent", function(self, event, ...)
+    if event == "GROUP_ROSTER_UPDATE" or event == "RAID_ROSTER_UPDATE" then
+        CheckGroupMembersAgainstDatabase()
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        C_Timer.After(2, CheckGroupMembersAgainstDatabase)
+    end
+end)
+
+-- ╭─────────────────────────────────────────────────────╮
+-- │      Event and Function Handler for LFG Browser     │
+-- ╰─────────────────────────────────────────────────────╯
+local lastScanTime = 0
+local scanCooldown = 0.1 -- Cooldown time in seconds
+
+local function AddChatIconToLFGResults()
+    local currentTime = GetTime() -- Get the current time in seconds
+    if currentTime - lastScanTime < scanCooldown then
+        if iWRSettings.DebugMode then
+            print(L["Debug"] .. "Skipping scan due to cooldown.")
+        end
+        return
+    end
+
+    lastScanTime = currentTime -- Update the last scan time
+
+    local scrollBox = LFGBrowseFrameScrollBox
+    if not scrollBox or not scrollBox.ScrollTarget then
+        if iWRSettings.DebugMode then
+            print(L["Debug"] .. "LFGBrowseFrameScrollBox or ScrollTarget not found.")
+        end
+        return
+    end
+
+    local children = {scrollBox.ScrollTarget:GetChildren()}
+
+    for _, child in ipairs(children) do
+        local nameText
+        for _, region in ipairs({child:GetRegions()}) do
+            if region and region:GetObjectType() == "FontString" and region:GetText() then
+                nameText = region
+                break
+            end
+        end
+
+        if nameText then
+            local playerName = nameText:GetText()
+            if playerName then
+                playerName = playerName:match("^[^-]+")
+            end
+
+            if playerName and iWRDatabase[playerName] then
+                if not child.chatIcon then
+                    if iWRSettings.DebugMode then
+                        print(L["Debug"] .. "Adding icon for player: " .. playerName)
+                    end
+                    child.chatIcon = child:CreateTexture(nil, "OVERLAY")
+                    child.chatIcon:SetSize(18, 18)
+                    child.chatIcon:SetPoint("LEFT", child, "LEFT", 154, 0)
+                end
+                child.chatIcon:SetTexture(iWRBase.ChatIcons[iWRDatabase[playerName][2]] or "Interface\\Icons\\INV_Misc_QuestionMark")
+                child.chatIcon:Show()
+            elseif child.chatIcon then
+                child.chatIcon:Hide()
+            end
+        else
+            if iWRSettings.DebugMode then
+                print(L["Debug"] .. "No FontString found for this child.")
+            end
+        end
+    end
+end
+
+local function HookLFGScrollBox()
+    if LFGBrowseFrameScrollBox then
+        -- Add throttling using a timer
+        local lastUpdate = 0
+        LFGBrowseFrame:HookScript("OnUpdate", function()
+            if GetTime() - lastUpdate >= scanCooldown then
+                AddChatIconToLFGResults()
+                lastUpdate = GetTime()
+            end
+        end)
+    else
+        if iWRSettings.DebugMode then
+            print(L["Debug"] .. "LFGBrowseFrameScrollBox not available yet.")
+        end
+    end
+end
+
+local function InitializeLFGHook()
+    local frame = CreateFrame("Frame")
+    frame:RegisterEvent("ADDON_LOADED")
+    frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+
+    frame:SetScript("OnEvent", function(self, event, addon)
+        if event == "ADDON_LOADED" and addon == "Blizzard_LookingForGroupUI" then
+            HookLFGScrollBox()
+            frame:UnregisterEvent("ADDON_LOADED")
+        elseif event == "PLAYER_ENTERING_WORLD" then
+            C_Timer.After(2, HookLFGScrollBox)
+            frame:UnregisterEvent("PLAYER_ENTERING_WORLD")
+        end
+    end)
+end
+
+InitializeLFGHook()

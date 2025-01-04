@@ -55,7 +55,7 @@ L["DefaultNameInput"] = "Enter player name..."
 L["DefaultNoteInput"] = "Enter note..."
 L["MinimapButtonLeftClick"] = (Colors.Yellow .. "Left Click: " .. Colors.Orange .. "Open iWR Menu")
 L["MinimapButtonShiftLeftClick"] = (Colors.Yellow .. "Shift-Left Click: " .. Colors.Orange .. "Open iWR Database")
-L["MinimapButtonRightClick"] = (Colors.Yellow .. "Right Click: " .. Colors.Orange .. "Open iWR Settings")
+L["MinimapButtonRightClick"] = (Colors.Yellow .. "Right Click: " .. Colors.Orange .. "Open Settings")
 
 L["HelpSync"] = Colors.Yellow .. "How to sync: " .. Colors.iWR .. "Add your friends in the social panel in-game, It will not share to Battle.Net friends(REAL ID), only the friends added to the World of Warcraft friendslist"
 L["HelpUse"] = Colors.Yellow .. "How to use: " .. Colors.iWR .. "Target a player or write their name manually, optionally add a note and then press Respected, Liked, Disliked or Hated to save the player in the database"
@@ -63,9 +63,9 @@ L["HelpClear"] = Colors.Yellow .. "How to clear: " .. Colors.iWR .. "When pressi
 L["HelpSettings"] = Colors.Yellow .. "Settings Menu: " .. Colors.iWR .. "You will find the settings menu in ESC > Options > addOns > iWillRemember"
 
 L["iWRLoaded"] = Msg("iWillRemember Version v")
-L["DevLoad"] = Msg("iWillRemember Debug messages are now active. Welcome Developer")
 L["InvalidTarget"] = Msg("Target must be a player")
 L["InCombat"] = Msg("Cannot be used in combat")
 L["CharNoteStart"] = Msg("Character note: [")
 L["CharNoteEnd"] = "|cffff9716] created.|r"
 L["Debug"] = Msg(Colors.Red .. "DEBUG: " .. Colors.iWR)
+L["NameInputError"] = Msg("Name input includes not allowed characters")
