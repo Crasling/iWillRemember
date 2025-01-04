@@ -46,6 +46,7 @@ local defaultSettings = {
     UpdateTargetFrame = true,
     SoundWarnings = true,
     GroupWarnings = true,
+    MinimapButton = { hide = false, minimapPos = -30 }
 }
 
 local iWRDatabaseDefault = {
@@ -248,6 +249,19 @@ function iWR:VerifyInputName(Name)
     return false
 end
 
+function iWR:SaveMinimapPosition(event, buttonName)
+    iWRSettings.MinimapButton.minimapPos = LDBIcon.db.iWillRemember_MinimapButton.minimapPos
+end
+
+-- Hook into LibDBIcon updates
+LDBIcon.RegisterCallback(iWR, "LibDBIcon_Changed", "SaveMinimapPosition")
+
+-- Restore position on load
+local function RestoreMinimapPosition()
+    if iWRSettings.MinimapButton then
+        LDBIcon:Refresh("iWillRemember_MinimapButton", iWRSettings.MinimapButton)
+    end
+end
 
 -- ╭────────────────────────────────────────╮
 -- │      Function: Add note to Tooltip     │
@@ -2125,6 +2139,7 @@ function iWR:OnEnable()
     iWR:RegisterComm("iWRNewDBUpdate", "OnNewDBUpdate")
     iWR:RegisterComm("iWRRemDBUpdate", "OnRemDBUpdate")
 
+    RestoreMinimapPosition()
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Options Panel                                │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
@@ -2259,12 +2274,8 @@ function iWR:OnEnable()
     })
 
     -- Register the minimap button with LibDBIcon
-    LDBIcon:Register("iWillRemember_MinimapButton", minimapButton, {
-        hide = false,
-        lock = false,
-        minimapPos = -30,
-        radius = 80,
-    })
+    LDBIcon:Register("iWillRemember_MinimapButton", minimapButton, iWRSettings.MinimapButton)
+
 
 -- Function to modify the right-click menu for a given context
 local function ModifyMenuForContext(menuType)
@@ -2301,7 +2312,7 @@ end
     ModifyMenuForContext("MENU_UNIT_PARTY")
     ModifyMenuForContext("MENU_UNIT_RAID_PLAYER")
     ModifyMenuForContext("MENU_UNIT_ENEMY_PLAYER")
-    ModifyMenuForContext("MENU_UNIT_FRIEND")
+    ModifyMenuForContext("MENU_UNIT_FRIEND") -- Chat and Social Panel (fyrye)
 end
 
 -- ╭───────────────────────────────────────────╮

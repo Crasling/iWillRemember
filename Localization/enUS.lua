@@ -61,7 +61,7 @@ L["CharNoteUpdated"] = Colors.iWR .."] was updated in the iWR Database.|r"
 L["CharNoteRemoved"] = Colors.iWR .."] was removed from the iWR Database|r"
 L["CharNoteColorUpdate"] = Colors.iWR .."] was found with missing class information in the iWR Database. Class color was added to the iWR Database."
 
-L["HelpSync"] = Colors.Yellow .. "How to sync: " .. Colors.iWR .. "Add your friends in the social panel in-game, It will not share to Battle.Net friends(REAL ID), only the friends added to the World of Warcraft friendslist"
+L["HelpSync"] = Colors.Yellow .. "How to sync: " .. Colors.iWR .. "Add your friends in the social panel in-game, It will not share to Battle.Net friends(REAL ID), only the friends added to the World of Warcraft friendslist, and you both need to add each other for syncinc to go through."
 L["HelpUse"] = Colors.Yellow .. "How to use: " .. Colors.iWR .. "Target a player or write their name manually, optionally add a note and then press Respected, Liked, Disliked or Hated to save the player in the database"
 L["HelpClear"] = Colors.Yellow .. "How to clear: " .. Colors.iWR .. "When pressing the Clear button the name in the player name text box will be removed from the database, you can also remove them from the database using the remove button, or just edit it from the database."
 L["HelpSettings"] = Colors.Yellow .. "Settings Menu: " .. Colors.iWR .. "You will find the settings menu in ESC > Options > addOns > iWillRemember, or by right clicking the minimap icon to open settings menu and go to addOns > iWillRemember"
