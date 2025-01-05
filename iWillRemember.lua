@@ -38,7 +38,7 @@ local addonPath = "Interface\\AddOns\\iWillRemember\\"
 local removeRequestQueue = {}
 local isPopupActive = false
 local warnedPlayers = {}
-local defaultSettings = {
+local iWRSettingsDefault = {
     DebugMode = false,
     ChatIconSize = "Medium",
     DataSharing = true,
@@ -48,7 +48,6 @@ local defaultSettings = {
     GroupWarnings = true,
     MinimapButton = { hide = false, minimapPos = -30 }
 }
-
 local iWRDatabaseDefault = {
     "",
     0,
@@ -328,6 +327,7 @@ end
 -- ╰──────────────────────────────────────╯
 local function GetCurrentTimeByHours()
     -- Extract current time components
+    ---@diagnostic disable-next-line: param-type-mismatch
     local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
     -- Calculate the current time in hours
     local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay) * 24 + tonumber(CurrMonth) * 720 + tonumber(CurrYear) * 8640
@@ -351,7 +351,7 @@ local function ShowNotificationPopup(matches)
         -- Add title text
         local title = notificationFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
         title:SetPoint("TOP", notificationFrame, "TOP", 0, -10)
-        title:SetText("|cffff9716iWR: |cffff0000Warning: Database Matches in group.|r")
+        title:SetText(L["GroupWarning"])
         title:SetFont("Fonts\\FRIZQT__.TTF", 20, "OUTLINE")
 
         -- Add information for each match
@@ -359,13 +359,13 @@ local function ShowNotificationPopup(matches)
         for _, match in ipairs(matches) do
             local playerInfo = notificationFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             playerInfo:SetPoint("TOP", lastElement, "BOTTOM", 0, -10)
-            playerInfo:SetText("|cffff9716" .. match.name .. "|r" .. Colors.iWR .. " (" .. Colors[match.relation] .. iWRBase.Types[match.relation] .. Colors.iWR .. ")")
+            playerInfo:SetText(Colors.iWR .. match.name .. "|r" .. Colors.iWR .. " (" .. Colors[match.relation] .. iWRBase.Types[match.relation] .. Colors.iWR .. ")")
             playerInfo:SetFont("Fonts\\FRIZQT__.TTF", 16, "OUTLINE")
 
             -- Add note text
             local noteText = notificationFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             noteText:SetPoint("TOP", playerInfo, "BOTTOM", 0, -5)
-            noteText:SetText("Note: |cffffff00" .. match.note .. "|r")
+            noteText:SetText("Note: " .. Colors.Yellow .. match.note .. "|r")
             noteText:SetFont("Fonts\\FRIZQT__.TTF", 14, "OUTLINE")
 
             lastElement = noteText
@@ -498,18 +498,20 @@ end
 -- │      Function: Sending Latest Note to Friendslist      │
 -- ╰────────────────────────────────────────────────────────╯
 function iWR:SendNewDBUpdateToFriends()
-    -- Loop through all friends in the friend list
-    for i = 1, C_FriendList.GetNumFriends() do
-        -- Get friend's info (which includes friendName)
-        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-        -- Extract the friend's name from the table
-        local friendName = friendInfo and friendInfo.name
-        -- Ensure friendName is valid before printing
-        if friendName then
-            iWR:SendCommMessage("iWRNewDBUpdate", DataCache, "WHISPER", friendName)
-            iWR:DebugMsg("Successfully shared new note to: " .. friendName .. ".",3)
-        else
-            iWR:DebugMsg("No friend found at index " .. i .. ".")
+    if iWRSettings.DataSharing ~= false then
+        -- Loop through all friends in the friend list
+        for i = 1, C_FriendList.GetNumFriends() do
+            -- Get friend's info (which includes friendName)
+            local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+            -- Extract the friend's name from the table
+            local friendName = friendInfo and friendInfo.name
+            -- Ensure friendName is valid before printing
+            if friendName then
+                iWR:SendCommMessage("iWRNewDBUpdate", DataCache, "WHISPER", friendName)
+                iWR:DebugMsg("Successfully shared new note to: " .. friendName .. ".",3)
+            else
+                iWR:DebugMsg("No friend found at index " .. i .. ".")
+            end
         end
     end
 end
@@ -518,25 +520,28 @@ end
 -- │      Function: Sending All Notes to Friendslist      │
 -- ╰──────────────────────────────────────────────────────╯
 function iWR:SendFullDBUpdateToFriends()
-    iWR:DebugMsg("Sending full database data.",3)
-    -- Loop through all friends in the friend list
-    for i = 1, C_FriendList.GetNumFriends() do
-        -- Get friend's info (which includes friendName)
-        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-        -- Extract the friend's name from the table
-        local friendName = friendInfo and friendInfo.name
-        -- Ensure friendName is valid before printing
-        if friendName then
-            wipe(DataCacheTable)
-            local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
-            local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay)*24 + tonumber(CurrMonth)*720 + tonumber(CurrYear)*8640
-            for k,v in pairs(iWRDatabase) do
-                if (iWRDatabase[k][3] - CurrentTime) > -800 then --// Update only recent 33 days (800 h)
-                    DataCacheTable[k] = iWRDatabase[k]
-                end
-            end   
-            FullTableToSend = iWR:Serialize(DataCacheTable)
-            iWR:SendCommMessage("iWRFullDBUpdate", FullTableToSend, "WHISPER", friendName)
+    if iWRSettings.DataSharing ~= false then
+        iWR:DebugMsg("Sending full database data.",3)
+        -- Loop through all friends in the friend list
+        for i = 1, C_FriendList.GetNumFriends() do
+            -- Get friend's info (which includes friendName)
+            local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+            -- Extract the friend's name from the table
+            local friendName = friendInfo and friendInfo.name
+            -- Ensure friendName is valid before printing
+            if friendName then
+                wipe(DataCacheTable)
+                ---@diagnostic disable-next-line: param-type-mismatch
+                local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
+                local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay)*24 + tonumber(CurrMonth)*720 + tonumber(CurrYear)*8640
+                for k,v in pairs(iWRDatabase) do
+                    if (iWRDatabase[k][3] - CurrentTime) > -800 then --// Update only recent 33 days (800 h)
+                        DataCacheTable[k] = iWRDatabase[k]
+                    end
+                end   
+                FullTableToSend = iWR:Serialize(DataCacheTable)
+                iWR:SendCommMessage("iWRFullDBUpdate", FullTableToSend, "WHISPER", friendName)
+            end
         end
     end
 end
@@ -578,7 +583,7 @@ end
 -- │      Function: Full Database Update        │
 -- ╰────────────────────────────────────────────╯
 function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
-    if iWRSettings.DataSharing then
+    if iWRSettings.DataSharing ~= false then
         -- Check if the sender is the player itself
         if GetUnitName("player", false) == sender then return end
 
@@ -618,7 +623,7 @@ end
 -- │      New Database Update         │
 -- ╰──────────────────────────────────╯
 function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
-    if iWRSettings.DataSharing then
+    if iWRSettings.DataSharing ~= false then
         -- Check if the sender is the player itself
         if GetUnitName("player", false) == sender then return end
 
@@ -782,7 +787,7 @@ function iWR:SetTargetingFrame()
         if iWR.customFrame then
             iWR.customFrame:Hide()
         end
-        iWR:DebugMsg("Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was not found in Database.",3)
+        iWR:DebugMsg("Player [|r" .. Colors.Classes[class] .. playerName .. Colors.iWR .. "] was not found in Database.",3)
         return
     end
 
@@ -804,7 +809,7 @@ function iWR:SetTargetingFrame()
                 iWR:SetTargetFrameDefault()
             end
         end
-        iWR:DebugMsg("Player [|r" .. Colors.Classes[class] .. playerName .. "|r|cffff9716] was found in Database.",3)
+        iWR:DebugMsg("Player [|r" .. Colors.Classes[class] .. playerName .. Colors.iWR .. "] was found in Database.",3)
     end
 end
 
@@ -967,7 +972,7 @@ local function InitializeSettings()
         iWRSettings = {}
     end
 
-    for key, value in pairs(defaultSettings) do
+    for key, value in pairs(iWRSettingsDefault) do
         if iWRSettings[key] == nil then
             iWRSettings[key] = value
         end
@@ -1153,7 +1158,7 @@ function iWR:AddNewNote(Name, Note, Type)
         iWR:PopulateDatabase()
     else
         print(L["NameInputError"])
-        iWR:DebugMsg("NameInput error: [|r" .. (Name or "nil") .. Colors.iWR .. ".")
+        iWR:DebugMsg("NameInput error: [|r" .. (Name or "nil") .. Colors.iWR .. "].")
     end
 end
 
@@ -1178,10 +1183,11 @@ function iWR:ClearNote(Name)
             end
         else
             -- Notify that the name was not found in the database
-            print("|cffff9716[iWR]: Name [|r" .. capitalizedName .. Colors.iWR .. " does not exist in the database.")
+            print(Colors.iWR .. " [iWR]: Name [|r" .. capitalizedName .. Colors.iWR .. " does not exist in the database.")
         end
     else
-        iWR:DebugMsg("NameInput error: [|r" .. (Name or "nil") .. Colors.iWR .. ".")
+        print(L["ClearInputError"])
+        iWR:DebugMsg("NameInput error: [|r" .. (Name or "nil") .. Colors.iWR .. "].")
     end
 end
 
@@ -1268,9 +1274,9 @@ function iWR:CreateNote(Name, Note, Type)
         end
     else
         if playerUpdate then
-            print(L["CharNoteStart"] .. dbName .. L["CharNoteUpdated"] .. Colors.Gray .. " Class unknown." .. Colors.iWR .. " Class will be updated automatically when the player is targeted")
+            print(L["CharNoteStart"] .. dbName .. L["CharNoteUpdated"] .. Colors.Gray .. " Class unknown." .. Colors.iWR .. " Class will be updated automatically when the player is targeted.")
         else
-            print(L["CharNoteStart"] .. dbName .. L["CharNoteCreated"] .. Colors.Gray .. " Class unknown." .. Colors.iWR .. " Class will be updated automatically when the player is targeted")
+            print(L["CharNoteStart"] .. dbName .. L["CharNoteCreated"] .. Colors.Gray .. " Class unknown." .. Colors.iWR .. " Class will be updated automatically when the player is targeted.")
         end
     end
     colorCode = nil
@@ -1670,6 +1676,7 @@ end)
 function iWR:PopulateDatabase()
     -- Clear the container first by hiding all existing child frames
     for _, child in ipairs({dbContainer:GetChildren()}) do
+        ---@diagnostic disable-next-line: undefined-field
         child:Hide()
     end
 
@@ -1838,7 +1845,7 @@ clearDatabaseButton:SetScript("OnClick", function()
         OnAccept = function()
             -- Clear the database
             iWRDatabase = {}
-            print("|cffff9716[iWR]: Database cleared.")
+            print(Colors.iWR .. "[iWR]: Database cleared.")
             -- Refresh the display
             iWR:PopulateDatabase()
         end,
@@ -1860,7 +1867,7 @@ shareDatabaseButton:SetText("Share Full DB")
 shareDatabaseButton:SetScript("OnClick", function()
     -- Check if the database is empty
     if not next(iWRDatabase) then
-        print("|cffff9716[iWR]: The database is empty. Nothing to share.")
+        print(Colors.iWR .. "[iWR]: The database is empty. Nothing to share.")
         return
     end
 
@@ -1872,7 +1879,7 @@ shareDatabaseButton:SetScript("OnClick", function()
         OnAccept = function()
             -- Function to share the full database
             iWR:SendFullDBUpdateToFriends()
-            print("|cffff9716[iWR]: Full database shared.")
+            print(Colors.iWR .. "[iWR]: Full database shared.")
         end,
         timeout = 0,
         whileDead = true,
@@ -1900,7 +1907,9 @@ searchDatabaseButton:SetScript("OnClick", function()
         searchResultsFrame:Hide()
         -- Clear all child frames from the searchResultsFrame
         for _, child in ipairs({searchResultsFrame:GetChildren()}) do
+            ---@diagnostic disable-next-line: undefined-field
             child:Hide()
+            ---@diagnostic disable-next-line: undefined-field
             child:SetParent(nil)
         end
         if noResultsText then
@@ -1945,7 +1954,9 @@ searchDatabaseButton:SetScript("OnClick", function()
 
                 -- Clear previous content
                 for _, child in ipairs({searchResultsFrame:GetChildren()}) do
+                    ---@diagnostic disable-next-line: undefined-field
                     child:Hide()
+                    ---@diagnostic disable-next-line: undefined-field
                     child:SetParent(nil)
                     if noResultsText then
                         noResultsText:Hide()
@@ -2007,6 +2018,7 @@ searchDatabaseButton:SetScript("OnClick", function()
 
                         -- Tooltip functionality
                         entryFrame:SetScript("OnEnter", function()
+                            ---@diagnostic disable-next-line: param-type-mismatch
                             GameTooltip:SetOwner(entryFrame, "ANCHOR_RIGHT")
                             GameTooltip:AddLine(data[4], 1, 1, 1) -- Title (Player Name)
                             if #data[1] <= 30 then
@@ -2079,7 +2091,9 @@ searchDatabaseButton:SetScript("OnClick", function()
                 closeResultsButton:SetScript("OnClick", function()
                     searchResultsFrame:Hide()
                     for _, child in ipairs({searchResultsFrame:GetChildren()}) do
+                        ---@diagnostic disable-next-line: undefined-field
                         child:Hide()
+                        ---@diagnostic disable-next-line: undefined-field
                         child:SetParent(nil)
                         if noResultsText then
                             noResultsText:Hide()
@@ -2132,7 +2146,10 @@ function iWR:OnEnable()
 
     -- Print a message to the chat frame when the addon is loaded
     iWR:DebugMsg("Debug Mode is activated." .. Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
-    print(L["iWRLoaded"] .. Version)
+    print(L["iWRLoaded"] .. Colors.Green .. " v" .. Version .. Colors.iWR .. " Loaded.")
+    local playerName = UnitName("player")
+    local _, class = UnitClass("player")
+    print(L["iWRWelcomeStart"] .. Colors.Classes[class] .. playerName .. L["iWRWelcomeEnd"])
 
     -- Register DataSharing
     iWR:RegisterComm("iWRFullDBUpdate", "OnFullDBUpdate")
@@ -2253,16 +2270,14 @@ function iWR:OnEnable()
                 local success = pcall(function()
                     Settings.OpenToCategory("iWillRemember")
                 end)
-                if not success and iWRSettings.DebugMode then
-                    print("|cffff9716[iWR]: DEBUG: Failed to open settings. Make sure it is registered.")
-                end
+                iWR:DebugMsg("Failed to open settings. Make sure it is registered")
             end
         end,
 
         -- Tooltip handling
         OnTooltipShow = function(tooltip)
             -- Name
-            tooltip:SetText("|cffff9716iWillRemember v" .. Version, 1, 1, 1)
+            tooltip:SetText(Colors.iWR .. "iWillRemember" .. Colors.Green .. " v" .. Version, 1, 1, 1)
 
             -- Desc
             tooltip:AddLine(" ", 1, 1, 1) 

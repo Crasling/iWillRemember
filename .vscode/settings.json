@@ -58,7 +58,19 @@
         "HybridScrollFrame_GetOffset",
         "ToggleDropDownMenu",
         "iWRCustomFlagsMenu",
-        "LFGBrowseFrameScrollBox"
+        "LFGBrowseFrameScrollBox",
+        "noResultsText",
+        "tooManyText",
+        "searchTitle",
+        "searchResultsFrame",
+        "iWRDatabaseFrame",
+        "iWRNameInput",
+        "iWRNoteInput",
+        "TargetFrame_Update",
+        "iWRSettings",
+        "TargetFrameTextureFrameTexture",
+        "LFGBrowseFrame",
+        "iWR"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {
