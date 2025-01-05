@@ -46,7 +46,8 @@ local iWRSettingsDefault = {
     UpdateTargetFrame = true,
     SoundWarnings = true,
     GroupWarnings = true,
-    MinimapButton = { hide = false, minimapPos = -30 }
+    MinimapButton = { hide = false, minimapPos = -30 },
+    WelcomeMessage = "0",
 }
 local iWRDatabaseDefault = {
     "",
@@ -2161,9 +2162,12 @@ function iWR:OnEnable()
     -- Print a message to the chat frame when the addon is loaded
     iWR:DebugMsg("Debug Mode is activated." .. Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
     print(L["iWRLoaded"] .. Colors.Green .. " v" .. Version .. Colors.iWR .. " Loaded.")
-    local playerName = UnitName("player")
-    local _, class = UnitClass("player")
-    print(L["iWRWelcomeStart"] .. Colors.Classes[class] .. playerName .. L["iWRWelcomeEnd"])
+    if iWRSettings.WelcomeMessage ~= Version then
+        local playerName = UnitName("player")
+        local _, class = UnitClass("player")
+        print(L["iWRWelcomeStart"] .. Colors.Classes[class] .. playerName .. L["iWRWelcomeEnd"])
+        iWRSettings.WelcomeMessage = Version
+    end
 
     -- Register DataSharing
     iWR:RegisterComm("iWRFullDBUpdate", "OnFullDBUpdate")
