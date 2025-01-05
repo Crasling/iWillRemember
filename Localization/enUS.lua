@@ -65,10 +65,13 @@ L["HelpSync"] = Colors.Yellow .. "How to sync: " .. Colors.iWR .. "Add your frie
 L["HelpUse"] = Colors.Yellow .. "How to use: " .. Colors.iWR .. "Target a player or write their name manually, optionally add a note and then press Respected, Liked, Disliked or Hated to save the player in the database"
 L["HelpClear"] = Colors.Yellow .. "How to clear: " .. Colors.iWR .. "When pressing the Clear button the name in the player name text box will be removed from the database, you can also remove them from the database using the remove button, or just edit it from the database."
 L["HelpSettings"] = Colors.Yellow .. "Settings Menu: " .. Colors.iWR .. "You will find the settings menu in ESC > Options > addOns > iWillRemember, or by right clicking the minimap icon to open settings menu and go to addOns > iWillRemember"
+L["HelpDiscord"] = Colors.Yellow .."Help Discord: " .. Colors.iWR .. "Click the Question Mark Button without a player name to put code in the note field to be able to copy [https://discord.gg/8nnt25aw8B]"
 
 L["iWRLoaded"] = Msg("iWillRemember Version")
 L["iWRWelcomeStart"] = Msg("Thank you ")
-L["iWRWelcomeEnd"] = Colors.iWR .. (" for being part of the development of iWillRemember, if you get into any issues please reach out on CurseForge in the comment section.")
+L["iWRWelcomeEnd"] = Colors.iWR .. (" for being part of the development of iWillRemember, if you get into any issues please reach out on CurseForge in the comment section or Discord [https://discord.gg/8nnt25aw8B], can be copied from the Question Mark in the iWR menu.")
+L["DiscordCopiedToNote"] = Msg("Discord link was copied to note field.")
+L["DiscordLink"] = ("https://discord.gg/8nnt25aw8B")
 L["InCombat"] = Msg("Cannot be used in combat.")
 L["CharNoteStart"] = Msg("Character note [")
 L["DebugError"] = Msg(Colors.Red .. "ERROR: " .. Colors.iWR)

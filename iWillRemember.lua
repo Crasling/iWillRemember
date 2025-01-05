@@ -114,6 +114,7 @@ end
 -- │      List of Targeting Frames     │
 -- ╰───────────────────────────────────╯
 iWRBase.TargetFrames = {
+    [10]    = addonPath .. "Images\\TargetFrames\\" .. imagePath .. "\\Superior.blp",
     [5]     = addonPath .. "Images\\TargetFrames\\" .. imagePath .. "\\Respected.blp",
     [3]     = addonPath .. "Images\\TargetFrames\\" .. imagePath .. "\\Liked.blp",
     [-3]    = addonPath .. "Images\\TargetFrames\\" .. imagePath .. "\\Disliked.blp",
@@ -144,15 +145,15 @@ iWRBase.Types = {
 -- │      List of Icons     │
 -- ╰────────────────────────╯
 iWRBase.Icons = {
-    iWRIcon = addonPath     .. "Images\\Icons\\iWRIcon.blp",
-    Database = addonPath    .. "Images\\Icons\\Database.blp",
-    [10]    = addonPath     .. "Images\\Icons\\Superior.blp",
-    [5]     = addonPath     .. "Images\\Icons\\Respected.blp",
-    [3]     = addonPath     .. "Images\\Icons\\Liked.blp",
-    [1]     = addonPath     .. "Images\\Icons\\Neutral.blp",
-    [0]     = addonPath     .. "Images\\Icons\\Clear.blp",
-    [-3]    = addonPath     .. "Images\\Icons\\Disliked.blp",
-    [-5]    = addonPath     .. "Images\\Icons\\Hated.blp",
+    iWRIcon     = addonPath .. "Images\\Icons\\iWRIcon.blp",
+    Database    = addonPath .. "Images\\Icons\\Database.blp",
+    [10]        = addonPath .. "Images\\Icons\\Respected.blp",
+    [5]         = addonPath .. "Images\\Icons\\Respected.blp",
+    [3]         = addonPath .. "Images\\Icons\\Liked.blp",
+    [1]         = addonPath .. "Images\\Icons\\Neutral.blp",
+    [0]         = addonPath .. "Images\\Icons\\Clear.blp",
+    [-3]        = addonPath .. "Images\\Icons\\Disliked.blp",
+    [-5]        = addonPath .. "Images\\Icons\\Hated.blp",
 }
 
 iWRBase.ChatIcons = {
@@ -779,6 +780,11 @@ function iWR:SetTargetingFrame()
         return
     end
 
+    -- Remove Discordlink if a player is targetted
+    if iWRNoteInput:GetText() == L["DiscordLink"] then
+        iWRNoteInput:SetText(L["DefaultNoteInput"])
+    end
+
     -- Check if the target is in the database
     if not iWRDatabase[targetName] then
         local playerName = UnitName("target")
@@ -843,7 +849,7 @@ function iWR:HandleHyperlink(link, text, button, chatFrame)
         else
             iWR:DebugMsg("No data found for player: [" .. playerName .. "]",3)
         end
-        return -- Prevent further processing
+        return
     end
 end
 
@@ -1428,11 +1434,19 @@ helpIcon:SetScript("OnEnter", function(self)
     GameTooltip:AddLine(L["HelpSync"], 1, 0.82, 0, true)
     GameTooltip:AddLine(L["HelpClear"], 1, 0.82, 0, true)
     GameTooltip:AddLine(L["HelpSettings"], 1, 0.82, 0, true)
+    GameTooltip:AddLine(L["HelpDiscord"], 1, 0.82, 0, true)
     GameTooltip:Show()
 end)
 
 helpIcon:SetScript("OnLeave", function(self)
     GameTooltip:Hide()
+end)
+
+helpIcon:SetScript("OnClick", function()
+    if not iWR:VerifyInputName(iWRNameInput:GetText()) then
+    iWRNoteInput:SetText("https://discord.gg/8nnt25aw8B")
+    print(L["DiscordCopiedToNote"])
+    end
 end)
 
 -- Create a transparent frame to detect clicks outside the edit boxes
