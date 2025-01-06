@@ -72,7 +72,8 @@
         "LFGBrowseFrame",
         "iWR",
         "optionsCategory",
-        "iWRDatabaseBackup"
+        "iWRDatabaseBackup",
+        "iWRDatabaseBackupInfo"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {

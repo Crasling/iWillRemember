@@ -641,10 +641,7 @@ function iWR:OnVersionCheck(prefix, message, distribution, sender)
     Success, RetrievedVersion = iWR:Deserialize(message)
     if not Success then
         iWR:DebugMsg("OnVersionCheck Error.")
-    else
-        print("Retrieved Version from Friend: " .. tostring(RetrievedVersion))
-        print("Your Current Version Number: " .. tostring(versionNumber))
-        print("Version Message Sent: " .. tostring(VersionMessaged))        
+    else     
         if RetrievedVersion > versionNumber and not VersionMessaged then
             print(L["NewVersionAvailable"])
             iWR:DebugMsg("New version available information from: " .. sender .. ".",3)
@@ -1023,7 +1020,6 @@ function iWR:ShowDetailWindow(playerName)
         {label = Colors.Default .. "Author:" .. Colors.Reset, value = data[6]},
         {label = Colors.Default .. "Date:", value = data[5]},
     }
-
     for _, item in ipairs(detailsContent) do
         local row = self.detailContent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         row:SetPoint("TOPLEFT", self.detailContent, "TOPLEFT", 10, yOffset)
@@ -1032,7 +1028,6 @@ function iWR:ShowDetailWindow(playerName)
         row:SetText(item.label .. " " .. (item.value or "N/A"))
         row:Show()
         table.insert(self.detailRows, row) -- Store the row for updates
-
         -- Adjust yOffset dynamically based on whether the row is the "Note" row
         if item.isNote then
             local noteHeight = row:GetStringHeight()
@@ -1041,18 +1036,26 @@ function iWR:ShowDetailWindow(playerName)
             yOffset = yOffset - 20
         end
     end
-
     -- Adjust frame height based on content
     local frameHeight = math.abs(yOffset) + 60
     self.detailFrame:SetHeight(frameHeight)
-
     -- Show the frame
     self.detailFrame:Show()
 end
 
 function iWR:BackupDatabase()
+    -- Make a copy of the database for backup
     iWRDatabaseBackup = CopyTable(iWRDatabase)
-    iWR:DebugMsg("Backup completed!")
+    -- Get the current date and time
+    local backupDate = date("%Y-%m-%d")
+    local backupTime = date("%H:%M:%S")
+    -- Save the backup metadata
+    iWRDatabaseBackupInfo = {
+        backupDate = backupDate,
+        backupTime = backupTime
+    }
+    -- Debug message to notify the user
+    iWR:DebugMsg("Backup completed on " .. backupDate .. " at " .. backupTime .. "!")
 end
 
 function iWR:StartHourlyBackup()
@@ -2353,7 +2356,7 @@ function iWR:OnEnable()
 
         -- Sound Warning Checkbox
         soundWarningCheckbox = CreateFrame("CheckButton", "iWRSoundWarningCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-        soundWarningCheckbox:SetPoint("TOPLEFT", groupWarningCheckbox, "BOTTOMLEFT", 30, -5)
+        soundWarningCheckbox:SetPoint("TOPLEFT", groupWarningCheckbox, "BOTTOMLEFT", 30, -3)
         soundWarningCheckbox.Text:SetText("Enable Sound Warnings")
         soundWarningCheckbox:SetChecked(iWRSettings.SoundWarnings)
         soundWarningCheckbox:SetScript("OnClick", function(self)
@@ -2375,6 +2378,65 @@ function iWR:OnEnable()
             iWRSettings.HourlyBackup = isEnabled
             iWR:ToggleHourlyBackup(isEnabled)
         end)
+
+        -- Restore Database Button
+        local restoreButton = CreateFrame("Button", "iWRRestoreButton", optionsPanel, "UIPanelButtonTemplate")
+        restoreButton:SetSize(150, 30)
+        restoreButton:SetPoint("TOPLEFT", backupCheckbox, "BOTTOMLEFT", 0, -5)
+        restoreButton:SetText("Restore Database")
+        restoreButton:SetScript("OnClick", function()
+            if iWRDatabaseBackup then
+                -- Define the StaticPopup dialog
+                StaticPopupDialogs["CONFIRM_RESTORE_DATABASE"] = {
+                    text = Colors.Red .. "Are you sure you want to overwrite the current database with the backup data?\n\nBackup made on "
+                           .. (iWRDatabaseBackupInfo and (iWRDatabaseBackupInfo.backupDate or "Unknown Date"))
+                           .. " at "
+                           .. (iWRDatabaseBackupInfo and (iWRDatabaseBackupInfo.backupTime or "Unknown Time")) .. ".",
+                    button1 = "Yes",
+                    button2 = "No",
+                    OnAccept = function()
+                        iWRDatabase = CopyTable(iWRDatabaseBackup)
+                        print(Colors.iWR .. "[iWR]: Database restored from backup made on "
+                              .. (iWRDatabaseBackupInfo and (iWRDatabaseBackupInfo.backupDate or "Unknown Date"))
+                              .. " at "
+                              .. (iWRDatabaseBackupInfo and (iWRDatabaseBackupInfo.backupTime or "Unknown Time"))
+                              .. ".")
+                        iWR:PopulateDatabase()
+                    end,
+                    timeout = 0,
+                    whileDead = true,
+                    hideOnEscape = true,
+                    preferredIndex = 3,
+                }
+                -- Show the confirmation dialog
+                StaticPopup_Show("CONFIRM_RESTORE_DATABASE")
+            else
+                print(Colors.Red .. "[iWR]: No backup found to restore.")
+            end
+        end)
+
+        -- Backup Info Display
+        local backupInfoDisplay = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        backupInfoDisplay:SetPoint("LEFT", restoreButton, "RIGHT", 10, 0)
+
+        -- Function to Update Restore Button and Backup Info Display
+        local function UpdateBackupInfoDisplay()
+            if iWRDatabaseBackupInfo and iWRDatabaseBackupInfo.backupDate and iWRDatabaseBackupInfo.backupTime then
+                backupInfoDisplay:SetText("Last Backup: " .. iWRDatabaseBackupInfo.backupDate .. " at " .. iWRDatabaseBackupInfo.backupTime)
+                restoreButton:Enable()
+                restoreButton:SetAlpha(1.0)
+            else
+                backupInfoDisplay:SetText("No Backup Available")
+                restoreButton:Disable()
+                restoreButton:SetAlpha(0.5)
+            end
+        end
+
+        -- Update the display when a new backup is made
+        hooksecurefunc(iWR, "BackupDatabase", UpdateBackupInfoDisplay)
+
+        -- Initial Update
+        UpdateBackupInfoDisplay()
 
         -- Register the options panel
         optionsCategory = Settings.RegisterCanvasLayoutCategory(optionsPanel, "iWillRemember")
