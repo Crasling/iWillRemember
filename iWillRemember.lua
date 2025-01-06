@@ -39,8 +39,6 @@ local addonPath = "Interface\\AddOns\\iWillRemember\\"
 local removeRequestQueue = {}
 local isPopupActive = false
 local warnedPlayers = {}
-local iWRSettings = {}
-local iWRDatabase = {}
 local iWRSettingsDefault = {
     DebugMode = false,
     ChatIconSize = "Medium",
@@ -60,6 +58,12 @@ local iWRDatabaseDefault = {
     "",
     "",
 }
+if not iWRSettings then
+    iWRSettings = {}
+end
+if not iWRDatabase then
+    iWRDatabase = {}
+end
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                     Colors                                     │
@@ -1053,10 +1057,6 @@ function iWR:UpdateDetailWindow(updatedData)
 end
 
 local function InitializeSettings()
-    if not iWRSettings then
-        iWRSettings = {}
-    end
-
     for key, value in pairs(iWRSettingsDefault) do
         if iWRSettings[key] == nil then
             iWRSettings[key] = value
@@ -1065,10 +1065,6 @@ local function InitializeSettings()
 end
 
 local function InitializeDatabase()
-    if not iWRDatabase then
-        iWRDatabase = {}
-    end
-
     for playerName, data in pairs(iWRDatabase) do
         for index, defaultValue in ipairs(iWRDatabaseDefault) do
             if data[index] == nil then
