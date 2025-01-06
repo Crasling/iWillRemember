@@ -49,6 +49,7 @@ local iWRSettingsDefault = {
     GroupWarnings = true,
     MinimapButton = { hide = false, minimapPos = -30 },
     WelcomeMessage = "0",
+    HourlyBackup = true,
 }
 local iWRDatabaseDefault = {
     "",
@@ -58,13 +59,18 @@ local iWRDatabaseDefault = {
     "",
     "",
 }
+--Saved Variable iWRSettings
 if not iWRSettings then
     iWRSettings = {}
 end
+--Saved Variable iWRDatabase
 if not iWRDatabase then
     iWRDatabase = {}
 end
-
+--Saved Variable iWRDatabaseBackup
+if not iWRDatabaseBackup then
+    iWRDatabaseBackup = {}
+end
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                     Colors                                     │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
@@ -1043,6 +1049,44 @@ function iWR:ShowDetailWindow(playerName)
     -- Show the frame
     self.detailFrame:Show()
 end
+
+function iWR:BackupDatabase()
+    iWRDatabaseBackup = CopyTable(iWRDatabase)
+    iWR:DebugMsg("Backup completed!")
+end
+
+function iWR:StartHourlyBackup()
+    if self.backupTicker then
+        iWR:DebugMsg("Hourly backup is already running.")
+        return
+    end
+
+    -- Ticker that runs every hour (3600 seconds)
+    self.backupTicker = C_Timer.NewTicker(3600, function()
+        iWR:BackupDatabase()
+    end)
+
+    iWR:DebugMsg("Hourly backup started.")
+end
+
+function iWR:StopHourlyBackup()
+    if self.backupTicker then
+        self.backupTicker:Cancel() -- Cancel the ticker
+        self.backupTicker = nil
+        iWR:DebugMsg("Hourly backup stopped.")
+    else
+        iWR:DebugMsg("No active hourly backup to stop.")
+    end
+end
+
+function iWR:ToggleHourlyBackup(enabled)
+    if enabled then
+        self:StartHourlyBackup()
+    else
+        self:StopHourlyBackup()
+    end
+end
+
 
 function iWR:UpdateDetailWindow(updatedData)
     -- Update rows dynamically if the detail frame is visible
@@ -2200,6 +2244,11 @@ function iWR:OnEnable()
     InitializeSettings()
     InitializeDatabase()
 
+     -- Initialize hourly backup based on saved settings
+     if iWRSettings.HourlyBackup then
+        iWR:StartHourlyBackup()
+    end
+
     -- Print a message to the chat frame when the addon is loaded
     iWR:DebugMsg("Debug Mode is activated." .. Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
     print(L["iWRLoaded"] .. Colors.Green .. " v" .. Version .. Colors.iWR .. " Loaded.")
@@ -2309,6 +2358,22 @@ function iWR:OnEnable()
         soundWarningCheckbox:SetChecked(iWRSettings.SoundWarnings)
         soundWarningCheckbox:SetScript("OnClick", function(self)
             iWRSettings.SoundWarnings = self:GetChecked()
+        end)
+
+        -- Hourly Backup Category Title
+        local backupCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        backupCategoryTitle:SetPoint("TOPLEFT", soundWarningCheckbox, "BOTTOMLEFT", -30, -15)
+        backupCategoryTitle:SetText(Colors.iWR .. "Backup Settings")
+
+        -- Hourly Backup Checkbox
+        local backupCheckbox = CreateFrame("CheckButton", "iWRBackupCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+        backupCheckbox:SetPoint("TOPLEFT", backupCategoryTitle, "BOTTOMLEFT", 0, -5)
+        backupCheckbox.Text:SetText("Enable Hourly Backup")
+        backupCheckbox:SetChecked(iWRSettings.HourlyBackup or false) -- Initialize from settings
+        backupCheckbox:SetScript("OnClick", function(self)
+            local isEnabled = self:GetChecked()
+            iWRSettings.HourlyBackup = isEnabled
+            iWR:ToggleHourlyBackup(isEnabled)
         end)
 
         -- Register the options panel
