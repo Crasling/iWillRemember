@@ -70,7 +70,8 @@
         "iWRSettings",
         "TargetFrameTextureFrameTexture",
         "LFGBrowseFrame",
-        "iWR"
+        "iWR",
+        "optionsCategory"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {

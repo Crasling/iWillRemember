@@ -27,6 +27,7 @@ local LDBIcon = LibStub("LibDBIcon-1.0")
 -- │                                     Variables                                  │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 local Success
+local VersionMessaged = false
 local DataCache
 local imagePath = "Classic"
 local TempTable = {}
@@ -38,6 +39,8 @@ local addonPath = "Interface\\AddOns\\iWillRemember\\"
 local removeRequestQueue = {}
 local isPopupActive = false
 local warnedPlayers = {}
+local iWRSettings = {}
+local iWRDatabase = {}
 local iWRSettingsDefault = {
     DebugMode = false,
     ChatIconSize = "Medium",
@@ -387,7 +390,7 @@ local function ShowNotificationPopup(matches)
 
         if iWRSettings.SoundWarnings then
             PlayNotificationSound()
-            iWR:DebugMsg("Warning sound was played.")
+            iWR:DebugMsg("Warning sound was played.",3)
         end
 
         notificationFrame:Show()
@@ -403,12 +406,14 @@ function iWR:CheckGroupMembersAgainstDatabase()
 
     for i = 1, numGroupMembers do
         local unitID = isInRaid and "raid" .. i or "party" .. i
+        local playerName = UnitName("player")
         local name, realm = UnitName(unitID)
+        if playerName == name then warnedPlayers[name] = true return end
         if name and not warnedPlayers[name] then
             -- Get player data
             local data = GetDatabaseEntry(name)
             if next(data) == nil then
-                iWR:DebugMsg("No data found for player: [" .. name .. "]")
+                iWR:DebugMsg("No data found for player in group: [" .. name .. "]",3)
                 return
             end
             local relationValue = data[2]
@@ -434,6 +439,28 @@ function iWR:UpdateTooltip()
         tooltip:Hide() -- Hide it first
         tooltip:Show() -- Trigger it to show again with updated info
     end
+end
+
+-- Function to create a button
+local function CreateRelationButton(parent, size, position, texture, label, onClick)
+    -- Create the button
+    local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    button:SetSize(size[1], size[2])
+    button:SetPoint(unpack(position))
+    button:SetScript("OnClick", onClick)
+
+    -- Add an icon to the button
+    local iconTexture = button:CreateTexture(nil, "ARTWORK")
+    iconTexture:SetSize(size[1] - 8, size[2] - 8) -- Adjust size for padding
+    iconTexture:SetPoint("CENTER", button, "CENTER", 0, 0)
+    iconTexture:SetTexture(texture)
+
+    -- Add a label below the button
+    local buttonLabel = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    buttonLabel:SetPoint("TOP", button, "BOTTOM", 0, -5)
+    buttonLabel:SetText(label)
+
+    return button, buttonLabel
 end
 
 -- ╭────────────────────────────────────────────────────────╮
@@ -581,6 +608,62 @@ function StripColorCodes(input)
     return input:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
 end
 
+local function ConvertVersionToNumber(versionString)
+    -- Split the version string into its components
+    local major, minor, patch = string.match(versionString, "(%d+)%.(%d+)%.(%d+)")
+    -- Convert each component to a number and compute a single numerical value
+    if major and minor and patch then
+        return tonumber(major) * 10000 + tonumber(minor) * 100 + tonumber(patch)
+    end
+    return 0 -- Return 0 if the version string is invalid
+end
+
+-- ╭──────────────────────────────────────────────╮
+-- │      Function: Receive Version check         │
+-- ╰──────────────────────────────────────────────╯
+function iWR:OnVersionCheck(prefix, message, distribution, sender)
+    iWR:DebugMsg("Version information successfully received by " .. sender .. ".",3)
+    -- Check if the sender is the player itself
+    if GetUnitName("player", false) == sender then return end
+    -- Convert the version string into a number
+    local versionNumber = ConvertVersionToNumber(Version)
+    -- Deserialize the message
+    Success, RetrievedVersion = iWR:Deserialize(message)
+    if not Success then
+        iWR:DebugMsg("OnVersionCheck Error.")
+    else
+        print("Retrieved Version from Friend: " .. tostring(RetrievedVersion))
+        print("Your Current Version Number: " .. tostring(versionNumber))
+        print("Version Message Sent: " .. tostring(VersionMessaged))        
+        if RetrievedVersion > versionNumber and not VersionMessaged then
+            print(L["NewVersionAvailable"])
+            iWR:DebugMsg("New version available information from: " .. sender .. ".",3)
+            VersionMessaged = true
+        end
+    end
+end
+
+-- ╭──────────────────────────────────────────╮
+-- │      Function: Send Version check        │
+-- ╰──────────────────────────────────────────╯
+function iWR:CheckLatestVersion()
+    -- Convert the version string into a number
+    local versionNumber = ConvertVersionToNumber(Version)
+    -- Loop through all friends in the friend list
+    for i = 1, C_FriendList.GetNumFriends() do
+        -- Get friend's info (which includes friendName)
+        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+        -- Extract the friend's name from the table
+        local friendName = friendInfo and friendInfo.name
+        -- Ensure friendName is valid before printing
+        if friendName then
+            local VersionCache = iWR:Serialize(versionNumber)
+            iWR:SendCommMessage("iWRVersionCheck", VersionCache, "WHISPER", friendName)
+        end
+    end
+end
+
+
 -- ╭────────────────────────────────────────────╮
 -- │      Function: Full Database Update        │
 -- ╰────────────────────────────────────────────╯
@@ -588,15 +671,12 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
     if iWRSettings.DataSharing ~= false then
         -- Check if the sender is the player itself
         if GetUnitName("player", false) == sender then return end
-
         iWR:DebugMsg("Database full update request successfully received by " .. sender .. ".",3)
-
         -- If the sender is not a friend, skip processing
         if not iWR:VerifyFriend(sender) then
             iWR:DebugMsg("Sender " .. sender .. " is not on the friends list. Ignoring update.",3)
             return
         end
-
         -- Deserialize the message
         Success, FullNotesTable = iWR:Deserialize(message)
         if not Success then
@@ -611,11 +691,9 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
                     iWRDatabase[k] = v
                 end
             end
-
             iWR:UpdateTargetFrame()
             iWR:PopulateDatabase()
             iWR:UpdateTooltip()
-
             iWR:DebugMsg("Full database data received from: " .. sender .. ".",3)
         end
     end
@@ -1202,9 +1280,9 @@ end
 -- │      Create New Note      │
 -- ╰───────────────────────────╯
 function iWR:CreateNote(Name, Note, Type)
-    iWR:DebugMsg("New note Name: [|r" .. Name .. Colors.iWR .. ".",3)
-    iWR:DebugMsg("New note Note: [|r" .. Note .. Colors.iWR .. ".",3)
-    iWR:DebugMsg("New note Type: [|r" .. Type .. Colors.iWR .. ".",3)
+    iWR:DebugMsg("New note Name: [|r" .. Name .. Colors.iWR .. "].",3)
+    iWR:DebugMsg("New note Note: [|r" .. Note .. Colors.iWR .. "].",3)
+    iWR:DebugMsg("New note Type: [|r" .. Colors[Type] .. Type .. Colors.iWR .. "].",3)
 
     local colorCode = string.match(Name, "|c%x%x%x%x%x%x%x%x")
     local playerUpdate = false
@@ -1450,6 +1528,9 @@ helpIcon:SetScript("OnClick", function()
     end
 end)
 
+-- ╭─────────────────────────╮
+-- │      Focus Handling     │
+-- ╰─────────────────────────╯
 -- Create a transparent frame to detect clicks outside the edit boxes
 local clickAwayFrame = CreateFrame("Frame", nil, UIParent)
 clickAwayFrame:SetAllPoints(UIParent) -- Cover the entire screen
@@ -1499,108 +1580,72 @@ end)
 -- ╭─────────────────────────────────────╮
 -- │      Main Panel Set Type Hated      │
 -- ╰─────────────────────────────────────╯
-local button1 = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
-button1:SetSize(53, 62)
-button1:SetPoint("TOP", iWRNoteInput, "BOTTOM", 120, -15)
-button1:SetScript("OnClick", function()
-    iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWRBase.Types["Hated"])
-
-end)
-
--- Add an icon to the button using the iWRBase.Icons table
-local iconTexture1 = button1:CreateTexture(nil, "ARTWORK")
-iconTexture1:SetSize(45, 45)
-iconTexture1:SetPoint("CENTER", button1, "CENTER", 0, 0)
-iconTexture1:SetTexture(iWRBase.Icons[iWRBase.Types["Hated"]])
-
--- Add a label below the button
-local button1Label = iWRPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-button1Label:SetPoint("TOP", button1, "BOTTOM", 0, -5)
-button1Label:SetText("Hated")
+local button1, button1Label = CreateRelationButton(
+    iWRPanel,
+    {53, 53},
+    {"TOP", iWRNoteInput, "BOTTOM", 120, -15},
+    iWRBase.Icons[iWRBase.Types["Hated"]],
+    "Hated",
+    function()
+        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWRBase.Types["Hated"])
+    end
+)
 
 -- ╭────────────────────────────────────────╮
 -- │      Main Panel Set Type Disliked      │
 -- ╰────────────────────────────────────────╯
-local button2 = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
-button2:SetSize(53, 62)
-button2:SetPoint("TOP", iWRNoteInput, "BOTTOM", 60, -15)
-button2:SetScript("OnClick", function()
-    iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWRBase.Types["Disliked"])
-end)
-
--- Add an icon to button 2
-local iconTexture2 = button2:CreateTexture(nil, "ARTWORK")
-iconTexture2:SetSize(45, 45)
-iconTexture2:SetPoint("CENTER", button2, "CENTER", 0, 0)
-iconTexture2:SetTexture(iWRBase.Icons[iWRBase.Types["Disliked"]])
-
--- Add a label below the button
-local button2Label = iWRPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-button2Label:SetPoint("TOP", button2, "BOTTOM", 0, -5)
-button2Label:SetText("Disliked")
+local button2, button2Label = CreateRelationButton(
+    iWRPanel,
+    {53, 53},
+    {"TOP", iWRNoteInput, "BOTTOM", 60, -15},
+    iWRBase.Icons[iWRBase.Types["Disliked"]],
+    "Disliked",
+    function()
+        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWRBase.Types["Disliked"])
+    end
+)
 
 -- ╭─────────────────────────────────────╮
 -- │      Main Panel Set Type Liked      │
 -- ╰─────────────────────────────────────╯
-local button3 = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
-button3:SetSize(53, 62)
-button3:SetPoint("TOP", iWRNoteInput, "BOTTOM", 0, -15)
-button3:SetScript("OnClick", function()
-    iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWRBase.Types["Liked"])
-end)
-
--- Add an icon to button 3
-local iconTexture3 = button3:CreateTexture(nil, "ARTWORK")
-iconTexture3:SetSize(45, 45)
-iconTexture3:SetPoint("CENTER", button3, "CENTER", 0, 0)
-iconTexture3:SetTexture(iWRBase.Icons[iWRBase.Types["Liked"]])
-
--- Add a label below the button
-local button3Label = iWRPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-button3Label:SetPoint("TOP", button3, "BOTTOM", 0, -5)
-button3Label:SetText("Liked")
+local button3, button3Label = CreateRelationButton(
+    iWRPanel,
+    {53, 53},
+    {"TOP", iWRNoteInput, "BOTTOM", 0, -15},
+    iWRBase.Icons[iWRBase.Types["Liked"]],
+    "Liked",
+    function()
+        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWRBase.Types["Liked"])
+    end
+)
 
 -- ╭─────────────────────────────────────────╮
 -- │      Main Panel Set Type Respected      │
 -- ╰─────────────────────────────────────────╯
-local button4 = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
-button4:SetSize(53, 62)
-button4:SetPoint("TOP", iWRNoteInput, "BOTTOM", -60, -15)
-button4:SetScript("OnClick", function()
-    iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWRBase.Types["Respected"])
-end)
-
--- Add an icon to button 4
-local iconTexture4 = button4:CreateTexture(nil, "ARTWORK")
-iconTexture4:SetSize(45, 45)
-iconTexture4:SetPoint("CENTER", button4, "CENTER", 0, 0)
-iconTexture4:SetTexture(iWRBase.Icons[iWRBase.Types["Respected"]])
-
--- Add a label below the button
-local button4Label = iWRPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-button4Label:SetPoint("TOP", button4, "BOTTOM", 0, -5)
-button4Label:SetText("Respected")
+local button4, button4Label = CreateRelationButton(
+    iWRPanel,
+    {53, 53},
+    {"TOP", iWRNoteInput, "BOTTOM", -60, -15},
+    iWRBase.Icons[iWRBase.Types["Respected"]],
+    "Respected",
+    function()
+        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWRBase.Types["Respected"])
+    end
+)
 
 -- ╭─────────────────────────────────────╮
 -- │      Main Panel Set Type Clear      │
 -- ╰─────────────────────────────────────╯
-local button5 = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
-button5:SetSize(53, 62)
-button5:SetPoint("TOP", iWRNoteInput, "BOTTOM", -120, -15)
-button5:SetScript("OnClick", function()
-    iWR:ClearNote(iWRNameInput:GetText())
-end)
-
--- Add an icon to button 5
-local iconTexture5 = button5:CreateTexture(nil, "ARTWORK")
-iconTexture5:SetSize(45, 45)
-iconTexture5:SetPoint("CENTER", button5, "CENTER", 0, 0)
-iconTexture5:SetTexture(iWRBase.Icons[iWRBase.Types["Clear"]])
-
--- Add a label below the button
-local button5Label = iWRPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-button5Label:SetPoint("TOP", button5, "BOTTOM", 0, -5)
-button5Label:SetText("Clear")
+local button5, button5Label = CreateRelationButton(
+    iWRPanel,
+    {53, 53},
+    {"TOP", iWRNoteInput, "BOTTOM", -120, -15},
+    iWRBase.Icons[iWRBase.Types["Clear"]],
+    "Clear",
+    function()
+        iWR:ClearNote(iWRNameInput:GetText())
+    end
+)
 
 -- ╭────────────────────────────────────────╮
 -- │      Button to Open the Database       │
@@ -2169,107 +2214,111 @@ function iWR:OnEnable()
         iWRSettings.WelcomeMessage = Version
     end
 
+    -- Check versioning
+    iWR:CheckLatestVersion()
+
     -- Register DataSharing
     iWR:RegisterComm("iWRFullDBUpdate", "OnFullDBUpdate")
     iWR:RegisterComm("iWRNewDBUpdate", "OnNewDBUpdate")
     iWR:RegisterComm("iWRRemDBUpdate", "OnRemDBUpdate")
+    iWR:RegisterComm("iWRVersionCheck", "OnVersionCheck")
 
     RestoreMinimapPosition()
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Options Panel                                │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
-    local optionsPanel = CreateFrame("Frame", "iWROptionsPanel", UIParent)
-    optionsPanel.name = "iWillRemember"
-    optionsPanel:Hide() -- Hide initially; only shown by WoW's interface
+    C_Timer.After(1, function()
+        local optionsPanel = CreateFrame("Frame", "iWROptionsPanel", UIParent)
+        optionsPanel.name = "iWillRemember"
+        optionsPanel:Hide() -- Hide initially; only shown by WoW's interface
 
-    -- Title
-    local title = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("TOPLEFT", 16, -16)
-    title:SetText(Colors.iWR .. "iWillRemember" .. Colors.Green .. " v" .. Version .. Colors.iWR .. " Options")
+        -- Title
+        local title = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        title:SetPoint("TOPLEFT", 16, -16)
+        title:SetText(Colors.iWR .. "iWillRemember" .. Colors.Green .. " v" .. Version .. Colors.iWR .. " Options")
 
-    -- Debug Mode Category Title
-    local debugCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    debugCategoryTitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
-    debugCategoryTitle:SetText(Colors.iWR .. "Developer Settings")
+        -- Debug Mode Category Title
+        local debugCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        debugCategoryTitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
+        debugCategoryTitle:SetText(Colors.iWR .. "Developer Settings")
 
-    -- Debug Mode Checkbox
-    local debugCheckbox = CreateFrame("CheckButton", "iWRDebugCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-    debugCheckbox:SetPoint("TOPLEFT", debugCategoryTitle, "BOTTOMLEFT", 0, -5)
-    debugCheckbox.Text:SetText("Enable Debug Mode")
-    debugCheckbox:SetChecked(iWRSettings.DebugMode or false) -- Initialize from settings
-    debugCheckbox:SetScript("OnClick", function(self)
-        local isDebugEnabled = self:GetChecked()
-        iWRSettings.DebugMode = isDebugEnabled
-        iWR:DebugMsg("Debug Mode is activated." .. Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
+        -- Debug Mode Checkbox
+        local debugCheckbox = CreateFrame("CheckButton", "iWRDebugCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+        debugCheckbox:SetPoint("TOPLEFT", debugCategoryTitle, "BOTTOMLEFT", 0, -5)
+        debugCheckbox.Text:SetText("Enable Debug Mode")
+        debugCheckbox:SetChecked(iWRSettings.DebugMode or false) -- Initialize from settings
+        debugCheckbox:SetScript("OnClick", function(self)
+            local isDebugEnabled = self:GetChecked()
+            iWRSettings.DebugMode = isDebugEnabled
+            iWR:DebugMsg("Debug Mode is activated." .. Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
+        end)
+
+        -- Data Sharing Category Title
+        local dataSharingCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        dataSharingCategoryTitle:SetPoint("TOPLEFT", debugCheckbox, "BOTTOMLEFT", 0, -15)
+        dataSharingCategoryTitle:SetText(Colors.iWR .. "Data Sharing Settings")
+
+        -- Data Sharing Checkbox
+        local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+        dataSharingCheckbox:SetPoint("TOPLEFT", dataSharingCategoryTitle, "BOTTOMLEFT", 0, -5)
+        dataSharingCheckbox.Text:SetText("Enable Data Sharing")
+        dataSharingCheckbox:SetChecked(iWRSettings.DataSharing)
+        dataSharingCheckbox:SetScript("OnClick", function(self)
+            iWRSettings.DataSharing = self:GetChecked()
+        end)
+
+        -- Target Frame and Chat Icons Category Title
+        local targetChatCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        targetChatCategoryTitle:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", 0, -15)
+        targetChatCategoryTitle:SetText(Colors.iWR .. "Display Settings")
+
+        -- Target Frames Visibility Checkbox
+        local targetFrameCheckbox = CreateFrame("CheckButton", "iWRTargetFrameCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+        targetFrameCheckbox:SetPoint("TOPLEFT", targetChatCategoryTitle, "BOTTOMLEFT", 0, -5)
+        targetFrameCheckbox.Text:SetText("Enable TargetFrame Update")
+        targetFrameCheckbox:SetChecked(iWRSettings.ShowChatIcons)
+        targetFrameCheckbox:SetScript("OnClick", function(self)
+            iWRSettings.UpdateTargetFrame = self:GetChecked()
+        end)
+
+        -- Chat Icon Visibility Checkbox
+        local chatIconCheckbox = CreateFrame("CheckButton", "iWRChatIconCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+        chatIconCheckbox:SetPoint("TOPLEFT", targetFrameCheckbox, "BOTTOMLEFT", 0, -10)
+        chatIconCheckbox.Text:SetText("Show Chat Icons")
+        chatIconCheckbox:SetChecked(iWRSettings.ShowChatIcons)
+        chatIconCheckbox:SetScript("OnClick", function(self)
+            iWRSettings.ShowChatIcons = self:GetChecked()
+        end)
+
+        -- Group Warnings Category Title
+        local groupWarningCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        groupWarningCategoryTitle:SetPoint("TOPLEFT", chatIconCheckbox, "BOTTOMLEFT", 0, -15)
+        groupWarningCategoryTitle:SetText(Colors.iWR .. "Warning Settings")
+
+        -- Group Warning Checkbox
+        local groupWarningCheckbox = CreateFrame("CheckButton", "iWRGroupWarningCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+        groupWarningCheckbox:SetPoint("TOPLEFT", groupWarningCategoryTitle, "BOTTOMLEFT", 0, -5)
+        groupWarningCheckbox.Text:SetText("Enable Group Warnings")
+        groupWarningCheckbox:SetChecked(iWRSettings.GroupWarnings)
+        groupWarningCheckbox:SetScript("OnClick", function(self)
+            local isEnabled = self:GetChecked()
+            iWRSettings.GroupWarnings = isEnabled
+            soundWarningCheckbox:SetEnabled(isEnabled) -- Enable or disable the Sound Warning checkbox
+        end)
+
+        -- Sound Warning Checkbox
+        soundWarningCheckbox = CreateFrame("CheckButton", "iWRSoundWarningCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
+        soundWarningCheckbox:SetPoint("TOPLEFT", groupWarningCheckbox, "BOTTOMLEFT", 30, -5)
+        soundWarningCheckbox.Text:SetText("Enable Sound Warnings")
+        soundWarningCheckbox:SetChecked(iWRSettings.SoundWarnings)
+        soundWarningCheckbox:SetScript("OnClick", function(self)
+            iWRSettings.SoundWarnings = self:GetChecked()
+        end)
+
+        -- Register the options panel
+        optionsCategory = Settings.RegisterCanvasLayoutCategory(optionsPanel, "iWillRemember")
+        Settings.RegisterAddOnCategory(optionsCategory)
     end)
-
-    -- Data Sharing Category Title
-    local dataSharingCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    dataSharingCategoryTitle:SetPoint("TOPLEFT", debugCheckbox, "BOTTOMLEFT", 0, -15)
-    dataSharingCategoryTitle:SetText(Colors.iWR .. "Data Sharing Settings")
-
-    -- Data Sharing Checkbox
-    local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-    dataSharingCheckbox:SetPoint("TOPLEFT", dataSharingCategoryTitle, "BOTTOMLEFT", 0, -5)
-    dataSharingCheckbox.Text:SetText("Enable Data Sharing")
-    dataSharingCheckbox:SetChecked(iWRSettings.DataSharing)
-    dataSharingCheckbox:SetScript("OnClick", function(self)
-        iWRSettings.DataSharing = self:GetChecked()
-    end)
-
-    -- Target Frame and Chat Icons Category Title
-    local targetChatCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    targetChatCategoryTitle:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", 0, -15)
-    targetChatCategoryTitle:SetText(Colors.iWR .. "Display Settings")
-
-    -- Target Frames Visibility Checkbox
-    local targetFrameCheckbox = CreateFrame("CheckButton", "iWRTargetFrameCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-    targetFrameCheckbox:SetPoint("TOPLEFT", targetChatCategoryTitle, "BOTTOMLEFT", 0, -5)
-    targetFrameCheckbox.Text:SetText("Enable TargetFrame Update")
-    targetFrameCheckbox:SetChecked(iWRSettings.ShowChatIcons)
-    targetFrameCheckbox:SetScript("OnClick", function(self)
-        iWRSettings.UpdateTargetFrame = self:GetChecked()
-    end)
-
-    -- Chat Icon Visibility Checkbox
-    local chatIconCheckbox = CreateFrame("CheckButton", "iWRChatIconCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-    chatIconCheckbox:SetPoint("TOPLEFT", targetFrameCheckbox, "BOTTOMLEFT", 0, -10)
-    chatIconCheckbox.Text:SetText("Show Chat Icons")
-    chatIconCheckbox:SetChecked(iWRSettings.ShowChatIcons)
-    chatIconCheckbox:SetScript("OnClick", function(self)
-        iWRSettings.ShowChatIcons = self:GetChecked()
-    end)
-
-    -- Group Warnings Category Title
-    local groupWarningCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    groupWarningCategoryTitle:SetPoint("TOPLEFT", chatIconCheckbox, "BOTTOMLEFT", 0, -15)
-    groupWarningCategoryTitle:SetText(Colors.iWR .. "Warning Settings")
-
-    -- Group Warning Checkbox
-    local groupWarningCheckbox = CreateFrame("CheckButton", "iWRGroupWarningCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-    groupWarningCheckbox:SetPoint("TOPLEFT", groupWarningCategoryTitle, "BOTTOMLEFT", 0, -5)
-    groupWarningCheckbox.Text:SetText("Enable Group Warnings")
-    groupWarningCheckbox:SetChecked(iWRSettings.GroupWarnings)
-    groupWarningCheckbox:SetScript("OnClick", function(self)
-        local isEnabled = self:GetChecked()
-        iWRSettings.GroupWarnings = isEnabled
-        soundWarningCheckbox:SetEnabled(isEnabled) -- Enable or disable the Sound Warning checkbox
-    end)
-
-    -- Sound Warning Checkbox
-    soundWarningCheckbox = CreateFrame("CheckButton", "iWRSoundWarningCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-    soundWarningCheckbox:SetPoint("TOPLEFT", groupWarningCheckbox, "BOTTOMLEFT", 30, -5)
-    soundWarningCheckbox.Text:SetText("Enable Sound Warnings")
-    soundWarningCheckbox:SetChecked(iWRSettings.SoundWarnings)
-    soundWarningCheckbox:SetScript("OnClick", function(self)
-        iWRSettings.SoundWarnings = self:GetChecked()
-    end)
-
-
-    -- Register the options panel
-    local optionsCategory = Settings.RegisterCanvasLayoutCategory(optionsPanel, "iWillRemember")
-    Settings.RegisterAddOnCategory(optionsCategory)
-
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Minimap button                                │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
@@ -2284,11 +2333,7 @@ function iWR:OnEnable()
             elseif button == "LeftButton" then
                 iWR:MenuToggle()
             elseif button == "RightButton" then
-                -- Open the settings menu directly to the addon category
-                local success = pcall(function()
-                    Settings.OpenToCategory("iWillRemember")
-                end)
-                iWR:DebugMsg("Failed to open settings. Make sure it is registered")
+                Settings.OpenToCategory(optionsCategory:GetID())
             end
         end,
 

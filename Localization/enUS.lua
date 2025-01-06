@@ -64,7 +64,7 @@ L["CharNoteColorUpdate"] = Colors.iWR .."] was found with missing class informat
 L["HelpSync"] = Colors.Yellow .. "How to sync: " .. Colors.iWR .. "Add your friends in the social panel in-game, It will not share to Battle.Net friends(REAL ID), only the friends added to the World of Warcraft friendslist, and you both need to add each other for sync to go through."
 L["HelpUse"] = Colors.Yellow .. "How to use: " .. Colors.iWR .. "Target a player or write their name manually, optionally add a note and then press Respected, Liked, Disliked or Hated to save the player in the database"
 L["HelpClear"] = Colors.Yellow .. "How to clear: " .. Colors.iWR .. "When pressing the Clear button the name in the player name text box will be removed from the database, you can also remove them from the database using the remove button, or just edit it from the database."
-L["HelpSettings"] = Colors.Yellow .. "Settings Menu: " .. Colors.iWR .. "You will find the settings menu in ESC > Options > addOns > iWillRemember, or by right clicking the minimap icon to open settings menu and go to addOns > iWillRemember"
+L["HelpSettings"] = Colors.Yellow .. "Settings Menu: " .. Colors.iWR .. "Right clicking the minimap icon to open settings menu."
 L["HelpDiscord"] = Colors.Yellow .."Help Discord: " .. Colors.iWR .. "Click the Question Mark Button without a player name to put code in the note field to be able to copy [https://discord.gg/8nnt25aw8B]"
 
 L["iWRLoaded"] = Msg("iWillRemember Version")
@@ -79,4 +79,5 @@ L["DebugWarning"] = Msg(Colors.Yellow .. "WARNING: " .. Colors.iWR)
 L["DebugInfo"] = Msg(Colors.White .. "INFO: " .. Colors.iWR)
 L["NameInputError"] = Msg("Unable to add player: The name contains invalid characters or is empty. Please remove spaces, numbers, or special symbols and try again.")
 L["ClearInputError"] = Msg("Unable to clear player: The name contains invalid characters or is empty. Please remove spaces, numbers, or special symbols and try again.")
-L["GroupWarning"] = Msg((Colors.iWR .. "iWR: " .. Colors.Red .. "Warning: Database Matches in group.|r"))
+L["GroupWarning"] = Msg((Colors.Red .. "Warning: Database Matches in group.|r"))
+L["NewVersionAvailable"] = Msg("A new version is available on CurseForge.")
