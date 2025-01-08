@@ -29,6 +29,7 @@ local LDBIcon = LibStub("LibDBIcon-1.0")
 local Success
 local VersionMessaged = false
 local DataCache
+local currentRealm = GetRealmName()
 local imagePath = "Classic"
 local TempTable = {}
 local DataCacheTable = {}
@@ -40,21 +41,25 @@ local removeRequestQueue = {}
 local isPopupActive = false
 local warnedPlayers = {}
 local iWRSettingsDefault = {
-    DebugMode = false,
-    ChatIconSize = "Medium",
     DataSharing = true,
-    ShowChatIcons = true,
-    UpdateTargetFrame = true,
-    SoundWarnings = true,
+    DebugMode = false,
     GroupWarnings = true,
-    MinimapButton = { hide = false, minimapPos = -30 },
-    WelcomeMessage = "0",
     HourlyBackup = true,
+    MinimapButton = { hide = false, minimapPos = -30 },
+    ShowChatIcons = true,
+    SoundWarnings = true,
+    UpdateTargetFrame = true,
+    WelcomeMessage = "0",
+    iWRDatabaseBackupInfo = {
+        backupDate = "",
+        backupTime = "",
+    }
 }
 local iWRDatabaseDefault = {
     "",
     0,
     0,
+    "",
     "",
     "",
     "",
@@ -70,6 +75,10 @@ end
 --Saved Variable iWRDatabaseBackup
 if not iWRDatabaseBackup then
     iWRDatabaseBackup = {}
+end
+--Saved Variable iWRMemory
+if not iWRMemory then
+    iWRMemory = {}
 end
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                     Colors                                     │
@@ -107,22 +116,12 @@ local Colors = {
         MAGE = "|cFF40C7EB",
         WARLOCK = "|cFF8788EE",
         DRUID = "|cFFFF7D0A",
+        DEATHKNIGHT = "|cFFC41F3B"
     },
 
     -- Reset Color
     Reset = "|r"
 }
-
--- ╭────────────────────────────────────────────────────────────────────────────────╮
--- │                                    Set Paths                                   │
--- ├──────────────────────────┬─────────────────────────────────────────────────────╯
--- │      Check what UI       │
--- ╰──────────────────────────╯
-if C_AddOns.IsAddOnLoaded("EasyFrames") then
-    imagePath = "EasyFrames"
-elseif C_AddOns.IsAddOnLoaded("DragonFlightUI") then
-    imagePath = "DragonFlightUI"
-end
 
 -- ╭───────────────────────────────────╮
 -- │      List of Targeting Frames     │
@@ -178,6 +177,17 @@ iWRBase.ChatIcons = {
 }
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
+-- │                                    Set Paths                                   │
+-- ├──────────────────────────┬─────────────────────────────────────────────────────╯
+-- │      Check what UI       │
+-- ╰──────────────────────────╯
+if C_AddOns.IsAddOnLoaded("EasyFrames") then
+    imagePath = "EasyFrames"
+elseif C_AddOns.IsAddOnLoaded("DragonFlightUI") then
+    imagePath = "DragonFlightUI"
+end
+
+-- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                    Functions                                   │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 if not _G["Blizzard_ItemRef"] then
@@ -210,9 +220,23 @@ function iWR:DebugMsg(message,level)
     end
 end
 
+function iWR:VerifyRealm(playerName)
+    if not playerName:find("-" .. currentRealm) then
+        return playerName .. "-" .. currentRealm
+    else
+        return playerName
+    end
+end
+
 -- Get player data
 function GetDatabaseEntry(playerName)
     return iWRDatabase[playerName] or {}
+end
+
+function iWR:CapitalizeWord(word)
+    local wordUpper = word:upper()
+    local wordLower = word:lower()
+    return wordUpper:sub(1, 1) .. wordLower:sub(2)
 end
 
 function iWR:VerifyInputNote(Note)
@@ -224,6 +248,31 @@ function iWR:VerifyInputNote(Note)
         return true
     end
     return false
+end
+
+-- Function to create a title and checkbox combo
+local function CreateTitleAndCheckbox(parent, titleText, checkboxText, settingKey, relatedCheckbox, offsetX, offsetY)
+    -- Title
+    local title = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    title:SetPoint("TOPLEFT", offsetX or 0, offsetY or -15) -- Default offsets if not provided
+    title:SetText(Colors.iWR .. titleText)
+
+    -- Checkbox
+    local checkbox = CreateFrame("CheckButton", nil, parent, "InterfaceOptionsCheckButtonTemplate")
+    checkbox:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -5)
+    checkbox.Text:SetText(checkboxText)
+    checkbox:SetChecked(iWRSettings[settingKey])
+    checkbox:SetScript("OnClick", function(self)
+        local isEnabled = self:GetChecked()
+        iWRSettings[settingKey] = isEnabled
+
+        -- If a related checkbox is provided, enable/disable it
+        if relatedCheckbox then
+            relatedCheckbox:SetEnabled(isEnabled)
+        end
+    end)
+
+    return title, checkbox
 end
 
 function iWR:CreateiWRStyleFrame(parent, width, height, point, backdrop)
@@ -243,8 +292,6 @@ function iWR:CreateiWRStyleFrame(parent, width, height, point, backdrop)
     end
     return frame
 end
-
-
 
 function iWR:VerifyInputName(Name)
     local verifyName = StripColorCodes(Name)
@@ -560,30 +607,30 @@ end
 -- ╰──────────────────────────────────────────────────────╯
 function iWR:SendFullDBUpdateToFriends()
     if iWRSettings.DataSharing ~= false then
-        iWR:DebugMsg("Sending full database data.",3)
+        iWR:DebugMsg("Sending full database data.", 3)
         -- Loop through all friends in the friend list
         for i = 1, C_FriendList.GetNumFriends() do
             -- Get friend's info (which includes friendName)
             local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
             -- Extract the friend's name from the table
             local friendName = friendInfo and friendInfo.name
-            -- Ensure friendName is valid before printing
+            -- Ensure friendName is valid before sending
             if friendName then
                 wipe(DataCacheTable)
-                ---@diagnostic disable-next-line: param-type-mismatch
-                local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
-                local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay)*24 + tonumber(CurrMonth)*720 + tonumber(CurrYear)*8640
-                for k,v in pairs(iWRDatabase) do
-                    if (iWRDatabase[k][3] - CurrentTime) > -800 then --// Update only recent 33 days (800 h)
-                        DataCacheTable[k] = iWRDatabase[k]
-                    end
-                end   
+                -- Populate DataCacheTable with the full database
+                for k, v in pairs(iWRDatabase) do
+                    DataCacheTable[k] = v
+                end
+                -- Serialize the full table
                 FullTableToSend = iWR:Serialize(DataCacheTable)
+                -- Send the serialized table to the friend
                 iWR:SendCommMessage("iWRFullDBUpdate", FullTableToSend, "WHISPER", friendName)
+                iWR:DebugMsg("Full database sent to: " .. friendName, 3)
             end
         end
     end
 end
+
 
 -- ╭────────────────────────────────────────╮
 -- │      Function: Add new line if long    │
@@ -1013,13 +1060,24 @@ function iWR:ShowDetailWindow(playerName)
 
     -- Populate new content
     local yOffset = -5
-    local detailsContent = {
-        {label = Colors.Default .. "Name:" .. Colors.Reset, value = data[4]},
-        {label = Colors.Default .. "Type:" .. Colors[data[2]], value = iWRBase.Types[tonumber(data[2])]},
-        {label = Colors.Default .. "Note:" .. Colors[data[2]], value = data[1], isNote = true},
-        {label = Colors.Default .. "Author:" .. Colors.Reset, value = data[6]},
-        {label = Colors.Default .. "Date:", value = data[5]},
-    }
+    local detailsContent = {}
+    if data[7] and data[7] ~= currentRealm then
+        detailsContent = {
+            {label = Colors.Default .. "Name:" .. Colors.Reset, value = data[4]..Colors.Reset.."-"..data[7]},
+            {label = Colors.Default .. "Type:" .. Colors[data[2]], value = iWRBase.Types[tonumber(data[2])]},
+            {label = Colors.Default .. "Note:" .. Colors[data[2]], value = data[1], isNote = true},
+            {label = Colors.Default .. "Author:" .. Colors.Reset, value = data[6]},
+            {label = Colors.Default .. "Date:", value = data[5]},
+        }
+    else
+        detailsContent = {
+            {label = Colors.Default .. "Name:" .. Colors.Reset, value = data[4]},
+            {label = Colors.Default .. "Type:" .. Colors[data[2]], value = iWRBase.Types[tonumber(data[2])]},
+            {label = Colors.Default .. "Note:" .. Colors[data[2]], value = data[1], isNote = true},
+            {label = Colors.Default .. "Author:" .. Colors.Reset, value = data[6]},
+            {label = Colors.Default .. "Date:", value = data[5]},
+        }
+    end
     for _, item in ipairs(detailsContent) do
         local row = self.detailContent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         row:SetPoint("TOPLEFT", self.detailContent, "TOPLEFT", 10, yOffset)
@@ -1050,17 +1108,17 @@ function iWR:BackupDatabase()
     local backupDate = date("%Y-%m-%d")
     local backupTime = date("%H:%M:%S")
     -- Save the backup metadata
-    iWRDatabaseBackupInfo = {
+    iWRSettings.iWRDatabaseBackupInfo = {
         backupDate = backupDate,
         backupTime = backupTime
     }
     -- Debug message to notify the user
-    iWR:DebugMsg("Backup completed on " .. backupDate .. " at " .. backupTime .. "!")
+    iWR:DebugMsg("Backup completed on " .. backupDate .. " at " .. backupTime .. "!",3)
 end
 
 function iWR:StartHourlyBackup()
     if self.backupTicker then
-        iWR:DebugMsg("Hourly backup is already running.")
+        iWR:DebugMsg("Hourly backup is already running.",2)
         return
     end
 
@@ -1069,16 +1127,16 @@ function iWR:StartHourlyBackup()
         iWR:BackupDatabase()
     end)
 
-    iWR:DebugMsg("Hourly backup started.")
+    iWR:DebugMsg("Hourly backup started.",3)
 end
 
 function iWR:StopHourlyBackup()
     if self.backupTicker then
         self.backupTicker:Cancel() -- Cancel the ticker
         self.backupTicker = nil
-        iWR:DebugMsg("Hourly backup stopped.")
+        iWR:DebugMsg("Hourly backup stopped.",3)
     else
-        iWR:DebugMsg("No active hourly backup to stop.")
+        iWR:DebugMsg("No active hourly backup to stop.",2)
     end
 end
 
@@ -1112,14 +1170,76 @@ local function InitializeSettings()
 end
 
 local function InitializeDatabase()
-    for playerName, data in pairs(iWRDatabase) do
-        for index, defaultValue in ipairs(iWRDatabaseDefault) do
-            if data[index] == nil then
-                data[index] = defaultValue
+    local currentRealm = GetRealmName() -- Get the current realm name
+    local updatedDatabase = {}
+
+    -- Iterate through the existing database keys
+    for databaseKey, data in pairs(iWRDatabase) do
+        iWR:DebugMsg("Processing key: " .. databaseKey, 3)
+
+        -- Clone the data to avoid reference issues
+        local clonedData = {}
+        for index, value in pairs(data) do
+            clonedData[index] = value
+        end
+
+        -- Check if the key already has a realm (contains "-")
+        if not strfind(databaseKey, "-") then
+            local newKey = databaseKey .. "-" .. currentRealm
+            -- Only add to updatedDatabase if the newKey doesn't already exist
+            if not updatedDatabase[newKey] then
+                updatedDatabase[newKey] = clonedData
+                iWR:DebugMsg("New key created: " .. newKey, 3)
+            else
+                iWR:DebugMsg("Conflict detected for key: " .. newKey .. ". Keeping existing entry.", 2)
+            end
+        else
+            -- Check if the key already exists in updatedDatabase to prevent overwriting
+            if not updatedDatabase[databaseKey] then
+                updatedDatabase[databaseKey] = clonedData
+                iWR:DebugMsg("Key retained: " .. databaseKey, 3)
+            else
+                iWR:DebugMsg("Key already exists in updated database: " .. databaseKey .. ". Skipping duplicate.", 2)
             end
         end
     end
+
+    -- Replace the original database with the updated one
+    iWRDatabase = updatedDatabase
+
+    -- Ensure all entries have default values and set realm in data[7]
+    for playerKey, data in pairs(iWRDatabase) do
+        -- Ensure data is a table
+        if type(data) ~= "table" then
+            iWR:DebugMsg("Unexpected data type for key: " .. playerKey .. ". Setting data to default.", 2)
+            data = {}
+            iWRDatabase[playerKey] = data
+        end
+
+        -- Populate missing default values
+        for index, defaultValue in ipairs(iWRDatabaseDefault) do
+            if data[index] == nil then
+                data[index] = defaultValue
+                iWR:DebugMsg("Default value set for index " .. index .. " in key: " .. playerKey, 3)
+            end
+        end
+
+        -- Extract the realm from the key and assign only if data[7] is not already set and valid
+        local _, keyRealm = strsplit("-", playerKey)
+        if not data[7] or data[7] == "" or data[7] == currentRealm then
+            if keyRealm and keyRealm ~= "" then
+                data[7] = keyRealm
+                iWR:DebugMsg("Set realm for key: " .. playerKey .. " to extracted realm: " .. keyRealm, 3)
+            else
+                data[7] = currentRealm
+                iWR:DebugMsg("Set realm for key: " .. playerKey .. " to current realm: " .. currentRealm, 3)
+            end
+        else
+            iWR:DebugMsg("Realm for key: " .. playerKey .. " already set to: " .. data[7] .. ". Skipping update.", 3)
+        end
+    end
 end
+
 
 local function RegisterChatFilters()
     local chatEvents = {
@@ -1295,19 +1415,16 @@ end
 -- ╰──────────────────────╯
 function iWR:ClearNote(Name)
     if iWR:VerifyInputName(Name) then
-        local uncoloredName = StripColorCodes(Name)
-
-        local upperName = uncoloredName:upper()
-        local lowerName = uncoloredName:lower()
-        local capitalizedName = upperName:sub(1, 1) .. lowerName:sub(2)
-        if iWRDatabase[capitalizedName] then
+        local capitalizedName = iWR:CapitalizeWord(StripColorCodes(Name))
+        local databaseKey = iWR:VerifyRealm(capitalizedName)
+        if iWRDatabase[databaseKey] then
             -- Remove the entry from the iWR database
-            print(L["CharNoteStart"] .. iWRDatabase[capitalizedName][4] .. L["CharNoteRemoved"])
-            iWRDatabase[capitalizedName] = nil
+            print(L["CharNoteStart"] .. iWRDatabase[databaseKey][4] .. L["CharNoteRemoved"])
+            iWRDatabase[databaseKey] = nil
             iWR:PopulateDatabase()
             iWR:UpdateTargetFrame()
             if iWRSettings.DataSharing ~= false then
-                iWR:SendRemoveRequestToFriends(capitalizedName)
+                iWR:SendRemoveRequestToFriends(databaseKey)
             end
         else
             -- Notify that the name was not found in the database
@@ -1329,13 +1446,15 @@ function iWR:CreateNote(Name, Note, Type)
 
     local colorCode = string.match(Name, "|c%x%x%x%x%x%x%x%x")
     local playerUpdate = false
-    local NoteAuthor
+    local noteAuthor
     local playerName = UnitName("player")
+    iWR:VerifyRealm(playerName)
+    local playerName, playerRealm = strsplit("-", playerName)
     local _, class = UnitClass("player")
     if class then
-        NoteAuthor = ColorizePlayerNameByClass(playerName, class)
+        noteAuthor = ColorizePlayerNameByClass(playerName, class)
     else
-        NoteAuthor = playerName
+        noteAuthor = playerName
     end
 
     -- Get player data
@@ -1345,12 +1464,8 @@ function iWR:CreateNote(Name, Note, Type)
     end
 
     -- Remove color codes from the name
-    local uncoloredName = StripColorCodes(Name)
-
-    local upperName = uncoloredName:upper()
-    local lowerName = uncoloredName:lower()
-    local capitalizedName = upperName:sub(1, 1) .. lowerName:sub(2)
-
+    local capitalizedName = iWR:CapitalizeWord(StripColorCodes(Name))
+ 
     local targetName = UnitName("target")
     local _, targetClass = UnitClass("target")
 
@@ -1369,14 +1484,15 @@ function iWR:CreateNote(Name, Note, Type)
         end
     end
 
-    -- Save to database using uncolored name
+    -- Save to database
     iWRDatabase[NoteName] = {
         Note,           --Data[1]
         Type,           --Data[2]
         currentTime,    --Data[3]
         dbName,         --Data[4]
         currentDate,    --Data[5]
-        NoteAuthor,     --Data[6]
+        noteAuthor,     --Data[6]
+        playerRealm     --Data[7]
     }
 
     iWR:UpdateTargetFrame()
@@ -1389,7 +1505,8 @@ function iWR:CreateNote(Name, Note, Type)
             currentTime,    --Data[3]
             dbName,         --Data[4]
             currentDate,    --Data[5]
-            NoteAuthor,     --Data[6]
+            noteAuthor,     --Data[6]
+            playerRealm     --Data[7]
         }
         DataCache = iWR:Serialize(DataCacheTable)
         iWR:SendNewDBUpdateToFriends()
@@ -1477,9 +1594,9 @@ playerNameTitle:SetText("Player Name")
 playerNameTitle:SetTextColor(0.9, 0.9, 1, 1)
 
 iWRNameInput = CreateFrame("EditBox", nil, iWRPanel, "InputBoxTemplate")
-iWRNameInput:SetSize(155, 30)
+iWRNameInput:SetSize(155, 40)
 iWRNameInput:SetPoint("TOP", playerNameTitle, "BOTTOM", 0, -1)
-iWRNameInput:SetMaxLetters(20)
+iWRNameInput:SetMaxLetters(50)
 iWRNameInput:SetAutoFocus(false)
 iWRNameInput:SetTextColor(1, 1, 1, 1)
 iWRNameInput:SetText(L["DefaultNameInput"])
@@ -1844,16 +1961,28 @@ function iWR:PopulateDatabase()
             local playerNameText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             playerNameText:SetPoint("LEFT", iconTexture, "RIGHT", 5, 0)
             if data[1] ~= "" then
-                playerNameText:SetText(data[4] .. Colors.iWR .. " (" .. Colors[data[2]] .. truncatedNote .. Colors.iWR .. ")")
+                if data[7] and data[7] ~= currentRealm then
+                    playerNameText:SetText(data[4]..Colors.Reset.."-"..data[7])
+                else
+                    playerNameText:SetText(data[4] .. Colors.iWR .. " (" .. Colors[data[2]] .. truncatedNote .. Colors.iWR .. ")")
+                end
             else
-                playerNameText:SetText(data[4])
+                if data[7] and data[7] ~= currentRealm then
+                    playerNameText:SetText(data[4]..Colors.Reset.."-"..data[7])
+                else
+                    playerNameText:SetText(data[4])
+                end
             end
             playerNameText:SetTextColor(1, 1, 1, 1) -- White text
 
             -- Tooltip functionality
             entryFrame:SetScript("OnEnter", function()
                 GameTooltip:SetOwner(entryFrame, "ANCHOR_RIGHT")
-                GameTooltip:AddLine(data[4], 1, 1, 1) -- Title (Player Name)
+                if data[7] ~= currentRealm then
+                    GameTooltip:AddLine(data[4]..Colors.Reset.."-"..data[7], 1, 1, 1) -- Title (Player Name)
+                else
+                    GameTooltip:AddLine(data[4], 1, 1, 1) -- Title (Player Name)
+                end
                 if #data[1] <= 30 then
                     GameTooltip:AddLine("Note: " .. Colors[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
                 else
@@ -2234,11 +2363,29 @@ end)
 -- │      On Startup      │
 -- ╰──────────────────────╯
 function iWR:OnEnable()
+    -- Print a message to the chat frame when the addon is loaded
+    print(L["iWRLoaded"] .. Colors.Green .. " v" .. Version .. Colors.iWR .. " Loaded.")
+    
     -- Secure hooks to add custom behavior
     self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
     self:SecureHook("TargetFrame_Update", "SetTargetingFrame")
     hooksecurefunc("SetItemRef", function(link, text, button, chatFrame)
+        -- Call your custom handler
         iWR:HandleHyperlink(link, text, button, chatFrame)
+    
+        -- Check if the link is a player link
+        if link:match("^player:") then
+            local _, playerName, playerRealm = strsplit(":", link)
+    
+            -- If the playerRealm is empty, it means the player is from the same realm
+            if not playerRealm or playerRealm == "" then
+                playerRealm = GetRealmName() -- Retrieve the current realm if not specified
+            end
+    
+            -- Print or use the player and realm information
+            print("Player Name: " .. playerName)
+            print("Realm: " .. playerRealm)
+        end
     end)
 
     iWR:DebugMsg("All initialization hooks added.",3)
@@ -2252,9 +2399,8 @@ function iWR:OnEnable()
         iWR:StartHourlyBackup()
     end
 
-    -- Print a message to the chat frame when the addon is loaded
     iWR:DebugMsg("Debug Mode is activated." .. Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
-    print(L["iWRLoaded"] .. Colors.Green .. " v" .. Version .. Colors.iWR .. " Loaded.")
+    
     if iWRSettings.WelcomeMessage ~= Version then
         local playerName = UnitName("player")
         local _, class = UnitClass("player")
@@ -2275,173 +2421,354 @@ function iWR:OnEnable()
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Options Panel                                │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
-    C_Timer.After(1, function()
-        local optionsPanel = CreateFrame("Frame", "iWROptionsPanel", UIParent)
-        optionsPanel.name = "iWillRemember"
-        optionsPanel:Hide() -- Hide initially; only shown by WoW's interface
+local function CreateTab(panel, index, name, onClick)
+    -- Create the tab
+    local tab = CreateFrame("Button", "$parentTab" .. index, panel, "OptionsFrameTabButtonTemplate")
+    tab:SetText(name)
+    tab:SetID(index)
 
-        -- Title
-        local title = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-        title:SetPoint("TOPLEFT", 16, -16)
-        title:SetText(Colors.iWR .. "iWillRemember" .. Colors.Green .. " v" .. Version .. Colors.iWR .. " Options")
+    -- Adjust the positioning of the tabs to the top of the panel
+    if index == 1 then
+        tab:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -20)
+    else
+        tab:SetPoint("LEFT", "$parentTab" .. (index - 1), "RIGHT", -5, 0)
+    end
 
-        -- Debug Mode Category Title
-        local debugCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        debugCategoryTitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
-        debugCategoryTitle:SetText(Colors.iWR .. "Developer Settings")
+    -- Adjust the tab size
+    tab:SetScale(1.3)
+    tab:SetHeight(25)
 
-        -- Debug Mode Checkbox
-        local debugCheckbox = CreateFrame("CheckButton", "iWRDebugCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-        debugCheckbox:SetPoint("TOPLEFT", debugCategoryTitle, "BOTTOMLEFT", 0, -5)
-        debugCheckbox.Text:SetText("Enable Debug Mode")
-        debugCheckbox:SetChecked(iWRSettings.DebugMode or false) -- Initialize from settings
-        debugCheckbox:SetScript("OnClick", function(self)
-            local isDebugEnabled = self:GetChecked()
-            iWRSettings.DebugMode = isDebugEnabled
-            iWR:DebugMsg("Debug Mode is activated." .. Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
-        end)
-
-        -- Data Sharing Category Title
-        local dataSharingCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        dataSharingCategoryTitle:SetPoint("TOPLEFT", debugCheckbox, "BOTTOMLEFT", 0, -15)
-        dataSharingCategoryTitle:SetText(Colors.iWR .. "Data Sharing Settings")
-
-        -- Data Sharing Checkbox
-        local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-        dataSharingCheckbox:SetPoint("TOPLEFT", dataSharingCategoryTitle, "BOTTOMLEFT", 0, -5)
-        dataSharingCheckbox.Text:SetText("Enable Data Sharing")
-        dataSharingCheckbox:SetChecked(iWRSettings.DataSharing)
-        dataSharingCheckbox:SetScript("OnClick", function(self)
-            iWRSettings.DataSharing = self:GetChecked()
-        end)
-
-        -- Target Frame and Chat Icons Category Title
-        local targetChatCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        targetChatCategoryTitle:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", 0, -15)
-        targetChatCategoryTitle:SetText(Colors.iWR .. "Display Settings")
-
-        -- Target Frames Visibility Checkbox
-        local targetFrameCheckbox = CreateFrame("CheckButton", "iWRTargetFrameCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-        targetFrameCheckbox:SetPoint("TOPLEFT", targetChatCategoryTitle, "BOTTOMLEFT", 0, -5)
-        targetFrameCheckbox.Text:SetText("Enable TargetFrame Update")
-        targetFrameCheckbox:SetChecked(iWRSettings.ShowChatIcons)
-        targetFrameCheckbox:SetScript("OnClick", function(self)
-            iWRSettings.UpdateTargetFrame = self:GetChecked()
-        end)
-
-        -- Chat Icon Visibility Checkbox
-        local chatIconCheckbox = CreateFrame("CheckButton", "iWRChatIconCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-        chatIconCheckbox:SetPoint("TOPLEFT", targetFrameCheckbox, "BOTTOMLEFT", 0, -10)
-        chatIconCheckbox.Text:SetText("Show Chat Icons")
-        chatIconCheckbox:SetChecked(iWRSettings.ShowChatIcons)
-        chatIconCheckbox:SetScript("OnClick", function(self)
-            iWRSettings.ShowChatIcons = self:GetChecked()
-        end)
-
-        -- Group Warnings Category Title
-        local groupWarningCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        groupWarningCategoryTitle:SetPoint("TOPLEFT", chatIconCheckbox, "BOTTOMLEFT", 0, -15)
-        groupWarningCategoryTitle:SetText(Colors.iWR .. "Warning Settings")
-
-        -- Group Warning Checkbox
-        local groupWarningCheckbox = CreateFrame("CheckButton", "iWRGroupWarningCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-        groupWarningCheckbox:SetPoint("TOPLEFT", groupWarningCategoryTitle, "BOTTOMLEFT", 0, -5)
-        groupWarningCheckbox.Text:SetText("Enable Group Warnings")
-        groupWarningCheckbox:SetChecked(iWRSettings.GroupWarnings)
-        groupWarningCheckbox:SetScript("OnClick", function(self)
-            local isEnabled = self:GetChecked()
-            iWRSettings.GroupWarnings = isEnabled
-            soundWarningCheckbox:SetEnabled(isEnabled) -- Enable or disable the Sound Warning checkbox
-        end)
-
-        -- Sound Warning Checkbox
-        soundWarningCheckbox = CreateFrame("CheckButton", "iWRSoundWarningCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-        soundWarningCheckbox:SetPoint("TOPLEFT", groupWarningCheckbox, "BOTTOMLEFT", 30, -3)
-        soundWarningCheckbox.Text:SetText("Enable Sound Warnings")
-        soundWarningCheckbox:SetChecked(iWRSettings.SoundWarnings)
-        soundWarningCheckbox:SetScript("OnClick", function(self)
-            iWRSettings.SoundWarnings = self:GetChecked()
-        end)
-
-        -- Hourly Backup Category Title
-        local backupCategoryTitle = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        backupCategoryTitle:SetPoint("TOPLEFT", soundWarningCheckbox, "BOTTOMLEFT", -30, -15)
-        backupCategoryTitle:SetText(Colors.iWR .. "Backup Settings")
-
-        -- Hourly Backup Checkbox
-        local backupCheckbox = CreateFrame("CheckButton", "iWRBackupCheckbox", optionsPanel, "InterfaceOptionsCheckButtonTemplate")
-        backupCheckbox:SetPoint("TOPLEFT", backupCategoryTitle, "BOTTOMLEFT", 0, -5)
-        backupCheckbox.Text:SetText("Enable Hourly Backup")
-        backupCheckbox:SetChecked(iWRSettings.HourlyBackup or false) -- Initialize from settings
-        backupCheckbox:SetScript("OnClick", function(self)
-            local isEnabled = self:GetChecked()
-            iWRSettings.HourlyBackup = isEnabled
-            iWR:ToggleHourlyBackup(isEnabled)
-        end)
-
-        -- Restore Database Button
-        local restoreButton = CreateFrame("Button", "iWRRestoreButton", optionsPanel, "UIPanelButtonTemplate")
-        restoreButton:SetSize(150, 30)
-        restoreButton:SetPoint("TOPLEFT", backupCheckbox, "BOTTOMLEFT", 0, -5)
-        restoreButton:SetText("Restore Database")
-        restoreButton:SetScript("OnClick", function()
-            if iWRDatabaseBackup then
-                -- Define the StaticPopup dialog
-                StaticPopupDialogs["CONFIRM_RESTORE_DATABASE"] = {
-                    text = Colors.Red .. "Are you sure you want to overwrite the current database with the backup data?\n\nBackup made on "
-                           .. (iWRDatabaseBackupInfo and (iWRDatabaseBackupInfo.backupDate or "Unknown Date"))
-                           .. " at "
-                           .. (iWRDatabaseBackupInfo and (iWRDatabaseBackupInfo.backupTime or "Unknown Time")) .. ".",
-                    button1 = "Yes",
-                    button2 = "No",
-                    OnAccept = function()
-                        iWRDatabase = CopyTable(iWRDatabaseBackup)
-                        print(Colors.iWR .. "[iWR]: Database restored from backup made on "
-                              .. (iWRDatabaseBackupInfo and (iWRDatabaseBackupInfo.backupDate or "Unknown Date"))
-                              .. " at "
-                              .. (iWRDatabaseBackupInfo and (iWRDatabaseBackupInfo.backupTime or "Unknown Time"))
-                              .. ".")
-                        iWR:PopulateDatabase()
-                    end,
-                    timeout = 0,
-                    whileDead = true,
-                    hideOnEscape = true,
-                    preferredIndex = 3,
-                }
-                -- Show the confirmation dialog
-                StaticPopup_Show("CONFIRM_RESTORE_DATABASE")
-            else
-                print(Colors.Red .. "[iWR]: No backup found to restore.")
-            end
-        end)
-
-        -- Backup Info Display
-        local backupInfoDisplay = optionsPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        backupInfoDisplay:SetPoint("LEFT", restoreButton, "RIGHT", 10, 0)
-
-        -- Function to Update Restore Button and Backup Info Display
-        local function UpdateBackupInfoDisplay()
-            if iWRDatabaseBackupInfo and iWRDatabaseBackupInfo.backupDate and iWRDatabaseBackupInfo.backupTime then
-                backupInfoDisplay:SetText("Last Backup: " .. iWRDatabaseBackupInfo.backupDate .. " at " .. iWRDatabaseBackupInfo.backupTime)
-                restoreButton:Enable()
-                restoreButton:SetAlpha(1.0)
-            else
-                backupInfoDisplay:SetText("No Backup Available")
-                restoreButton:Disable()
-                restoreButton:SetAlpha(0.5)
-            end
+    -- Ensure the font string (text) follows the tab movement
+    local fontString = tab:GetFontString()
+    if fontString then
+        fontString:ClearAllPoints()
+        fontString:SetPoint("CENTER", tab, "CENTER")
+    end
+    tab:SetScript("OnClick", function()
+        PanelTemplates_SetTab(panel, index)
+        if onClick then
+        onClick()
+        fontString:SetPoint("CENTER", tab, "CENTER", 0, -2)
         end
-
-        -- Update the display when a new backup is made
-        hooksecurefunc(iWR, "BackupDatabase", UpdateBackupInfoDisplay)
-
-        -- Initial Update
-        UpdateBackupInfoDisplay()
-
-        -- Register the options panel
-        optionsCategory = Settings.RegisterCanvasLayoutCategory(optionsPanel, "iWillRemember")
-        Settings.RegisterAddOnCategory(optionsCategory)
     end)
+        PanelTemplates_TabResize(tab, 0)
+    return tab
+end
+
+-- Create options panel
+local function CreateOptionsPanel()
+    local panel = CreateFrame("Frame", "iWROptionsPanel", UIParent)
+    panel:SetSize(650, 570)
+    panel:SetPoint("CENTER", nil, "CENTER")
+    panel:Hide()
+
+    -- Title
+    local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOP", panel, "TOP", 0, -2)
+    title:SetText(Title .. Colors.iWR .." Options")
+
+    -- Content Frames
+    local optionsPanel = {
+        General = CreateFrame("Frame", "$parentGeneralTabContent", panel, "BackdropTemplate"),
+        Backup = CreateFrame("Frame", "$parentBackupTabContent", panel, "BackdropTemplate"),
+        About = CreateFrame("Frame", "$parentAboutTabContent", panel, "BackdropTemplate"),
+    }
+
+    -- Initialize Content Frames
+    for name, frame in pairs(optionsPanel) do
+        frame:SetSize(panel:GetWidth() - 20, panel:GetHeight() - 50)
+        frame:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -55)
+        frame:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            edgeSize = 16,
+            insets = {left = 4, right = 4, top = 4, bottom = 4},
+        })
+        frame:SetBackdropBorderColor(0.7, 0.7, 0.8, 1)
+        frame:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
+        if name ~= "General" then
+            frame:Hide()
+        end
+    end
+
+    -- ╭───────────────────────╮
+    -- │      General Tab      │
+    -- ╰───────────────────────╯
+    -- Debug Mode Category Title
+    local debugCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    debugCategoryTitle:SetPoint("TOPLEFT", optionsPanel.General, "TOPLEFT", 20, -20)
+    debugCategoryTitle:SetText(Colors.iWR .. "Developer Settings")
+
+    -- Debug Mode Checkbox
+    local debugCheckbox = CreateFrame("CheckButton", "iWRDebugCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
+    debugCheckbox:SetPoint("TOPLEFT", debugCategoryTitle, "BOTTOMLEFT", 0, -5)
+    debugCheckbox.Text:SetText("Enable Debug Mode")
+    debugCheckbox:SetChecked(iWRSettings.DebugMode) -- Initialize from settings
+    debugCheckbox:SetScript("OnClick", function(self)
+        local isDebugEnabled = self:GetChecked()
+        iWRSettings.DebugMode = isDebugEnabled
+        iWR:DebugMsg("Debug Mode is activated." .. Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
+    end)
+
+    -- Data Sharing Category Title
+    local dataSharingCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    dataSharingCategoryTitle:SetPoint("TOPLEFT", debugCheckbox, "BOTTOMLEFT", 0, -15)
+    dataSharingCategoryTitle:SetText(Colors.iWR .. "Data Sharing Settings")
+
+    -- Data Sharing Checkbox
+    local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
+    dataSharingCheckbox:SetPoint("TOPLEFT", dataSharingCategoryTitle, "BOTTOMLEFT", 0, -5)
+    dataSharingCheckbox.Text:SetText("Enable Data Sharing")
+    dataSharingCheckbox:SetChecked(iWRSettings.DataSharing)
+    dataSharingCheckbox:SetScript("OnClick", function(self)
+        iWRSettings.DataSharing = self:GetChecked()
+        iWR:DebugMsg("Data Sharing: " .. tostring(iWRSettings.DataSharing),3)
+    end)
+
+    -- Target Frame and Chat Icons Category Title
+    local targetChatCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    targetChatCategoryTitle:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", 0, -15)
+    targetChatCategoryTitle:SetText(Colors.iWR .. "Display Settings")
+
+    -- Target Frames Visibility Checkbox
+    local targetFrameCheckbox = CreateFrame("CheckButton", "iWRTargetFrameCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
+    targetFrameCheckbox:SetPoint("TOPLEFT", targetChatCategoryTitle, "BOTTOMLEFT", 0, -5)
+    targetFrameCheckbox.Text:SetText("Enable TargetFrame Update")
+    targetFrameCheckbox:SetChecked(iWRSettings.UpdateTargetFrame)
+    targetFrameCheckbox:SetScript("OnClick", function(self)
+        iWRSettings.UpdateTargetFrame = self:GetChecked()
+        iWR:DebugMsg("TargetFrame Update: " .. tostring(iWRSettings.UpdateTargetFrame),3)
+    end)
+
+    -- Chat Icon Visibility Checkbox
+    local chatIconCheckbox = CreateFrame("CheckButton", "iWRChatIconCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
+    chatIconCheckbox:SetPoint("TOPLEFT", targetFrameCheckbox, "BOTTOMLEFT", 0, -10)
+    chatIconCheckbox.Text:SetText("Show Chat Icons")
+    chatIconCheckbox:SetChecked(iWRSettings.ShowChatIcons)
+    chatIconCheckbox:SetScript("OnClick", function(self)
+        iWRSettings.ShowChatIcons = self:GetChecked()
+        iWR:DebugMsg("Chat Icons: " .. tostring(iWRSettings.ShowChatIcons),3)
+    end)
+
+    -- Group Warnings Category Title
+    local groupWarningCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    groupWarningCategoryTitle:SetPoint("TOPLEFT", chatIconCheckbox, "BOTTOMLEFT", 0, -15)
+    groupWarningCategoryTitle:SetText(Colors.iWR .. "Warning Settings")
+
+    -- Group Warning Checkbox
+    local groupWarningCheckbox = CreateFrame("CheckButton", "iWRGroupWarningCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
+    groupWarningCheckbox:SetPoint("TOPLEFT", groupWarningCategoryTitle, "BOTTOMLEFT", 0, -5)
+    groupWarningCheckbox.Text:SetText("Enable Group Warnings")
+    groupWarningCheckbox:SetChecked(iWRSettings.GroupWarnings)
+    groupWarningCheckbox:SetScript("OnClick", function(self)
+        local isEnabled = self:GetChecked()
+        iWRSettings.GroupWarnings = isEnabled
+        soundWarningCheckbox:SetEnabled(isEnabled)
+        if iWRSettings.GroupWarnings ~= true then
+            iWRMemory.SoundWarnings = iWRSettings.SoundWarnings
+            iWRSettings.SoundWarnings = false
+        else
+            iWRSettings.SoundWarnings = iWRMemory.SoundWarnings
+            soundWarningCheckbox:SetChecked(iWRSettings.SoundWarnings)
+        end
+        iWR:DebugMsg("GroupWarnings: " .. tostring(iWRSettings.GroupWarnings),3)
+        iWR:DebugMsg("SoundWarnings: " .. tostring(iWRSettings.SoundWarnings),3)
+    end)
+
+    -- Sound Warning Checkbox
+    soundWarningCheckbox = CreateFrame("CheckButton", "iWRSoundWarningCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
+    soundWarningCheckbox:SetPoint("TOPLEFT", groupWarningCheckbox, "BOTTOMLEFT", 30, -3)
+    soundWarningCheckbox.Text:SetText("Enable Sound Warnings")
+    soundWarningCheckbox:SetChecked(iWRSettings.SoundWarnings)
+    soundWarningCheckbox:SetScript("OnClick", function(self)
+        iWRSettings.SoundWarnings = self:GetChecked()
+        iWR:DebugMsg("SoundWarnings: " .. tostring(iWRSettings.SoundWarnings),3)
+    end)
+
+    -- ╭──────────────────────╮
+    -- │      Backup Tab      │
+    -- ╰──────────────────────╯
+    local backupCategoryTitle = optionsPanel.Backup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    backupCategoryTitle:SetPoint("TOPLEFT", optionsPanel.Backup, "TOPLEFT", 20, -20)
+    backupCategoryTitle:SetText(Colors.iWR .. "Backup Settings|r")
+
+    -- Backup Checkbox
+    local backupCheckbox = CreateFrame("CheckButton", nil, optionsPanel.Backup, "InterfaceOptionsCheckButtonTemplate")
+    backupCheckbox:SetPoint("TOPLEFT", backupCategoryTitle, "BOTTOMLEFT", 0, -5)
+    backupCheckbox.Text:SetText("Enable Hourly Backup")
+    backupCheckbox:SetChecked(iWRSettings.HourlyBackup)
+    backupCheckbox:SetScript("OnClick", function(self)
+        local isEnabled = self:GetChecked()
+        iWRSettings.HourlyBackup = isEnabled
+        iWR:ToggleHourlyBackup(isEnabled)
+        iWR:DebugMsg("Hourly Backup: " .. tostring(iWRSettings.HourlyBackup),3)
+    end)
+
+    local restoreButton = CreateFrame("Button", nil, optionsPanel.Backup, "UIPanelButtonTemplate")
+    restoreButton:SetSize(150, 30)
+    restoreButton:SetPoint("TOPLEFT", backupCheckbox, "BOTTOMLEFT", 0, -10)
+    restoreButton:SetText("Restore Database")
+    restoreButton:SetScript("OnClick", function()
+        if iWRDatabaseBackup then
+            StaticPopupDialogs["CONFIRM_RESTORE_DATABASE"] = {
+                text = Colors.Red .. "Are you sure you want to overwrite the current iWR Database with the backup data?|nThis is non-reversible.\n\nBackup made on "
+                    .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupDate or "Unknown Date"))
+                    .. " at "
+                    .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupTime or "Unknown Time")) .. ".",
+                button1 = "Yes",
+                button2 = "No",
+                OnAccept = function()
+                    iWRDatabase = CopyTable(iWRDatabaseBackup)
+                    print(Colors.iWR .. "[iWR]: Database restored from backup made on "
+                        .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupDate or "Unknown Date"))
+                        .. " at "
+                        .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupTime or "Unknown Time"))
+                        .. ".")
+                    iWR:PopulateDatabase()
+                end,
+                timeout = 0,
+                whileDead = true,
+                hideOnEscape = true,
+                preferredIndex = 3,
+            }
+            StaticPopup_Show("CONFIRM_RESTORE_DATABASE")
+        else
+            print(Colors.Red .. "[iWR]: No backup found to restore.")
+        end
+    end)
+
+    -- Backup Info Display
+    local backupInfoDisplay = optionsPanel.Backup:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    backupInfoDisplay:SetPoint("LEFT", restoreButton, "RIGHT", 10, 0)
+
+    -- Function to Update Restore Button and Backup Info Display
+    local function UpdateBackupInfoDisplay()
+        if iWRDatabaseBackup and iWRSettings.iWRDatabaseBackupInfo and iWRSettings.iWRDatabaseBackupInfo.backupDate ~= "" and iWRSettings.iWRDatabaseBackupInfo.backupTime ~= "" then
+            backupInfoDisplay:SetText("Last Backup: " .. iWRSettings.iWRDatabaseBackupInfo.backupDate .. " at " .. iWRSettings.iWRDatabaseBackupInfo.backupTime)
+            restoreButton:Enable()
+            restoreButton:SetAlpha(1.0)
+        else
+            backupInfoDisplay:SetText("No Backup Available")
+            restoreButton:Disable()
+            restoreButton:SetAlpha(0.5)
+        end
+    end
+
+    -- Update the display when a new backup is made
+    hooksecurefunc(iWR, "BackupDatabase", UpdateBackupInfoDisplay)
+
+    -- Initial Update
+    UpdateBackupInfoDisplay()
+
+    -- ╭─────────────────────╮
+    -- │      About Tab      │
+    -- ╰─────────────────────╯
+    -- About Category Title
+    local aboutCategoryTitle = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    aboutCategoryTitle:SetPoint("TOP", optionsPanel.About, "TOP", 0, -30)
+    aboutCategoryTitle:SetText(Colors.iWR .. "About|r")
+
+    -- Addon Name and Version
+    local aboutAddonName = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    aboutAddonName:SetPoint("TOP", aboutCategoryTitle, "BOTTOM", 0, -10)
+    aboutAddonName:SetText(Colors.iWR .. Title)
+
+    -- Author Information
+    local aboutAuthor = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    aboutAuthor:SetPoint("TOP", aboutAddonName, "BOTTOM", 0, -10)
+    aboutAuthor:SetText("Created by: " .. Colors.Cyan .. Author .. Colors.Reset)
+
+    -- Description
+    local aboutDescription = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    aboutDescription:SetPoint("TOP", aboutAuthor, "BOTTOM", 0, -30)
+    aboutDescription:SetText(Colors.iWR .. "iWillRemember " .. Colors.Reset .. "is an addon designed to help you track and easily share player notes with friends.")
+
+    -- Support Information
+    local aboutSupport = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    aboutSupport:SetPoint("TOP", aboutDescription, "BOTTOM", 0, -10)
+    aboutSupport:SetText(Colors.iWR .. "iWR " .. Colors.Reset .. "is in early development. Join the Discord for help with issues, questions, or suggestions.")
+
+    -- Discord Link
+    local aboutDiscord = CreateFrame("EditBox", nil, optionsPanel.About, "InputBoxTemplate")
+    aboutDiscord:SetSize(200, 30)
+    aboutDiscord:SetText(L["DiscordLink"])
+    aboutDiscord:SetPoint("TOP", aboutSupport, "BOTTOM", 0, -20)
+    aboutDiscord:SetAutoFocus(false)
+    aboutDiscord:SetTextColor(1, 1, 1, 1)
+    aboutDiscord:SetFontObject(GameFontHighlight)
+    aboutDiscord:SetJustifyH("CENTER")
+    aboutDiscord:SetScript("OnTextChanged", function(self, userInput)
+        if userInput and self:GetText() ~= L["DiscordLink"] then
+            self:SetText(L["DiscordLink"])
+        end
+    end)
+    aboutDiscord:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Copy this link to join our Discord for support and updates.", 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    aboutDiscord:SetScript("OnLeave", function(self)
+        GameTooltip:Hide()
+    end)
+
+    if UnitName("player") == "Baldvin" then
+        -- Game Version Information
+        local gameVersion, gameBuild, gameBuildDate, gameTocVersion = GetBuildInfo()
+
+        -- Game Version Label
+        local aboutGameVersion = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        aboutGameVersion:SetPoint("TOP", aboutDiscord, "BOTTOM", 0, -20)
+        aboutGameVersion:SetText(Colors.iWR .. "Game Version: " .. Colors.Reset .. gameVersion)
+
+        -- TOC Version Label
+        local aboutTocVersion = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        aboutTocVersion:SetPoint("TOP", aboutGameVersion, "BOTTOM", 0, -10)
+        aboutTocVersion:SetText(Colors.iWR .. "TOC Version: " .. Colors.Reset .. gameTocVersion)
+
+        -- TOC Version Label
+        local aboutBuildVersion = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        aboutBuildVersion:SetPoint("TOP", aboutTocVersion, "BOTTOM", 0, -10)
+        aboutBuildVersion:SetText(Colors.iWR .. "Build Version: " .. Colors.Reset .. gameBuild)
+
+        -- TOC Version Label
+        local aboutBuildDate = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        aboutBuildDate:SetPoint("TOP", aboutBuildVersion, "BOTTOM", 0, -10)
+        aboutBuildDate:SetText(Colors.iWR .. "Build Date: " .. Colors.Reset .. gameBuildDate)
+    end
+
+    -- Tabs
+    local tabs = {
+        General = CreateTab(panel, 1, "General", function()
+            for name, frame in pairs(optionsPanel) do
+                frame:SetShown(name == "General")
+            end
+        end),
+        Backup = CreateTab(panel, 2, "Backup", function()
+            for name, frame in pairs(optionsPanel) do
+                frame:SetShown(name == "Backup")
+            end
+        end),
+        About = CreateTab(panel, 3, "About", function()
+            for name, frame in pairs(optionsPanel) do
+                frame:SetShown(name == "About")
+            end
+        end),
+    }
+
+    -- Tab Switching Logic
+    PanelTemplates_SetNumTabs(panel, 3)
+    PanelTemplates_SetTab(panel, 1)
+
+    -- Register the options panel
+    optionsCategory = Settings.RegisterCanvasLayoutCategory(panel, "iWillRemember")
+    Settings.RegisterAddOnCategory(optionsCategory)
+
+    -- Return Panel
+    return panel
+end
+
+CreateOptionsPanel()
+
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Minimap button                                │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯

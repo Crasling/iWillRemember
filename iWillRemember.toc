@@ -1,12 +1,12 @@
-## Interface: 11505
-## Title: |cffff9716iWillRemember |cFF00FF00v0.10.3|r
-## Version: 0.10.3
+## Interface: 11505, 40401
+## Title: |cffff9716iWillRemember |cFF00FF00v0.11.1|r
+## Version: 0.11.0.1
 ## Notes: |cffff9716Personalized Player Notes Addon|n|cFFFF0000Never forget again.|r
 ## Author: Crasling
 ## X-Curse-Project-ID: 1160664
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
-## SavedVariables: iWRDatabase, iWRSettings, iWRDatabaseBackup
+## SavedVariables: iWRDatabase, iWRSettings, iWRDatabaseBackup, iWRMemory
 
 embeds.xml
 Localization\locale.xml

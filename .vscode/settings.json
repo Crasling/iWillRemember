@@ -73,7 +73,15 @@
         "iWR",
         "optionsCategory",
         "iWRDatabaseBackup",
-        "iWRDatabaseBackupInfo"
+        "iWRDatabaseBackupInfo",
+        "soundWarningCheckbox",
+        "PanelTemplates_TabResize",
+        "PanelTemplates_SelectTab",
+        "PanelTemplates_DeselectTab",
+        "PanelTemplates_SetNumTabs",
+        "PanelTemplates_SetTab",
+        "iWRMemory",
+        "LFGListFrame"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {

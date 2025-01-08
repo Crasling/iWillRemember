@@ -35,6 +35,7 @@ local Colors = {
         MAGE = "|cFF40C7EB",
         WARLOCK = "|cFF8788EE",
         DRUID = "|cFFFF7D0A",
+        DEATHKNIGHT = "|cFFC41F3B"
     },
 
     -- Reset Color
