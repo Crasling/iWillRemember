@@ -74,49 +74,37 @@ end
 -- │      On Startup      │
 -- ╰──────────────────────╯
 function iWR:OnEnable()
-    -- Print a message to the chat frame when the addon is loaded
+    -- Print a messages to the chat frame when the addon is loaded
+    iWR:DebugMsg("Debug Mode is activated." .. Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
     print(L["iWRLoaded"] .. " " .. iWRGameVersionName .. Colors.Green .. " v" .. Version .. Colors.iWR .. " Loaded.")
-    
     -- Secure hooks to add custom behavior
     self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
     self:SecureHook("TargetFrame_Update", "SetTargetingFrame")
     hooksecurefunc("SetItemRef", function(link, text, button, chatFrame)
         -- Call your custom handler
         iWR:HandleHyperlink(link, text, button, chatFrame)
-    
         -- Check if the link is a player link
         if link:match("^player:") then
             local _, playerName, playerRealm = strsplit(":", link)
-    
             -- If the playerRealm is empty, it means the player is from the same realm
             if not playerRealm or playerRealm == "" then
                 playerRealm = GetRealmName() -- Retrieve the current realm if not specified
             end
-    
-            -- Print or use the player and realm information
-            print("Player Name: " .. playerName)
-            print("Realm: " .. playerRealm)
         end
     end)
-
     -- Hook into LibDBIcon updates
     LDBIcon.RegisterCallback(iWR, "LibDBIcon_Changed", "SaveMinimapPosition")
-
     -- Initialize
     iWR:InitializeSettings()
     iWR:InitializeDatabase()
-    
     -- Create Options Panel
     iWR:CreateOptionsPanel()
-
      -- Initialize hourly backup based on saved settings
      if iWRSettings.HourlyBackup then
         iWR:StartHourlyBackup()
     end
-
     -- Check versioning
     iWR:CheckLatestVersion()
-
     -- Register DataSharing
     iWR:RegisterComm("iWRFullDBUpdate", "OnFullDBUpdate")
     iWR:RegisterComm("iWRNewDBUpdate", "OnNewDBUpdate")
@@ -126,10 +114,8 @@ function iWR:OnEnable()
     -- Restore minimap position if moved
     iWR:RestoreMinimapPosition()
 
-    -- Messages
+    -- Done Messages
     iWR:DebugMsg("All initialization hooks added.",3)
-    iWR:DebugMsg("Debug Mode is activated." .. Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
-
     if iWRSettings.WelcomeMessage ~= Version then
         local playerName = UnitName("player")
         local _, class = UnitClass("player")

@@ -309,6 +309,7 @@ local openDatabaseButtonLabel = iWRPanel:CreateFontString(nil, "OVERLAY", "GameF
 openDatabaseButtonLabel:SetPoint("TOP", openDatabaseButton, "BOTTOM", 0, -5)
 openDatabaseButtonLabel:SetText("Open DB")
 
+---------------------
 -- Create a new frame to display the database
 iWRDatabaseFrame = iWR:CreateiWRStyleFrame(UIParent, 400, 500, {"CENTER", UIParent, "CENTER"})
 iWRDatabaseFrame:Hide()
@@ -384,10 +385,8 @@ clearDatabaseButton:SetScript("OnClick", function()
         button1 = "Yes",
         button2 = "No",
         OnAccept = function()
-            -- Clear the database
             iWRDatabase = {}
             print(Colors.iWR .. "[iWR]: Database cleared.")
-            -- Refresh the display
             iWR:PopulateDatabase()
         end,
         timeout = 0,
@@ -674,6 +673,8 @@ searchDatabaseButton:SetScript("OnClick", function()
     StaticPopup_Show("SEARCH_DATABASE")
 end)
 
+
+------
 function iWR:CreateTab(panel, index, name, onClick)
     -- Create the tab
     local tab = CreateFrame("Button", "$parentTab" .. index, panel, "OptionsFrameTabButtonTemplate")

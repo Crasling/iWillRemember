@@ -200,9 +200,6 @@ iWRBase.ChatIcons = {
 -- ╰───────────────────────╯
 local major, minor, patch = string.match(iWRGameTocVersion, "(%d)(%d%d)(%d%d)")
 if major and minor and patch then
-    print("Major:", major) -- Expected output: 1
-print("Minor:", minor) -- Expected output: 23
-print("Patch:", patch) -- Expected output: 45
     local gameTocNumber = tonumber(major) * 10000 + tonumber(minor) * 100 + tonumber(patch)
     if gameTocNumber >40000 and gameTocNumber <49999 then
         iWRGameVersionName = "Classic Cata"

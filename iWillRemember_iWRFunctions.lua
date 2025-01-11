@@ -1,11 +1,11 @@
--- ═══════════════════════════════════════════════════
--- ██╗    ██╗ ██████╗     ███████╗██╗   ██╗███╗   ██╗ 
--- ██║    ██║ ██╔══██╗    ██╔════╝██║   ██║████╗  ██║ 
--- ██║ █╗ ██║ ██████╔╝    █████╗  ██║   ██║██╔██╗ ██║ 
--- ██║███╗██║ ██  ██╔     ██╔══╝  ██║   ██║██║╚██╗██║ 
--- ╚███╔███╔╝ ██   ██╗    ██║     ╚██████╔╝██║ ╚████║ 
---  ╚══╝╚══╝  ╚══════╝    ╚═╝      ╚═════╝ ╚═╝  ╚═══╝ 
--- ══════════════════════════════════════════════════
+-- ═════════════════════════
+-- ██╗ ██╗    ██╗ ██████╗ 
+-- ╚═╝ ██║    ██║ ██╔══██╗
+-- ██║ ██║ █╗ ██║ ██████╔╝
+-- ██║ ██║███╗██║ ██  ██╔ 
+-- ██║ ╚███╔███╔╝ ██   ██╗
+-- ╚═╝  ╚══╝╚══╝  ╚══════╝
+-- ═════════════════════════
 
 -- ╭────────────────────────╮
 -- │      List of Types     │
@@ -144,9 +144,19 @@ function iWR:AddNoteToGameTooltip(self, ...)
         return
     end
 
-    -- Get player data
-    local data = iWR:GetDatabaseEntry(name)
-    if next(data) == nil then
+    -- Get the player's realm and format the database key
+    local targetNameWithRealm = GetUnitName(unit, true) -- Includes the realm
+    local targetName = GetUnitName(unit, false) -- Only the character name
+    local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or GetRealmName() -- Use current realm if not provided
+
+    -- Format the key for database lookup
+    local formattedTargetName = targetName:sub(1, 1):upper() .. targetName:sub(2):lower()
+    local formattedTargetRealm = targetRealm:sub(1, 1):upper() .. targetRealm:sub(2):lower()
+    local databaseKey = formattedTargetName .. "-" .. formattedTargetRealm
+
+    -- Get player data from the database
+    local data = iWR:GetDatabaseEntry(databaseKey)
+    if not data or next(data) == nil then
         return
     end
 
@@ -157,6 +167,7 @@ function iWR:AddNoteToGameTooltip(self, ...)
     local typeText = iWRBase.Types[typeIndex]
     local iconPath = iWRBase.ChatIcons[typeIndex] or "Interface\\Icons\\INV_Misc_QuestionMark"
 
+    -- Add the note details to the tooltip
     if typeText then
         local icon = iconPath and "|T" .. iconPath .. ":16:16:0:0|t" or ""
         GameTooltip:AddLine(L["NoteToolTip"] .. icon .. Colors[typeIndex] .. " " .. typeText .. "|r " .. icon)
@@ -167,10 +178,9 @@ function iWR:AddNoteToGameTooltip(self, ...)
     end
 
     if author and date then
-        GameTooltip:AddLine(Colors.Default .. "Author: " .. Colors[typeIndex] .. author .. Colors.Default .." (" .. date .. ")")
+        GameTooltip:AddLine(Colors.Default .. "Author: " .. Colors[typeIndex] .. author .. Colors.Default .. " (" .. date .. ")")
     end
 end
-
 
 -- ╭─────────────────────────────────────╮
 -- │      Function: Timestamp Compare    │
@@ -853,9 +863,9 @@ function iWR:SetTargetingFrame()
         end
 
         if targetRealm == iWRCurrentRealm then
-            iWR:DebugMsg("Player [|r" .. (Colors.Classes[class] or Colors.Gray) .. targetName .. Colors.iWR .. "] was not found in Database.", 3)
+            iWR:DebugMsg("Player [|r" .. (Colors.Classes[class] or Colors.Gray) .. targetName .. Colors.iWR .. "] was found in Database.", 3)
         else
-            iWR:DebugMsg("Player [|r" .. (Colors.Classes[class] or Colors.Gray) .. targetName .. Colors.iWR .. "] from realm [" .. Colors.Reset .. (targetRealm or "Unknown Realm") .. Colors.iWR .. "] was not found in Database.", 3)
+            iWR:DebugMsg("Player [|r" .. (Colors.Classes[class] or Colors.Gray) .. targetName .. Colors.iWR .. "] from realm [" .. Colors.Reset .. (targetRealm or "Unknown Realm") .. Colors.iWR .. "] was found in Database.", 3)
         end
     end
 end
@@ -989,23 +999,20 @@ function iWR:ShowDetailWindow(playerName)
     for _, item in ipairs(detailsContent) do
         local row = self.detailContent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         row:SetPoint("TOPLEFT", self.detailContent, "TOPLEFT", 10, yOffset)
-        row:SetWidth(270) -- Set the width to control wrapping
-        row:SetWordWrap(true) -- Enable word wrapping
+        row:SetWidth(270)
+        row:SetWordWrap(true)
         row:SetText(item.label .. " " .. (item.value or "N/A"))
         row:Show()
-        table.insert(self.detailRows, row) -- Store the row for updates
-        -- Adjust yOffset dynamically based on whether the row is the "Note" row
+        table.insert(self.detailRows, row) 
         if item.isNote then
             local noteHeight = row:GetStringHeight()
-            yOffset = yOffset - noteHeight - 10 -- Add spacing after the wrapped note
+            yOffset = yOffset - noteHeight - 10
         else
             yOffset = yOffset - 20
         end
     end
-    -- Adjust frame height based on content
     local frameHeight = math.abs(yOffset) + 60
     self.detailFrame:SetHeight(frameHeight)
-    -- Show the frame
     self.detailFrame:Show()
 end
 
@@ -1397,8 +1404,12 @@ end
 -- ╰───────────────────────────╯
 function iWR:CreateNote(Name, Note, Type)
     iWR:DebugMsg("New note Name: [|r" .. Name .. Colors.iWR .. "].", 3)
-    iWR:DebugMsg("New note Note: [|r" .. Note .. Colors.iWR .. "].", 3)
-    iWR:DebugMsg("New note Type: [|r" .. Colors[Type] .. Type .. Colors.iWR .. "].", 3)
+    if Note == "" then
+        iWR:DebugMsg("New note Note: [" .. Colors.Reset .. "Nothing" .. Colors.iWR .. "].", 3)
+    else
+        iWR:DebugMsg("New note Note: [|r" .. Note .. Colors.iWR .. "].", 3)
+    end
+     iWR:DebugMsg("New note Type: [|r" .. Colors[Type] .. iWRBase.Types[Type] .. Colors.iWR .. "].", 3)
 
     local playerName = UnitName("player")
     local iWRCurrentRealm = GetRealmName()
@@ -1491,14 +1502,7 @@ function iWR:CreateNote(Name, Note, Type)
         else
             print(L["CharNoteStart"] .. dbName .. L["CharNoteCreated"])
         end
-    else
-        if playerUpdate then
-            print(L["CharNoteStart"] .. dbName .. L["CharNoteUpdated"] .. Colors.Gray .. " Class unknown." .. Colors.iWR .. " Class will be updated automatically when the player is targeted.")
-        else
-            print(L["CharNoteStart"] .. dbName .. L["CharNoteCreated"] .. Colors.Gray .. " Class unknown." .. Colors.iWR .. " Class will be updated automatically when the player is targeted.")
-        end
     end
-
     colorCode = nil
 end
 
