@@ -3,7 +3,7 @@ name: Release AddOn
 on:
   push:
     tags:
-      - '*'
+      - '*' # Trigger on any tag
 
 env:
   CF_API_KEY: ${{ secrets.CF_API_KEY }}
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Fetch full history for tags
 
       - name: Prepare Build Directory
         run: |
@@ -39,10 +39,8 @@ jobs:
         id: changelog
         run: |
           # Extract the current tag's annotated message
-          changelog=$(git tag -l --format='%(contents:subject)%0A%0A%(contents:body)' $(git describe --tags))
-          echo "$changelog"
+          changelog=$(git tag -l --format='%(contents)' $(git describe --tags))
           echo "::set-output name=changelog::$changelog"
-
 
       - name: Publish to CurseForge
         uses: BigWigsMods/packager@v2
@@ -50,6 +48,3 @@ jobs:
           name: iWillRemember
           path: build/iWillRemember-$(git describe --tags).zip
           changelog: ${{ steps.changelog.outputs.changelog }}
-
-      - name: Debug Changelog
-        run: echo "${{ steps.changelog.outputs.changelog }}"

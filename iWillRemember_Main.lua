@@ -205,7 +205,9 @@ if major and minor and patch then
         iWRGameVersionName = "Classic Cata"
     elseif gameTocNumber >50000 then
         iWRGameVersionName =   "Retail"
-    else
+    elseif gameTocNumber >10000 and gameTocNumber <19999 then
         iWRGameVersionName = "Classic Era"
+    else
+        iWRGameVersionName = "Unknown Game Version"
     end
 end
