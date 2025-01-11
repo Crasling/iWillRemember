@@ -148,7 +148,8 @@ function iWR:AddNoteToGameTooltip(self, ...)
     local targetNameWithRealm = GetUnitName(unit, true)
     local targetName = GetUnitName(unit, false)
     local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or GetRealmName()
-
+    targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
+    
     -- Format name and realm for database key
     local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
     local databaseKey = capitalizedName .. "-" .. capitalizedRealm
@@ -366,7 +367,7 @@ function iWR:SendRemoveRequestToFriends(name)
         if #sentTo > 0 then
             iWR:DebugMsg("Remove request sent to: " .. table.concat(sentTo, ", "), 3)
         else
-            iWR:DebugMsg("No friends available to send the remove request.")
+            iWR:DebugMsg("No friends available to send the remove request.",2)
         end
     end
 end
@@ -396,7 +397,8 @@ function iWR:SetTargetFrameDragonFlightUI()
             local targetNameWithRealm = GetUnitName("target", true)
             local targetName = GetUnitName("target", false)
             local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or GetRealmName()
-            
+            targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
+
             -- Format name and realm for database key
             local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
             local databaseKey = capitalizedName .. "-" .. capitalizedRealm
@@ -471,7 +473,7 @@ function iWR:SetTargetFrameDefault()
 
     -- Set the target frame texture
     TargetFrameTextureFrameTexture:SetTexture(iWRBase.TargetFrames[targetType])
-    iWR:DebugMsg("Default frame updated for target [" .. databaseKey .. "] with type [" .. targetType .. "].", 3)
+    iWR:DebugMsg("Default frame updated for target [" .. databaseKey .. "] with type [" .. Colors[targetType] .. iWRBase.Types[targetType] .. "].", 3)
 end
 
 
@@ -757,37 +759,68 @@ function iWR:ProcessRemoveRequestQueue()
     local request = table.remove(iWRRemoveRequestQueue, 1)
     local noteName, senderName = request.NoteName, request.Sender
 
-    iWR:DebugMsg("Processing request for: [" .. iWRDatabase[noteName][4] .. Colors.iWR .. "] from sender " .. Colors.Green .. senderName .. Colors.iWR .. ". Remaining queue size: " .. #iWRRemoveRequestQueue,3)
-
-    -- Show the confirmation popup
-    StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
-        text = Colors.iWR .. "Your friend " .. Colors.Green .. senderName .. Colors.iWR .. " removed |n|n[" .. iWRDatabase[noteName][4] .. Colors.iWR .."]|n|n from their iWR database. Do you also want to remove [" .. iWRDatabase[noteName][4] .. Colors.iWR .."]?",
-        button1 = "Yes",
-        button2 = "No",
-        OnAccept = function()
-            print(L["CharNoteStart"] .. iWRDatabase[noteName][4] .. L["CharNoteRemoved"])
-            iWRDatabase[noteName] = nil
-            iWR:PopulateDatabase()
-            iWR:UpdateTooltip()
-            iWR:UpdateTargetFrame()
-        end,
-        OnCancel = function()
-            iWR:DebugMsg("User chose to keep: [" .. iWRDatabase[noteName][4] .. Colors.iWR .. "], if not removed it will be synced back to friend",3)
-        end,
-        OnHide = function()
-            iWRisPopupActive = false
-            if iWRInCombat then
-                iWR:DebugMsg("Cannot process next request due to combat.",3)
-            else
-                iWR:DebugMsg("Popup closed. Processing next request.",3)
-                iWR:ProcessRemoveRequestQueue()
-            end
-        end,
-        timeout = 0,
-        whileDead = true,
-        hideOnEscape = true,
-        preferredIndex = 3,
-    }
+    iWR:DebugMsg("Processing request for: [" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .. "] from sender " .. Colors.Green .. senderName .. Colors.iWR .. ". Remaining queue size: " .. #iWRRemoveRequestQueue,3)
+    if iWRDatabase[noteName][7] ~= iWRCurrentRealm then
+        -- Show the confirmation popup
+        StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
+            text = Colors.iWR .. "Your friend " .. Colors.Green .. senderName .. Colors.iWR .. " removed |n|n[" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .."]|n|n from their iWR database. Do you also want to remove [" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .."]?",
+            button1 = "Yes",
+            button2 = "No",
+            OnAccept = function()
+                print(L["CharNoteStart"] .. iWRDatabase[noteName][4] .. L["CharNoteRemoved"])
+                iWRDatabase[noteName] = nil
+                iWR:PopulateDatabase()
+                iWR:UpdateTooltip()
+                iWR:UpdateTargetFrame()
+            end,
+            OnCancel = function()
+                iWR:DebugMsg("User chose to keep: [" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .. "], if not removed it will be synced back to friend",3)
+            end,
+            OnHide = function()
+                iWRisPopupActive = false
+                if iWRInCombat then
+                    iWR:DebugMsg("Cannot process next request due to combat.",3)
+                else
+                    iWR:DebugMsg("Popup closed. Processing next request.",3)
+                    iWR:ProcessRemoveRequestQueue()
+                end
+            end,
+            timeout = 0,
+            whileDead = true,
+            hideOnEscape = true,
+            preferredIndex = 3,
+        }
+    else
+        -- Show the confirmation popup
+        StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
+            text = Colors.iWR .. "Your friend " .. Colors.Green .. senderName .. Colors.iWR .. " removed |n|n[" .. iWRDatabase[noteName][4] .. Colors.iWR .."]|n|n from their iWR database. Do you also want to remove [" .. iWRDatabase[noteName][4] .. Colors.iWR .."]?",
+            button1 = "Yes",
+            button2 = "No",
+            OnAccept = function()
+                print(L["CharNoteStart"] .. iWRDatabase[noteName][4] .. L["CharNoteRemoved"])
+                iWRDatabase[noteName] = nil
+                iWR:PopulateDatabase()
+                iWR:UpdateTooltip()
+                iWR:UpdateTargetFrame()
+            end,
+            OnCancel = function()
+                iWR:DebugMsg("User chose to keep: [" .. iWRDatabase[noteName][4] .. Colors.iWR .. "], if not removed it will be synced back to friend",3)
+            end,
+            OnHide = function()
+                iWRisPopupActive = false
+                if iWRInCombat then
+                    iWR:DebugMsg("Cannot process next request due to combat.",3)
+                else
+                    iWR:DebugMsg("Popup closed. Processing next request.",3)
+                    iWR:ProcessRemoveRequestQueue()
+                end
+            end,
+            timeout = 0,
+            whileDead = true,
+            hideOnEscape = true,
+            preferredIndex = 3,
+        }
+    end
     StaticPopup_Show("REMOVE_PLAYER_CONFIRM")
 end
 
@@ -822,10 +855,7 @@ function iWR:SetTargetingFrame()
     local targetNameWithRealm = GetUnitName("target", true)
     local targetName = GetUnitName("target", false)
     local targetRealm = select(2, strsplit("-", targetNameWithRealm or ""))
-
-    -- Remove "(*)" from the target name if it exists
-    targetName = targetName and targetName:gsub("%s*%(%*%)", "") or targetName
-    targetNameWithRealm = targetNameWithRealm and targetNameWithRealm:gsub("%s*%(%*%)", "") or targetNameWithRealm
+    targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
 
     -- Use current realm if no realm is found
     if not targetRealm or targetRealm == "" then
@@ -1355,59 +1385,67 @@ end
 -- │      Clear Note      │
 -- ╰──────────────────────╯
 function iWR:ClearNote(Name)
-    if iWR:VerifyInputName(Name) then
-        local iWRCurrentRealm = GetRealmName()
-        local targetName, targetRealm = UnitName("target")
-    
-        -- Handle cross-realm target
-        if targetName and not targetRealm then
-            local fullTargetName = UnitName("target")
-            if string.find(fullTargetName, "-") then
-                targetName, targetRealm = strsplit("-", fullTargetName)
-                iWR:DebugMsg("Cross-realm target detected. Name: " .. targetName .. ", Realm: " .. targetRealm, 1)
-            else
-                targetRealm = iWRCurrentRealm
-                iWR:DebugMsg("Target is from the same realm. Using current realm: " .. targetRealm, 3)
-            end
-        end
-    
-        -- If the input name matches the target's name but has no realm, assign the target's realm
-        if Name == targetName and not string.find(Name, "-") then
-            iWR:DebugMsg("Input name matches target. Using target's realm: " .. (targetRealm or "Unknown"), 1)
-            targetRealm = targetRealm or iWRCurrentRealm
-        end
-    
-        -- Format name and realm for database key
-        if not targetName or not targetRealm then
-            iWR:DebugMsg("Error on Creation: "..targetName or "Nothing" .. ". " ..targetRealm or "Nothing")
-            return
-        end
-
-        -- Format name and realm for database key
-        local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
-        local databaseKey = capitalizedName .. "-" .. capitalizedRealm
-
-        -- Check if the key exists in the database
-        if iWRDatabase[databaseKey] then
-            -- Remove the entry from the iWR database
-            print(L["CharNoteStart"] .. iWRDatabase[databaseKey][4] .. L["CharNoteRemoved"])
-            iWRDatabase[databaseKey] = nil
-
-            -- Repopulate and update the target frame
-            iWR:PopulateDatabase()
-            iWR:UpdateTargetFrame()
-
-            -- Notify friends if data sharing is enabled
-            if iWRSettings.DataSharing ~= false then
-                iWR:SendRemoveRequestToFriends(databaseKey)
-            end
-        else
-            -- Notify that the name was not found in the database
-            print(Colors.iWR .. " [iWR]: Name [|r" .. databaseKey .. Colors.iWR .. "] does not exist in the database.")
-        end
-    else
+    -- Validate input name
+    if not iWR:VerifyInputName(Name) then
         print(L["ClearInputError"])
         iWR:DebugMsg("NameInput error: [|r" .. (Name or "nil") .. Colors.iWR .. "].")
+        return
+    end
+
+    -- Determine target details
+    local targetNameWithRealm = GetUnitName("target", true) -- "Name-Realm"
+    local targetName = GetUnitName("target", false) -- "Name"
+    local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWRCurrentRealm
+    targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
+
+    local uncoloredName = StripColorCodes(Name)
+
+    -- Determine the final name and realm to use
+    local finalName, finalRealm
+    if string.find(Name, "-") then
+        -- Case 1: Input name includes "-"
+        finalName, finalRealm = strsplit("-", Name)
+        iWR:DebugMsg("Input includes realm. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
+    elseif targetName and targetName == uncoloredName then
+        -- Case 2: Input name matches target name
+        finalName = targetName
+        finalRealm = targetRealm
+        iWR:DebugMsg("Input matches target. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
+    else
+        -- Case 3: Input name does not include realm and does not match target name
+        finalName = Name
+        finalRealm = iWRCurrentRealm
+        iWR:DebugMsg("Input differs from target. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
+    end
+
+    -- Validate final target name and realm
+    if not finalName or not finalRealm then
+        iWR:DebugMsg("Error on Deletion: " .. (finalName or "Nothing") .. ", " .. (finalRealm or "Nothing"), 1)
+        return
+    end
+
+    -- Format name and realm for database key
+    local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(finalName, finalRealm)
+    local databaseKey = capitalizedName .. "-" .. capitalizedRealm
+
+    -- Check if the key exists in the database
+    if iWRDatabase[databaseKey] then
+        -- Remove the entry from the iWR database
+        print(L["CharNoteStart"] .. iWRDatabase[databaseKey][4] .. L["CharNoteRemoved"])
+        iWRDatabase[databaseKey] = nil
+
+        -- Repopulate and update the target frame
+        iWR:PopulateDatabase()
+        iWR:UpdateTargetFrame()
+
+        -- Notify friends if data sharing is enabled
+        if iWRSettings.DataSharing ~= false then
+            iWR:SendRemoveRequestToFriends(databaseKey)
+        end
+    else
+        -- Notify that the name was not found in the database
+        print(Colors.iWR .. " [iWR]: Name [|r" .. databaseKey .. Colors.iWR .. "] does not exist in the database.")
+        iWR:DebugMsg("Deletion failed. Name not found: " .. databaseKey, 1)
     end
 end
 
@@ -1429,56 +1467,52 @@ function iWR:CreateNote(Name, Note, Type)
     local targetNameWithRealm = GetUnitName("target", true) -- "Name-Realm"
     local targetName = GetUnitName("target", false) -- "Name"
     local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWRCurrentRealm
+    targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
 
-    -- If input name matches the target name
-    if Name == targetName then
-        -- Cross-realm handling
-        if not targetRealm then
-            local fullTargetName = UnitName("target") -- Includes realm if cross-realm
-            if string.find(fullTargetName, "-") then
-                targetName, targetRealm = strsplit("-", fullTargetName)
-                iWR:DebugMsg("Cross-realm target detected. Name: " .. targetName .. ", Realm: " .. targetRealm, 3)
-            else
-                targetRealm = iWRCurrentRealm
-                iWR:DebugMsg("Target is from the same realm. Using current realm: " .. targetRealm, 3)
-            end
-        end
+    local uncoloredName = StripColorCodes(Name)
+
+    -- Determine the final name and realm to use
+    local finalName, finalRealm
+    if string.find(Name, "-") then
+        -- Case 1: Input name includes "-"
+        finalName, finalRealm = strsplit("-", Name)
+        iWR:DebugMsg("Input includes realm. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
+    elseif targetName and targetName == uncoloredName then
+        -- Case 2: Input name matches target name
+        finalName = targetName
+        finalRealm = targetRealm
+        iWR:DebugMsg("Input matches target. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
     else
-        -- Handle cases where input Name doesn't match target
-        if not string.find(Name, "-") then
-            iWR:DebugMsg("Input name missing realm. Using current realm: " .. iWRCurrentRealm, 3)
-            targetName = Name
-            targetRealm = iWRCurrentRealm
-        else
-            targetName, targetRealm = strsplit("-", Name)
-            iWR:DebugMsg("Input name and realm detected. Name: " .. targetName .. ", Realm: " .. targetRealm, 3)
-        end
+        -- Case 3: Input name does not include realm and does not match target name
+        finalName = Name
+        finalRealm = iWRCurrentRealm
+        iWR:DebugMsg("Input differs from target. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
     end
 
-    targetName = StripColorCodes(targetName)
-    local colorCode = string.match(Name, "|c%x%x%x%x%x%x%x%x")
-    
-    -- Validate name and realm
-    if not targetName or not targetRealm then
-        iWR:DebugMsg("Error on creation: " .. (targetName or "Nothing") .. ", " .. (targetRealm or "Nothing"), 1)
+    -- Strip color codes and validate name and realm
+    finalName = StripColorCodes(finalName)
+    if not finalName or not finalRealm then
+        iWR:DebugMsg("Error on creation: Name or Realm missing. Name: " .. (finalName or "nil") .. ", Realm: " .. (finalRealm or "nil"), 1)
         return
     end
 
     -- Format name and realm for database key
-    local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
+    local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(finalName, finalRealm)
     local databaseKey = capitalizedName .. "-" .. capitalizedRealm
     iWR:DebugMsg("Formatted database key: " .. databaseKey, 3)
 
     -- Determine display name with color
-    
     local dbName = ""
+    local colorCode = string.match(Name, "|c%x%x%x%x%x%x%x%x")
     if colorCode then
         dbName = colorCode .. capitalizedName
-    elseif Name == targetName then
-        local targetClass = select(2, UnitClass("target"))
-        dbName = targetClass and (Colors.Classes[targetClass] .. capitalizedName) or (Colors.Gray .. capitalizedName)
     else
-        dbName = Colors.Gray .. capitalizedName
+        if targetName == capitalizedName then
+            local targetClass = select(2, UnitClass("target"))
+            dbName = targetClass and (Colors.Classes[targetClass] .. capitalizedName)
+        else
+            dbName = Colors.Gray .. capitalizedName
+        end
     end
 
     -- Note author
