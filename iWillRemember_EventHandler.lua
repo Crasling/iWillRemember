@@ -44,18 +44,15 @@ end)
 -- ╭──────────────────────────────────────────────────╮
 -- │      Event Handler for Party or Raid Changes     │
 -- ╰──────────────────────────────────────────────────╯
-local eventFrame = CreateFrame("Frame")
-eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
-eventFrame:RegisterEvent("RAID_ROSTER_UPDATE")
-eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-
-eventFrame:SetScript("OnEvent", function(self, event, ...)
+local groupFrame = CreateFrame("Frame")
+groupFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+groupFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+-- Track if the player was in a group previously
+local wasInGroup = false
+groupFrame:SetScript("OnEvent", function(_, event)
     if event == "GROUP_ROSTER_UPDATE" or event == "RAID_ROSTER_UPDATE" then
-        iWR:CheckGroupMembersAgainstDatabase()
-    elseif event == "PLAYER_ENTERING_WORLD" then
-        C_Timer.After(2, function()
-            iWR:CheckGroupMembersAgainstDatabase()
-        end)
+        iWR:HandleGroupRosterUpdate(wasInGroup)
+        wasInGroup = IsInGroup()
     end
 end)
 
@@ -81,15 +78,9 @@ function iWR:OnEnable()
     self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
     self:SecureHook("TargetFrame_Update", "SetTargetingFrame")
     hooksecurefunc("SetItemRef", function(link, text, button, chatFrame)
-        -- Call your custom handler
-        iWR:HandleHyperlink(link, text, button, chatFrame)
-        -- Check if the link is a player link
-        if link:match("^player:") then
-            local _, playerName, playerRealm = strsplit(":", link)
-            -- If the playerRealm is empty, it means the player is from the same realm
-            if not playerRealm or playerRealm == "" then
-                playerRealm = GetRealmName() -- Retrieve the current realm if not specified
-            end
+        local linkType, playerName = string.split(":", link)
+        if linkType == "iWRPlayer" and playerName then
+            iWR:HandleHyperlink(link, text, button, chatFrame)
         end
     end)
     -- Hook into LibDBIcon updates

@@ -7,25 +7,7 @@
 -- ╚═╝  ╚══╝╚══╝  ╚══════╝
 -- ═════════════════════════
 
--- ╭────────────────────────╮
--- │      List of Types     │
--- ╰────────────────────────╯
-iWRBase.Types = {
-    [10]    = "Superior",
-    [5]     = "Respected",
-    [3]     = "Liked",
-    [1]     = "Neutral",
-    [0]     = "Clear",
-    [-3]    = "Disliked",
-    [-5]    = "Hated",
-    Superior = 10,
-    Respected = 5,
-    Liked = 3,
-    Neutral = 1,
-    Clear = 0,
-    Disliked = -3,
-    Hated = -5,
-}
+local previousGroupSize = 0
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                  iWR Functions                                 │
@@ -147,7 +129,7 @@ function iWR:AddNoteToGameTooltip(self, ...)
     -- Get the player's realm and format the database key
     local targetNameWithRealm = GetUnitName(unit, true)
     local targetName = GetUnitName(unit, false)
-    local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or GetRealmName()
+    local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWRCurrentRealm
     targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
     
     -- Format name and realm for database key
@@ -174,7 +156,13 @@ function iWR:AddNoteToGameTooltip(self, ...)
     end
 
     if note and note ~= "" then
-        GameTooltip:AddLine(Colors.Default .. "Note: " .. Colors[typeIndex] .. note)
+        if #note <= 30 then
+            GameTooltip:AddLine("Note: " .. Colors[data[2]] .. note, 1, 0.82, 0) -- Add note in tooltip
+        else
+            local firstLine, secondLine = iWR:splitOnSpace(note, 30) -- Split text on the nearest space
+            GameTooltip:AddLine("Note: " .. Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
+            GameTooltip:AddLine(Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
+        end
     end
 
     if author and date then
@@ -273,9 +261,19 @@ function iWR:ShowNotificationPopup(matches)
     end
 end
 
-function iWR:CheckGroupMembersAgainstDatabase()
-    wipe(iWRWarnedPlayers)
+function iWR:HandleGroupRosterUpdate(wasInGroup)
+    local isInGroup = IsInGroup() -- Check if the player is currently in a group
+    if not isInGroup and wasInGroup then
+        -- Player has left the group, wipe warned players
+        wipe(iWRWarnedPlayers)
+        iWR:DebugMsg("Player has left the group. Warned players list wiped.", 3)
+    else
+        iWR:CheckGroupMembersAgainstDatabase()
+    end
+end
 
+
+function iWR:CheckGroupMembersAgainstDatabase()
     local numGroupMembers = GetNumGroupMembers()
     local isInRaid = IsInRaid()
     local matches = {}
@@ -284,19 +282,22 @@ function iWR:CheckGroupMembersAgainstDatabase()
         local unitID = isInRaid and "raid" .. i or "party" .. i
         local playerName = UnitName("player")
         local name, realm = UnitName(unitID)
-        if playerName == name then iWRWarnedPlayers[name] = true return end
-        if name and not iWRWarnedPlayers[name] then
+
+        -- Skip if the current player is being processed
+        if playerName == name then
+            iWRWarnedPlayers[name] = true
+        elseif name and not iWRWarnedPlayers[name] then
             -- Get player data
             local data = iWR:GetDatabaseEntry(name)
-            if next(data) == nil then
-                iWR:DebugMsg("No data found for player in group: [" .. name .. "]",3)
-                return
-            end
-            local relationValue = data[2]
-            if relationValue and relationValue < 0 then
-                local note = data[1] or ""
-                table.insert(matches, { name = name, relation = relationValue, note = note })
-                iWRWarnedPlayers[name] = true
+            if next(data) ~= nil then
+                local relationValue = data[2]
+                if relationValue and relationValue < 0 then
+                    local note = data[1] or ""
+                    table.insert(matches, { name = name, relation = relationValue, note = note })
+                    iWRWarnedPlayers[name] = true
+                end
+            else
+                iWR:DebugMsg("No data found for player in group: [" .. name .. "]", 3)
             end
         end
     end
@@ -313,9 +314,6 @@ function iWR:UpdateTooltip()
     local tooltip = GameTooltip
     if tooltip:IsVisible() then
         tooltip:Hide()
-        C_Timer.After(1, function()
-            tooltip:Show()
-        end)
     end
 end
 
@@ -396,7 +394,7 @@ function iWR:SetTargetFrameDragonFlightUI()
             -- Get the target's name and realm for database lookup
             local targetNameWithRealm = GetUnitName("target", true)
             local targetName = GetUnitName("target", false)
-            local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or GetRealmName()
+            local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWRCurrentRealm
             targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
 
             -- Format name and realm for database key
@@ -405,7 +403,7 @@ function iWR:SetTargetFrameDragonFlightUI()
 
             -- Ensure the database entry exists
             if not iWRDatabase[databaseKey] then
-                iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database.", 1)
+                iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database. [SetTargetFrameDragonFlightUI]", 1)
                 return
             end
 
@@ -445,7 +443,7 @@ function iWR:SetTargetFrameDefault()
 
     -- Use the current realm if no realm is specified
     if not targetRealm or targetRealm == "" then
-        targetRealm = GetRealmName()
+        targetRealm = iWRCurrentRealm
     end
 
     -- Format name and realm for database key
@@ -475,7 +473,6 @@ function iWR:SetTargetFrameDefault()
     TargetFrameTextureFrameTexture:SetTexture(iWRBase.TargetFrames[targetType])
     iWR:DebugMsg("Default frame updated for target [" .. databaseKey .. "] with type [" .. Colors[targetType] .. iWRBase.Types[targetType] .. "].", 3)
 end
-
 
 -- ╭────────────────────────────────────────────────────────╮
 -- │      Function: Sending Latest Note to Friendslist      │
@@ -763,11 +760,11 @@ function iWR:ProcessRemoveRequestQueue()
     if iWRDatabase[noteName][7] ~= iWRCurrentRealm then
         -- Show the confirmation popup
         StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
-            text = Colors.iWR .. "Your friend " .. Colors.Green .. senderName .. Colors.iWR .. " removed |n|n[" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .."]|n|n from their iWR database. Do you also want to remove [" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .."]?",
+            text = Colors.iWR .. "Your friend " .. Colors.Green .. senderName .. Colors.iWR .. " removed |n|n[" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .. "]|n|n from their iWR database. Do you also want to remove [" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .."]?",
             button1 = "Yes",
             button2 = "No",
             OnAccept = function()
-                print(L["CharNoteStart"] .. iWRDatabase[noteName][4] .. L["CharNoteRemoved"])
+                print(L["CharNoteStart"] .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .. L["CharNoteRemoved"])
                 iWRDatabase[noteName] = nil
                 iWR:PopulateDatabase()
                 iWR:UpdateTooltip()
@@ -859,7 +856,7 @@ function iWR:SetTargetingFrame()
 
     -- Use current realm if no realm is found
     if not targetRealm or targetRealm == "" then
-        targetRealm = GetRealmName()
+        targetRealm = iWRCurrentRealm
     end
 
     -- Clear the custom texture if no target or target is not a player
@@ -887,7 +884,7 @@ function iWR:SetTargetingFrame()
             iWR.customFrame:Hide()
         end
         if targetRealm == iWRCurrentRealm then
-            iWR:DebugMsg("Target [|r" .. (Colors.Classes[class] or Colors.Gray) .. targetName .. Colors.iWR .. "] was not found in Database.", 3)
+            iWR:DebugMsg("Target [|r" .. (Colors.Classes[class] or Colors.Gray) .. targetName .. Colors.iWR .. "] was not found in Database. [SetTargetingFrame]", 3)
         else
             iWR:DebugMsg("Target [|r" .. (Colors.Classes[class] or Colors.Gray) .. targetName .. Colors.iWR .. "] from realm [" .. Colors.Reset .. (targetRealm or "Unknown Realm") .. Colors.iWR .. "] was not found in Database.", 3)
         end
@@ -925,29 +922,32 @@ end
 
 local function AddRelationshipIconToChat(self, event, message, author, flags, ...)
     if iWRSettings.ShowChatIcons then
-        local authorName = string.match(author, "^[^-]+") or author
-        if iWRDatabase[authorName] then
+        -- Extract author name and realm
+        local authorName, authorRealm = string.match(author, "^([^-]+)-?(.*)$")
+        authorRealm = authorRealm ~= "" and authorRealm or iWRCurrentRealm -- Use current realm if none provided
+
+        -- Construct the key as name-realm
+        local databaseKey = authorName .. "-" .. authorRealm
+
+        -- Check the database using the constructed key
+        if iWRDatabase[databaseKey] then
             -- Get the font size from the current chat frame
             local font, fontSize, fontFlags = self:GetFont()
             local iconSize = math.floor(fontSize * 1.2)
-            local iconPath = iWRBase.ChatIcons[iWRDatabase[authorName][2]] or "Interface\\Icons\\INV_Misc_QuestionMark"
+            local iconPath = iWRBase.ChatIcons[iWRDatabase[databaseKey][2]] or "Interface\\Icons\\INV_Misc_QuestionMark"
             local iconString = "|T" .. iconPath .. ":" .. iconSize .. "|t"
-            local clickableLink = "|HiWRPlayer:" .. authorName .. "|h" .. iconString .. "|h"
-
+            local clickableLink = "|HiWRPlayer:" .. databaseKey .. "|h" .. iconString .. "|h"
             message = clickableLink .. " " .. message
         end
-
         return false, message, author, flags, ...
     else
         return false, message, author, flags, ...
     end
 end
 
-
 function iWR:HandleHyperlink(link, text, button, chatFrame)
     local linkType, playerName = string.split(":", link)
     if linkType == "iWRPlayer" and playerName then
-        -- Handle the custom hyperlink for iWRPlayer
         if iWRDatabase[playerName] then
             self:ShowDetailWindow(playerName)
         else
@@ -1086,7 +1086,7 @@ end
 
 function iWR:StartHourlyBackup()
     if self.backupTicker then
-        iWR:DebugMsg("Hourly backup is already running.",2)
+        iWR:DebugMsg("Automatic backup is already running.",2)
         return
     end
 
@@ -1095,16 +1095,16 @@ function iWR:StartHourlyBackup()
         iWR:BackupDatabase()
     end)
 
-    iWR:DebugMsg("Hourly backup started.",3)
+    iWR:DebugMsg("Automatic backup started.",3)
 end
 
 function iWR:StopHourlyBackup()
     if self.backupTicker then
         self.backupTicker:Cancel()
         self.backupTicker = nil
-        iWR:DebugMsg("Hourly backup stopped.",3)
+        iWR:DebugMsg("Automatic backup stopped.",3)
     else
-        iWR:DebugMsg("No active hourly backup to stop.",2)
+        iWR:DebugMsg("No active Automatic backup to stop.",2)
     end
 end
 
@@ -1444,8 +1444,8 @@ function iWR:ClearNote(Name)
         end
     else
         -- Notify that the name was not found in the database
-        print(Colors.iWR .. " [iWR]: Name [|r" .. databaseKey .. Colors.iWR .. "] does not exist in the database.")
-        iWR:DebugMsg("Deletion failed. Name not found: " .. databaseKey, 1)
+        print(Colors.iWR .. "[iWR]: Name [|r" .. databaseKey .. Colors.iWR .. "] does not exist in the database.")
+        iWR:DebugMsg("Deletion failed, key not found: " .. databaseKey, 1)
     end
 end
 
@@ -1459,7 +1459,6 @@ function iWR:CreateNote(Name, Note, Type)
     iWR:DebugMsg("New note Type: [|r" .. Colors[Type] .. iWRBase.Types[Type] .. Colors.iWR .. "].", 3)
 
     local playerName = UnitName("player")
-    local iWRCurrentRealm = GetRealmName()
     local currentTime, currentDate = iWR:GetCurrentTimeByHours()
     local playerUpdate = false
 
@@ -1615,16 +1614,16 @@ function iWR:CreateOptionsPanel()
     -- Data Sharing Category Title
     local dataSharingCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     dataSharingCategoryTitle:SetPoint("TOPLEFT", debugCheckbox, "BOTTOMLEFT", 0, -15)
-    dataSharingCategoryTitle:SetText(Colors.iWR .. "Database Sharing Settings")
+    dataSharingCategoryTitle:SetText(Colors.iWR .. "Sync Settings")
 
     -- Data Sharing Checkbox
     local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
     dataSharingCheckbox:SetPoint("TOPLEFT", dataSharingCategoryTitle, "BOTTOMLEFT", 0, -5)
-    dataSharingCheckbox.Text:SetText("Enable Database sharing")
+    dataSharingCheckbox.Text:SetText("Enable Sync with Friends")
     dataSharingCheckbox:SetChecked(iWRSettings.DataSharing)
     dataSharingCheckbox:SetScript("OnClick", function(self)
         iWRSettings.DataSharing = self:GetChecked()
-        iWR:DebugMsg("Database Sharing: " .. tostring(iWRSettings.DataSharing),3)
+        iWR:DebugMsg("Sync with Friends: " .. tostring(iWRSettings.DataSharing),3)
     end)
 
     -- Target Frame and Chat Icons Category Title
@@ -1697,13 +1696,13 @@ function iWR:CreateOptionsPanel()
     -- Backup Checkbox
     local backupCheckbox = CreateFrame("CheckButton", nil, optionsPanel.Backup, "InterfaceOptionsCheckButtonTemplate")
     backupCheckbox:SetPoint("TOPLEFT", backupCategoryTitle, "BOTTOMLEFT", 0, -5)
-    backupCheckbox.Text:SetText("Enable Hourly Backup")
+    backupCheckbox.Text:SetText("Enable Automatic Backup")
     backupCheckbox:SetChecked(iWRSettings.HourlyBackup)
     backupCheckbox:SetScript("OnClick", function(self)
         local isEnabled = self:GetChecked()
         iWRSettings.HourlyBackup = isEnabled
         iWR:ToggleHourlyBackup(isEnabled)
-        iWR:DebugMsg("Hourly Backup: " .. tostring(iWRSettings.HourlyBackup),3)
+        iWR:DebugMsg("Automatic Backup: " .. tostring(iWRSettings.HourlyBackup),3)
     end)
 
     local restoreButton = CreateFrame("Button", nil, optionsPanel.Backup, "UIPanelButtonTemplate")
@@ -1989,4 +1988,3 @@ iWR:ModifyMenuForContext("MENU_UNIT_PARTY")
 iWR:ModifyMenuForContext("MENU_UNIT_RAID_PLAYER")
 iWR:ModifyMenuForContext("MENU_UNIT_ENEMY_PLAYER")
 iWR:ModifyMenuForContext("MENU_UNIT_FRIEND") -- Chat and Social Panel (fyrye)
-
