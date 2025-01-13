@@ -115,7 +115,13 @@
         "iWRWarnedPlayers",
         "iWRActiveTimers",
         "iWRTimerFrame",
-        "iWRCurrentRealm"
+        "iWRCurrentRealm",
+        "GameFontHighlight",
+        "SOUNDKIT",
+        "CopyTable",
+        "tContains",
+        "UIFrameFadeOut",
+        "INFO"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {

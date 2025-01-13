@@ -7,8 +7,6 @@
 -- ╚═╝  ╚══╝╚══╝  ╚══════╝
 -- ═════════════════════════
 
-local previousGroupSize = 0
-
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                  iWR Functions                                 │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
@@ -23,23 +21,6 @@ function iWR:DebugMsg(message,level)
             print(L["DebugError"] .. message)
         end
     end
-end
-
-if not _G["Blizzard_ItemRef"] then
-    _G["Blizzard_ItemRef"] = SetItemRef
-end
-
-SetItemRef = function(link, text, button, chatFrame)
-    local linkType, playerName = string.split(":", link)
-    if linkType == "iWRPlayer" and playerName then
-        if iWRDatabase[playerName] then
-            iWR:ShowDetailWindow(playerName)
-        else
-            iWR:DebugMsg("No data found for player: [" .. playerName .. "].")
-        end
-        return
-    end
-    return _G["Blizzard_ItemRef"](link, text, button, chatFrame)
 end
 
 function iWR:VerifyRealm(playerName)
@@ -348,27 +329,31 @@ function iWR:SendRemoveRequestToFriends(name)
         local sentTo = {} -- Table to store friend names
         -- Loop through all friends in the friend list
         for i = 1, C_FriendList.GetNumFriends() do
-            -- Get friend's info (which includes friendName)
+            -- Get friend's info (which includes friendName and connected status)
             local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-            -- Extract the friend's name from the table
+            -- Extract the friend's name and connection status
             local friendName = friendInfo and friendInfo.name
+            local isOnline = friendInfo and friendInfo.connected
             iWRDataCache = iWR:Serialize(name)
-            -- Ensure friendName is valid before sending
-            if friendName then
+            -- Ensure friendName is valid and the friend is online before sending
+            if friendName and isOnline then
                 iWR:SendCommMessage("iWRRemDBUpdate", iWRDataCache, "WHISPER", friendName)
                 table.insert(sentTo, friendName)
+            elseif friendName and not isOnline then
+                -- Nothing
             else
-                iWR:DebugMsg("No friend found at index " .. i .. ".")
+                iWR:DebugMsg("No friend found at index " .. i .. ".", 1)
             end
         end
         -- Print a single message listing all recipients
         if #sentTo > 0 then
-            iWR:DebugMsg("Remove request sent to: " .. table.concat(sentTo, ", "), 3)
+            iWR:DebugMsg("Remove request sent to online friends: " .. table.concat(sentTo, ", "), 3)
         else
-            iWR:DebugMsg("No friends available to send the remove request.",2)
+            iWR:DebugMsg("No online friends available to send the remove request.", 2)
         end
     end
 end
+
 
 function iWR:FormatNameAndRealm(name, realm)
     -- Ensure the inputs are strings to prevent errors
@@ -385,47 +370,82 @@ function iWR:FormatNameAndRealm(name, realm)
     return formattedName, formattedRealm
 end
 
+-- Saved incase PvP Icon changes in DragonFlightUI.
+-- function iWR:GetDragonFlightUITargetScale()
+--     local dragonflightDB = _G["DragonflightUIDB"]
+--     if dragonflightDB 
+--         and dragonflightDB["namespaces"] 
+--         and dragonflightDB["namespaces"]["Unitframe"] 
+--         and dragonflightDB["namespaces"]["Unitframe"]["profiles"] then
+--         local profiles = dragonflightDB["namespaces"]["Unitframe"]["profiles"]
+--         local defaultProfile = profiles["Default"]
+--         if defaultProfile and defaultProfile["target"] and defaultProfile["target"]["scale"] then
+--             local targetScale = defaultProfile["target"]["scale"]
+--             iWR:DebugMsg("Target scale found: " .. tostring(targetScale), 3)
+--             return targetScale
+--         else
+--             iWR:DebugMsg("Scale not found in DragonflightUIDB.", 1)
+--         end
+--     else
+--         iWR:DebugMsg("DragonflightUIDB not found in.", 1)
+--     end
+--     return 1
+-- end
 
 function iWR:SetTargetFrameDragonFlightUI()
-    local portraitFrame = _G["DragonflightUITargetFrameBackground"] or _G["DragonflightUITargetFrameBorder"]
+    -- Get the portrait frame (a texture)
+    local portraitFrame = _G["DragonflightUITargetFramePortrait"]
+    local pvpIcon = _G["TargetFrameTextureFramePVPIcon"]
     if portraitFrame then
-        local parent = portraitFrame:GetParent()
-        if parent and type(parent.CreateTexture) == "function" then
-            -- Get the target's name and realm for database lookup
-            local targetNameWithRealm = GetUnitName("target", true)
-            local targetName = GetUnitName("target", false)
-            local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWRCurrentRealm
-            targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
+        iWR:DebugMsg("Using Portrait Frame: " .. tostring(portraitFrame), 3)
 
-            -- Format name and realm for database key
-            local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
-            local databaseKey = capitalizedName .. "-" .. capitalizedRealm
+        -- Get the target's name and realm for database lookup
+        local targetNameWithRealm = GetUnitName("target", true)
+        local targetName = GetUnitName("target", false)
+        local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWRCurrentRealm
+        targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
 
-            -- Ensure the database entry exists
-            if not iWRDatabase[databaseKey] then
-                iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database. [SetTargetFrameDragonFlightUI]", 1)
-                return
-            end
+        -- Format name and realm for database key
+        local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
+        local databaseKey = capitalizedName .. "-" .. capitalizedRealm
 
-            if not iWR.customFrame then
-                iWR.customFrame = parent:CreateTexture(nil, "OVERLAY")
-            end
-
-            local customFrame = iWR.customFrame
-            customFrame:SetTexture(iWRBase.TargetFrames[iWRDatabase[databaseKey][2]])
-            customFrame:SetSize(100, 81)
-            customFrame:ClearAllPoints()
-            customFrame:SetPoint("CENTER", parent, "CENTER", 54, 8)
-            customFrame:Show()
-
-            iWR:DebugMsg("Custom frame successfully anchored to DragonFlightUI frame.", 3)
-        else
-            iWR:DebugMsg("Parent frame not found or unsupported.")
-            iWR:DebugMsg("Parent frame value: " .. tostring(parent))
+        -- Ensure the database entry exists
+        if not iWRDatabase[databaseKey] then
+            iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database. [SetTargetFrameDragonFlightUI]", 1)
+            return
         end
+
+        -- Retrieve the scale from DragonflightUIDB
+        local targetScale = 1 -- Default scale
+        --targetScale = iWR:GetDragonFlightUITargetScale() (Wont be needed as long as PvP Icon works..)
+
+        -- Create or update the custom frame
+        if not iWR.customFrame then
+            iWR.customFrame = CreateFrame("Frame", nil, UIParent)
+            iWR.customFrame.texture = iWR.customFrame:CreateTexture(nil, "OVERLAY")
+        end
+
+        local customFrame = iWR.customFrame
+        local customTexture = customFrame.texture
+        customFrame:SetParent(pvpIcon:GetParent())
+
+        -- Set the texture and dimensions
+        customTexture:SetTexture(iWRBase.TargetFrames[iWRDatabase[databaseKey][2]])
+        customTexture:SetAllPoints(customFrame)
+        customFrame:SetSize(99, 81.2)
+
+        -- Apply the retrieved scale
+        customFrame:SetScale(targetScale)
+
+        -- Anchor to the portrait frame
+        customFrame:ClearAllPoints()
+        customFrame:SetPoint("CENTER", portraitFrame, "CENTER", 12.5, 1.3)
+        customFrame:SetFrameLevel(2)
+        customFrame:Show()
+
+        iWR:DebugMsg("Custom frame successfully anchored to: DragonflightUITargetFramePortrait with scale: " .. tostring(targetScale), 3)
     else
-        iWR:DebugMsg("DragonFlightUI portrait frame not found or unsupported.")
-        iWR:DebugMsg("PortraitFrame value: " .. tostring(portraitFrame))
+        iWR:DebugMsg("DragonFlightUI portrait frame not found.", 1)
     end
 end
 
@@ -481,30 +501,34 @@ function iWR:SendNewDBUpdateToFriends()
     if iWRSettings.DataSharing ~= false then
         -- Initialize a table to track friends the data is sent to
         local friendsSentTo = {}
+
         -- Loop through all friends in the friend list
         for i = 1, C_FriendList.GetNumFriends() do
-            -- Get friend's info (which includes friendName)
+            -- Get friend's info (which includes friendName and online status)
             local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-            -- Extract the friend's name from the table
             local friendName = friendInfo and friendInfo.name
-            -- Ensure friendName is valid before sending
-            if friendName then
+            local isOnline = friendInfo and friendInfo.connected
+
+            -- Ensure friendName is valid and the friend is online before sending
+            if friendName and isOnline then
                 iWR:SendCommMessage("iWRNewDBUpdate", iWRDataCache, "WHISPER", friendName)
                 table.insert(friendsSentTo, friendName)
+            elseif friendName and not isOnline then
+                -- Nothing
             else
-                iWR:DebugMsg("No valid friend found at index " .. i .. ".", 2)
+                iWR:DebugMsg("No valid friend found at index " .. i .. ".", 1)
             end
         end
+
         -- Generate a single debug message with all recipients
         if #friendsSentTo > 0 then
             local friendListString = table.concat(friendsSentTo, ", ")
             iWR:DebugMsg("Successfully shared new note to: " .. friendListString .. ".", 3)
         else
-            iWR:DebugMsg("No valid friends found to share the new note.", 2)
+            iWR:DebugMsg("No online friends found to share the new note.", 2)
         end
     end
 end
-
 
 -- ╭──────────────────────────────────────────────────────╮
 -- │      Function: Sending All Notes to Friendslist      │
@@ -513,37 +537,47 @@ function iWR:SendFullDBUpdateToFriends()
     if iWRSettings.DataSharing ~= false then
         -- Initialize a table to track friends the data is sent to
         local friendsSentTo = {}
+
         -- Loop through all friends in the friend list
         for i = 1, C_FriendList.GetNumFriends() do
-            -- Get friend's info (which includes friendName)
+            -- Get friend's info (which includes friendName and online status)
             local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-            -- Extract the friend's name from the table
             local friendName = friendInfo and friendInfo.name
-            -- Ensure friendName is valid before sending
-            if friendName then
+            local isOnline = friendInfo and friendInfo.connected
+
+            -- Ensure friendName is valid and the friend is online before sending
+            if friendName and isOnline then
                 wipe(iWRDataCacheTable)
+
                 -- Populate DataCacheTable with the full database
                 for k, v in pairs(iWRDatabase) do
                     iWRDataCacheTable[k] = v
                 end
+
                 -- Serialize the full table
                 iWRFullTableToSend = iWR:Serialize(iWRDataCacheTable)
+
                 -- Send the serialized table to the friend
                 iWR:SendCommMessage("iWRFullDBUpdate", iWRFullTableToSend, "WHISPER", friendName)
+
                 -- Add the friend's name to the list of recipients
                 table.insert(friendsSentTo, friendName)
+            elseif friendName and not isOnline then
+                -- Nothing
+            else
+                iWR:DebugMsg("No valid friend found at index " .. i .. ".", 1)
             end
         end
+
         -- Generate a single debug message with all recipients
         if #friendsSentTo > 0 then
             local friendListString = table.concat(friendsSentTo, ", ")
-            iWR:DebugMsg("Full database sent to: " .. friendListString, 3)
+            iWR:DebugMsg("Full database synced with: " .. friendListString, 3)
         else
-            iWR:DebugMsg("No valid friends found to send the database to.", 2)
+            iWR:DebugMsg("No online friends found to send the database to.", 2)
         end
     end
 end
-
 
 
 -- ╭────────────────────────────────────────╮
@@ -617,17 +651,23 @@ end
 function iWR:CheckLatestVersion()
     -- Convert the version string into a number
     local versionNumber = iWR:ConvertVersionToNumber(Version)
-    iWR:DebugMsg(Version .. " changed into: " .. versionNumber,3)
+    iWR:DebugMsg(Version .. " changed into: " .. versionNumber, 3)
+
     -- Loop through all friends in the friend list
     for i = 1, C_FriendList.GetNumFriends() do
-        -- Get friend's info (which includes friendName)
+        -- Get friend's info (which includes friendName and connected status)
         local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-        -- Extract the friend's name from the table
         local friendName = friendInfo and friendInfo.name
-        -- Ensure friendName is valid before printing
-        if friendName then
+        local isOnline = friendInfo and friendInfo.connected
+
+        -- Ensure friendName is valid and the friend is online before sending
+        if friendName and isOnline then
             local VersionCache = iWR:Serialize(versionNumber)
             iWR:SendCommMessage("iWRVersionCheck", VersionCache, "WHISPER", friendName)
+        elseif friendName and not isOnline then
+            -- Nothing
+        else
+            iWR:DebugMsg("No valid friend found at index " .. i .. ".", 1)
         end
     end
 end
@@ -642,7 +682,7 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
         iWR:DebugMsg("Database full update request successfully received by " .. sender .. ".",3)
         -- If the sender is not a friend, skip processing
         if not iWR:VerifyFriend(sender) then
-            iWR:DebugMsg("Sender " .. sender .. " is not on the friends list. Ignoring update.",3)
+            iWR:DebugMsg("Sender " .. sender .. " is not on the friends list. Ignoring sync request.",3)
             return
         end
         -- Deserialize the message
@@ -662,7 +702,7 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
             iWR:UpdateTargetFrame()
             iWR:PopulateDatabase()
             iWR:UpdateTooltip()
-            iWR:DebugMsg("Full database data received from: " .. sender .. ".",3)
+            iWR:DebugMsg("Successfully synced full database data from:  " .. sender .. ".",3)
         end
     end
 end
@@ -679,7 +719,7 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
 
         -- If the sender is not a friend, skip processing
         if not iWR:VerifyFriend(sender) then
-            iWR:DebugMsg("Sender " .. sender .. " is not on the friends list. Ignoring update.",3)
+            iWR:DebugMsg("Sender " .. sender .. " is not on the friends list. Ignoring sync request.",3)
             return
         end
 
@@ -696,7 +736,7 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
             iWR:PopulateDatabase()
             iWR:UpdateTooltip()
 
-            iWR:DebugMsg("New database data received from: " .. sender .. ".",3)
+            iWR:DebugMsg("Successfully synced new database data from: " .. sender .. ".",3)
         end
 
         -- Clean up the temporary table
@@ -715,7 +755,7 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
 
     -- If the sender is not a friend, skip processing
     if not iWR:VerifyFriend(sender) then
-        iWR:DebugMsg("Sender " .. sender .. " is not on the friends list. Ignoring update.",3)
+        iWR:DebugMsg("Sender " .. sender .. " is not on the friends list. Ignoring sync request.",3)
         return
     end
 
@@ -920,6 +960,7 @@ function iWR:SetTargetingFrame()
     end
 end
 
+-- Function to add relationship icons to chat messages
 local function AddRelationshipIconToChat(self, event, message, author, flags, ...)
     if iWRSettings.ShowChatIcons then
         -- Extract author name and realm
@@ -932,18 +973,23 @@ local function AddRelationshipIconToChat(self, event, message, author, flags, ..
         -- Check the database using the constructed key
         if iWRDatabase[databaseKey] then
             -- Get the font size from the current chat frame
-            local font, fontSize, fontFlags = self:GetFont()
+            local font, fontSize = self:GetFont()
             local iconSize = math.floor(fontSize * 1.2)
             local iconPath = iWRBase.ChatIcons[iWRDatabase[databaseKey][2]] or "Interface\\Icons\\INV_Misc_QuestionMark"
-            local iconString = "|T" .. iconPath .. ":" .. iconSize .. "|t"
-            local clickableLink = "|HiWRPlayer:" .. databaseKey .. "|h" .. iconString .. "|h"
+
+            -- Create the clickable addon link
+            local iconString = string.format("|T%s:%d|t", iconPath, iconSize)
+            local clickableLink = string.format("|cFFFFFF00|Haddon:iWR:%s|h%s|h|r", databaseKey, iconString)
+
+            -- Prepend the clickable link to the message
             message = clickableLink .. " " .. message
         end
-        return false, message, author, flags, ...
-    else
-        return false, message, author, flags, ...
     end
+
+    -- Ensure the message is returned unchanged if no modifications were made
+    return false, message, author, flags, ...
 end
+
 
 function iWR:HandleHyperlink(link, text, button, chatFrame)
     local linkType, playerName = string.split(":", link)

@@ -33,11 +33,11 @@ combatEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 -- ╰──────────────────────────────────╯
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_LOGIN")
-
--- Event handler function
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
-        iWR:SendFullDBUpdateToFriends()
+        C_Timer.After(5, function()
+            iWR:SendFullDBUpdateToFriends()
+        end)
     end
 end)
 
@@ -47,7 +47,6 @@ end)
 local groupFrame = CreateFrame("Frame")
 groupFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 groupFrame:RegisterEvent("RAID_ROSTER_UPDATE")
--- Track if the player was in a group previously
 local wasInGroup = false
 groupFrame:SetScript("OnEvent", function(_, event)
     if event == "GROUP_ROSTER_UPDATE" or event == "RAID_ROSTER_UPDATE" then
@@ -77,12 +76,27 @@ function iWR:OnEnable()
     -- Secure hooks to add custom behavior
     self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
     self:SecureHook("TargetFrame_Update", "SetTargetingFrame")
-    hooksecurefunc("SetItemRef", function(link, text, button, chatFrame)
-        local linkType, playerName = string.split(":", link)
-        if linkType == "iWRPlayer" and playerName then
-            iWR:HandleHyperlink(link, text, button, chatFrame)
+    -- Register callback for handling custom addon links
+    EventRegistry:RegisterCallback("SetItemRef", function(_, link, text, button, chatFrame)
+        local linkType, addonName, linkData = string.split(":", link, 3)
+
+        -- Handle only your specific addon link type
+        if linkType == "addon" and addonName == "iWR" then
+            iWR:DebugMsg("Addon link clicked: " .. tostring(linkData), 3)
+
+            -- Extract the player name and realm from linkData
+            local authorName, authorRealm = string.match(linkData, "^([^-]+)-?(.*)$")
+            authorRealm = authorRealm ~= "" and authorRealm or iWRCurrentRealm -- Default to current realm
+
+            -- Show detail window or log a message if not found
+            if iWRDatabase[linkData] then
+                iWR:ShowDetailWindow(linkData)
+            else
+                iWR:DebugMsg("No data found for: " .. linkData, 1)
+            end
         end
     end)
+
     -- Hook into LibDBIcon updates
     LDBIcon.RegisterCallback(iWR, "LibDBIcon_Changed", "SaveMinimapPosition")
     -- Initialize

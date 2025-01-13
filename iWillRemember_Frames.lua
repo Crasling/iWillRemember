@@ -418,7 +418,7 @@ shareDatabaseButton:SetScript("OnClick", function()
         OnAccept = function()
             -- Function to share the full database
             iWR:SendFullDBUpdateToFriends()
-            print(Colors.iWR .. "[iWR]: Full database shared.")
+            print(Colors.iWR .. "[iWR]: Full database synced to friends.")
         end,
         timeout = 0,
         whileDead = true,

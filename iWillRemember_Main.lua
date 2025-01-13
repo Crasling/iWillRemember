@@ -211,3 +211,4 @@ if major and minor and patch then
         iWRGameVersionName = "Unknown Game Version"
     end
 end
+
