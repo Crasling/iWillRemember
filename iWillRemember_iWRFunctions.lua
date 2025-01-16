@@ -32,8 +32,8 @@ function iWR:VerifyRealm(playerName)
 end
 
 -- Get player data
-function iWR:GetDatabaseEntry(playerName)
-    return iWRDatabase[playerName] or {}
+function iWR:GetDatabaseEntry(databaseKey)
+    return iWRDatabase[databaseKey] or {}
 end
 
 function iWR:VerifyInputNote(Note)
@@ -133,21 +133,21 @@ function iWR:AddNoteToGameTooltip(self, ...)
     -- Add the note details to the tooltip
     if typeText then
         local icon = iconPath and "|T" .. iconPath .. ":16:16:0:0|t" or ""
-        GameTooltip:AddLine(L["NoteToolTip"] .. icon .. Colors[typeIndex] .. " " .. typeText .. "|r " .. icon)
+        GameTooltip:AddLine(L["NoteToolTip"] .. icon .. iWRBase.Colors[typeIndex] .. " " .. typeText .. "|r " .. icon)
     end
 
     if note and note ~= "" then
         if #note <= 30 then
-            GameTooltip:AddLine("Note: " .. Colors[data[2]] .. note, 1, 0.82, 0) -- Add note in tooltip
+            GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. note, 1, 0.82, 0) -- Add note in tooltip
         else
             local firstLine, secondLine = iWR:splitOnSpace(note, 30) -- Split text on the nearest space
-            GameTooltip:AddLine("Note: " .. Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
-            GameTooltip:AddLine(Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
+            GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
+            GameTooltip:AddLine(iWRBase.Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
         end
     end
 
     if author and date then
-        GameTooltip:AddLine(Colors.Default .. "Author: " .. Colors[typeIndex] .. author .. Colors.Default .. " (" .. date .. ")")
+        GameTooltip:AddLine(iWRBase.Colors.Default .. "Author: " .. iWRBase.Colors[typeIndex] .. author .. iWRBase.Colors.Default .. " (" .. date .. ")")
     end
 end
 
@@ -209,13 +209,13 @@ function iWR:ShowNotificationPopup(matches)
         for _, match in ipairs(matches) do
             local playerInfo = notificationFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             playerInfo:SetPoint("TOP", lastElement, "BOTTOM", 0, -10)
-            playerInfo:SetText(Colors.iWR .. match.name .. "|r" .. Colors.iWR .. " (" .. Colors[match.relation] .. iWRBase.Types[match.relation] .. Colors.iWR .. ")")
+            playerInfo:SetText(iWRBase.Colors.iWR .. match.name .. "|r" .. iWRBase.Colors.iWR .. " (" .. iWRBase.Colors[match.relation] .. iWRBase.Types[match.relation] .. iWRBase.Colors.iWR .. ")")
             playerInfo:SetFont("Fonts\\FRIZQT__.TTF", 16, "OUTLINE")
 
             -- Add note text
             local noteText = notificationFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             noteText:SetPoint("TOP", playerInfo, "BOTTOM", 0, -5)
-            noteText:SetText("Note: " .. Colors.Yellow .. match.note .. "|r")
+            noteText:SetText("Note: " .. iWRBase.Colors.Yellow .. match.note .. "|r")
             noteText:SetFont("Fonts\\FRIZQT__.TTF", 14, "OUTLINE")
 
             lastElement = noteText
@@ -258,35 +258,54 @@ function iWR:CheckGroupMembersAgainstDatabase()
     local numGroupMembers = GetNumGroupMembers()
     local isInRaid = IsInRaid()
     local matches = {}
+    local playerName = UnitName("player") -- Current player's name for comparison
 
     for i = 1, numGroupMembers do
         local unitID = isInRaid and "raid" .. i or "party" .. i
-        local playerName = UnitName("player")
-        local name, realm = UnitName(unitID)
+        local targetName, targetRealm = UnitName(unitID)
 
-        -- Skip if the current player is being processed
-        if playerName == name then
-            iWRWarnedPlayers[name] = true
-        elseif name and not iWRWarnedPlayers[name] then
-            -- Get player data
-            local data = iWR:GetDatabaseEntry(name)
-            if next(data) ~= nil then
-                local relationValue = data[2]
-                if relationValue and relationValue < 0 then
-                    local note = data[1] or ""
-                    table.insert(matches, { name = name, relation = relationValue, note = note })
-                    iWRWarnedPlayers[name] = true
-                end
-            else
-                iWR:DebugMsg("No data found for player in group: [" .. name .. "]", 3)
+        if targetName and not iWRWarnedPlayers[targetName] then
+            -- Use current player's realm if `targetRealm` is nil
+            if targetRealm == "" or targetRealm == nil then
+                targetRealm = iWRCurrentRealm
             end
+            
+            -- Format name and realm for the database key
+            local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
+            local databaseKey = capitalizedName .. "-" .. capitalizedRealm
+
+            -- Skip the current player
+            if playerName == targetName then
+                iWRWarnedPlayers[targetName] = true
+            elseif databaseKey and not iWRWarnedPlayers[targetName] then
+                -- Check the database for this key
+                if iWRDatabase[databaseKey] then
+                    local data = iWR:GetDatabaseEntry(databaseKey)
+                    if data and next(data) ~= nil then
+                        local relationValue = data[2]
+                        if relationValue and relationValue < 0 then
+                            local note = data[1] or ""
+                            table.insert(matches, { name = data[4], relation = relationValue, note = note })
+                            iWRWarnedPlayers[targetName] = true
+                        end
+                    else
+                        iWR:DebugMsg("No data found for player in group: [" .. targetName .. "]", 3)
+                    end
+                else
+                    iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database. [CheckGroupMembersAgainstDatabase]", 3)
+                end
+            end
+        else
+            iWR:DebugMsg("Could not retrieve name for unitID: " .. unitID, 2)
         end
     end
 
+    -- Show a notification popup if any matches were found
     if #matches > 0 then
         iWR:ShowNotificationPopup(matches)
     end
 end
+
 
 -- ╭────────────────────────────────────────╮
 -- │      Function: Update the Tooltip      │
@@ -358,11 +377,11 @@ end
 function iWR:FormatNameAndRealm(name, realm)
     -- Ensure the inputs are strings to prevent errors
     if not name or type(name) ~= "string" then
-        iWR:DebugMsg("Format name not string: " .. name,3)
+        iWR:DebugMsg("Format name not string: " .. name or nil,3)
         name = ""
     end
     if not realm or type(realm) ~= "string" then
-        iWR:DebugMsg("Format realm not string: " .. realm,3)
+        iWR:DebugMsg("Format realm not string: " .. realm or nil,3)
         realm = ""
     end
     local formattedName = name:sub(1, 1):upper() .. name:sub(2):gsub("^%l", string.lower)
@@ -370,35 +389,11 @@ function iWR:FormatNameAndRealm(name, realm)
     return formattedName, formattedRealm
 end
 
--- Saved incase PvP Icon changes in DragonFlightUI.
--- function iWR:GetDragonFlightUITargetScale()
---     local dragonflightDB = _G["DragonflightUIDB"]
---     if dragonflightDB 
---         and dragonflightDB["namespaces"] 
---         and dragonflightDB["namespaces"]["Unitframe"] 
---         and dragonflightDB["namespaces"]["Unitframe"]["profiles"] then
---         local profiles = dragonflightDB["namespaces"]["Unitframe"]["profiles"]
---         local defaultProfile = profiles["Default"]
---         if defaultProfile and defaultProfile["target"] and defaultProfile["target"]["scale"] then
---             local targetScale = defaultProfile["target"]["scale"]
---             iWR:DebugMsg("Target scale found: " .. tostring(targetScale), 3)
---             return targetScale
---         else
---             iWR:DebugMsg("Scale not found in DragonflightUIDB.", 1)
---         end
---     else
---         iWR:DebugMsg("DragonflightUIDB not found in.", 1)
---     end
---     return 1
--- end
-
 function iWR:SetTargetFrameDragonFlightUI()
-    -- Get the portrait frame (a texture)
-    local portraitFrame = _G["DragonflightUITargetFramePortrait"]
-    local pvpIcon = _G["TargetFrameTextureFramePVPIcon"]
-    if portraitFrame then
-        iWR:DebugMsg("Using Portrait Frame: " .. tostring(portraitFrame), 3)
-
+    local portraitParent = _G["DragonflightUITargetFramePortraitExtra"]:GetParent()
+    if portraitParent then
+        iWR:DebugMsg("Using Portrait Parent: " .. tostring(portraitParent), 3)
+        
         -- Get the target's name and realm for database lookup
         local targetNameWithRealm = GetUnitName("target", true)
         local targetName = GetUnitName("target", false)
@@ -415,40 +410,50 @@ function iWR:SetTargetFrameDragonFlightUI()
             return
         end
 
-        -- Retrieve the scale from DragonflightUIDB
-        local targetScale = 1 -- Default scale
-        --targetScale = iWR:GetDragonFlightUITargetScale() (Wont be needed as long as PvP Icon works..)
-
         -- Create or update the custom frame
         if not iWR.customFrame then
-            iWR.customFrame = CreateFrame("Frame", nil, UIParent)
+            iWR.customFrame = CreateFrame("Frame", nil, portraitParent)
             iWR.customFrame.texture = iWR.customFrame:CreateTexture(nil, "OVERLAY")
         end
 
-        local customFrame = iWR.customFrame
-        local customTexture = customFrame.texture
-        customFrame:SetParent(pvpIcon:GetParent())
+        local dragonFrame = iWR.customFrame
+        dragonFrame:SetFrameLevel(2)
+        dragonFrame:Show()
 
-        -- Set the texture and dimensions
-        customTexture:SetTexture(iWRBase.TargetFrames[iWRDatabase[databaseKey][2]])
-        customTexture:SetAllPoints(customFrame)
-        customFrame:SetSize(99, 81.2)
+        local dragonTexture = dragonFrame.texture
+        -- Steal Classification dragons texture from DragonFlightUI (thanks KarlHeinzSchneider)
+        dragonTexture:SetTexture('Interface\\Addons\\DragonflightUI\\Textures\\uiunitframeboss2x')
+        dragonTexture:SetDrawLayer('ARTWORK', 3)
 
-        -- Apply the retrieved scale
-        customFrame:SetScale(targetScale)
+        local targetRelation = iWRDatabase[databaseKey][2]
 
-        -- Anchor to the portrait frame
-        customFrame:ClearAllPoints()
-        customFrame:SetPoint("CENTER", portraitFrame, "CENTER", 12.5, 1.3)
-        customFrame:SetFrameLevel(2)
-        customFrame:Show()
+        if targetRelation == iWRBase.Types["Respected"] then
+            dragonTexture:SetTexCoord(0.001953125, 0.388671875, 0.001953125, 0.31835937)
+            dragonTexture:SetSize(99, 81)
+            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 54.5, 8)
+            dragonTexture:SetVertexColor(0, 0.9, 0, 1)
+        elseif targetRelation == iWRBase.Types["Liked"] then
+            dragonTexture:SetTexCoord(0.001953125, 0.314453125, 0.322265625, 0.630859375)
+            dragonTexture:SetSize(80, 79)
+            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 45, 8)
+            dragonTexture:SetVertexColor(0, 0.7, 0, 1)
+        elseif targetRelation == iWRBase.Types["Disliked"] then
+            dragonTexture:SetTexCoord(0.001953125, 0.314453125, 0.322265625, 0.630859375)
+            dragonTexture:SetSize(80, 79)
+            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 45, 8)
+            dragonTexture:SetVertexColor(0.7, 0, 0, 1)
+        elseif targetRelation == iWRBase.Types["Hated"] then
+            dragonTexture:SetTexCoord(0.001953125, 0.388671875, 0.001953125, 0.31835937)
+            dragonTexture:SetSize(99, 81)
+            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 54.5, 8)
+            dragonTexture:SetVertexColor(0.9, 0, 0, 1)
+        end
 
-        iWR:DebugMsg("Custom frame successfully anchored to: DragonflightUITargetFramePortrait with scale: " .. tostring(targetScale), 3)
+        iWR:DebugMsg("Custom frame successfully anchored to: DragonflightUITargetFramePortraitExtra.", 3)
     else
         iWR:DebugMsg("DragonFlightUI portrait frame not found.", 1)
     end
 end
-
 
 function iWR:SetTargetFrameDefault()
     -- Validate target existence and ensure it's a player
@@ -457,22 +462,19 @@ function iWR:SetTargetFrameDefault()
         return
     end
 
-    -- Get the target's full name with realm and split into name and realm
+    -- Get the target's name and realm for database lookup
     local targetNameWithRealm = GetUnitName("target", true)
-    local targetName, targetRealm = strsplit("-", targetNameWithRealm or "")
-
-    -- Use the current realm if no realm is specified
-    if not targetRealm or targetRealm == "" then
-        targetRealm = iWRCurrentRealm
-    end
+    local targetName = GetUnitName("target", false)
+    local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWRCurrentRealm
+    targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
 
     -- Format name and realm for database key
     local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
     local databaseKey = capitalizedName .. "-" .. capitalizedRealm
 
-    -- Check if the target exists in the database
+    -- Ensure the database entry exists
     if not iWRDatabase[databaseKey] then
-        iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database.", 1)
+        iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database. [SetTargetFrameDragonFlightUI]", 1)
         return
     end
 
@@ -491,7 +493,7 @@ function iWR:SetTargetFrameDefault()
 
     -- Set the target frame texture
     TargetFrameTextureFrameTexture:SetTexture(iWRBase.TargetFrames[targetType])
-    iWR:DebugMsg("Default frame updated for target [" .. databaseKey .. "] with type [" .. Colors[targetType] .. iWRBase.Types[targetType] .. "].", 3)
+    iWR:DebugMsg("Default frame updated for target [" .. databaseKey .. "] with type [" .. iWRBase.Colors[targetType] .. iWRBase.Types[targetType] .. "].", 3)
 end
 
 -- ╭────────────────────────────────────────────────────────╮
@@ -796,22 +798,22 @@ function iWR:ProcessRemoveRequestQueue()
     local request = table.remove(iWRRemoveRequestQueue, 1)
     local noteName, senderName = request.NoteName, request.Sender
 
-    iWR:DebugMsg("Processing request for: [" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .. "] from sender " .. Colors.Green .. senderName .. Colors.iWR .. ". Remaining queue size: " .. #iWRRemoveRequestQueue,3)
+    iWR:DebugMsg("Processing request for: [" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. iWRBase.Colors.iWR .. "] from sender " .. iWRBase.Colors.Green .. senderName .. iWRBase.Colors.iWR .. ". Remaining queue size: " .. #iWRRemoveRequestQueue,3)
     if iWRDatabase[noteName][7] ~= iWRCurrentRealm then
         -- Show the confirmation popup
         StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
-            text = Colors.iWR .. "Your friend " .. Colors.Green .. senderName .. Colors.iWR .. " removed |n|n[" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .. "]|n|n from their iWR database. Do you also want to remove [" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .."]?",
+            text = iWRBase.Colors.iWR .. "Your friend " .. iWRBase.Colors.Green .. senderName .. iWRBase.Colors.iWR .. " removed |n|n[" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. iWRBase.Colors.iWR .. "]|n|n from their iWR database. Do you also want to remove [" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. iWRBase.Colors.iWR .."]?",
             button1 = "Yes",
             button2 = "No",
             OnAccept = function()
-                print(L["CharNoteStart"] .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .. L["CharNoteRemoved"])
+                print(L["CharNoteStart"] .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. iWRBase.Colors.iWR .. L["CharNoteRemoved"])
                 iWRDatabase[noteName] = nil
                 iWR:PopulateDatabase()
                 iWR:UpdateTooltip()
                 iWR:UpdateTargetFrame()
             end,
             OnCancel = function()
-                iWR:DebugMsg("User chose to keep: [" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. Colors.iWR .. "], if not removed it will be synced back to friend",3)
+                iWR:DebugMsg("User chose to keep: [" .. iWRDatabase[noteName][4] .. "-" .. iWRDatabase[noteName][7] .. iWRBase.Colors.iWR .. "], if not removed it will be synced back to friend",3)
             end,
             OnHide = function()
                 iWRisPopupActive = false
@@ -830,7 +832,7 @@ function iWR:ProcessRemoveRequestQueue()
     else
         -- Show the confirmation popup
         StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
-            text = Colors.iWR .. "Your friend " .. Colors.Green .. senderName .. Colors.iWR .. " removed |n|n[" .. iWRDatabase[noteName][4] .. Colors.iWR .."]|n|n from their iWR database. Do you also want to remove [" .. iWRDatabase[noteName][4] .. Colors.iWR .."]?",
+            text = iWRBase.Colors.iWR .. "Your friend " .. iWRBase.Colors.Green .. senderName .. iWRBase.Colors.iWR .. " removed |n|n[" .. iWRDatabase[noteName][4] .. iWRBase.Colors.iWR .."]|n|n from their iWR database. Do you also want to remove [" .. iWRDatabase[noteName][4] .. iWRBase.Colors.iWR .."]?",
             button1 = "Yes",
             button2 = "No",
             OnAccept = function()
@@ -841,7 +843,7 @@ function iWR:ProcessRemoveRequestQueue()
                 iWR:UpdateTargetFrame()
             end,
             OnCancel = function()
-                iWR:DebugMsg("User chose to keep: [" .. iWRDatabase[noteName][4] .. Colors.iWR .. "], if not removed it will be synced back to friend",3)
+                iWR:DebugMsg("User chose to keep: [" .. iWRDatabase[noteName][4] .. iWRBase.Colors.iWR .. "], if not removed it will be synced back to friend",3)
             end,
             OnHide = function()
                 iWRisPopupActive = false
@@ -877,10 +879,10 @@ end)
 -- │      Colorize Player Name by Class     │
 -- ╰────────────────────────────────────────╯
 function iWR:ColorizePlayerNameByClass(playerName, class)
-    if Colors.Classes[class] then
-        return Colors.Classes[class] .. playerName .. Colors.Reset
+    if iWRBase.Colors.Classes[class] then
+        return iWRBase.Colors.Classes[class] .. playerName .. iWRBase.Colors.Reset
     else
-        return Colors.iWR .. playerName .. Colors.Reset
+        return iWRBase.Colors.iWR .. playerName .. iWRBase.Colors.Reset
     end
 end
 
@@ -924,9 +926,9 @@ function iWR:SetTargetingFrame()
             iWR.customFrame:Hide()
         end
         if targetRealm == iWRCurrentRealm then
-            iWR:DebugMsg("Target [|r" .. (Colors.Classes[class] or Colors.Gray) .. targetName .. Colors.iWR .. "] was not found in Database. [SetTargetingFrame]", 3)
+            iWR:DebugMsg("Target [|r" .. (iWRBase.Colors.Classes[class] or iWRBase.Colors.Gray) .. targetName .. iWRBase.Colors.iWR .. "] was not found in Database. [SetTargetingFrame]", 3)
         else
-            iWR:DebugMsg("Target [|r" .. (Colors.Classes[class] or Colors.Gray) .. targetName .. Colors.iWR .. "] from realm [" .. Colors.Reset .. (targetRealm or "Unknown Realm") .. Colors.iWR .. "] was not found in Database.", 3)
+            iWR:DebugMsg("Target [|r" .. (iWRBase.Colors.Classes[class] or iWRBase.Colors.Gray) .. targetName .. iWRBase.Colors.iWR .. "] from realm [" .. iWRBase.Colors.Reset .. (targetRealm or "Unknown Realm") .. iWRBase.Colors.iWR .. "] was not found in Database.", 3)
         end
         return
     end
@@ -953,9 +955,9 @@ function iWR:SetTargetingFrame()
         end
 
         if targetRealm == iWRCurrentRealm then
-            iWR:DebugMsg("Target [|r" .. (Colors.Classes[class] or Colors.Gray) .. targetName .. Colors.iWR .. "] was found in Database.", 3)
+            iWR:DebugMsg("Target [|r" .. (iWRBase.Colors.Classes[class] or iWRBase.Colors.Gray) .. targetName .. iWRBase.Colors.iWR .. "] was found in Database.", 3)
         else
-            iWR:DebugMsg("Target [|r" .. (Colors.Classes[class] or Colors.Gray) .. targetName .. Colors.iWR .. "] from realm [" .. Colors.Reset .. (targetRealm or "Unknown Realm") .. Colors.iWR .. "] was found in Database.", 3)
+            iWR:DebugMsg("Target [|r" .. (iWRBase.Colors.Classes[class] or iWRBase.Colors.Gray) .. targetName .. iWRBase.Colors.iWR .. "] from realm [" .. iWRBase.Colors.Reset .. (targetRealm or "Unknown Realm") .. iWRBase.Colors.iWR .. "] was found in Database.", 3)
         end
     end
 end
@@ -966,6 +968,13 @@ local function AddRelationshipIconToChat(self, event, message, author, flags, ..
         -- Extract author name and realm
         local authorName, authorRealm = string.match(author, "^([^-]+)-?(.*)$")
         authorRealm = authorRealm ~= "" and authorRealm or iWRCurrentRealm -- Use current realm if none provided
+
+        if not authorName then
+            iWR:DebugMsg("AddRelationshipIconToChat tried to add icon to message with missing authorName")
+        end
+        if not authorRealm then
+            iWR:DebugMsg("AddRelationshipIconToChat tried to add icon to message with missing authorRealm")
+        end
 
         -- Construct the key as name-realm
         local databaseKey = authorName .. "-" .. authorRealm
@@ -1060,7 +1069,7 @@ function iWR:ShowDetailWindow(playerName)
         -- Add a title text
         local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
         titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
-        titleText:SetText(Colors.iWR .. "iWR: Player Details")
+        titleText:SetText(iWRBase.Colors.iWR .. "iWR: Player Details")
         titleText:SetTextColor(0.9, 0.9, 1, 1)
 
         -- Add a content frame for labels
@@ -1080,19 +1089,19 @@ function iWR:ShowDetailWindow(playerName)
     local detailsContent = {}
     if data[7] and data[7] ~= iWRcurrentRealm then
         detailsContent = {
-            {label = Colors.Default .. "Name:" .. Colors.Reset, value = data[4]..Colors.Reset.."-"..data[7]},
-            {label = Colors.Default .. "Type:" .. Colors[data[2]], value = iWRBase.Types[tonumber(data[2])]},
-            {label = Colors.Default .. "Note:" .. Colors[data[2]], value = data[1], isNote = true},
-            {label = Colors.Default .. "Author:" .. Colors.Reset, value = data[6]},
-            {label = Colors.Default .. "Date:", value = data[5]},
+            {label = iWRBase.Colors.Default .. "Name:" .. iWRBase.Colors.Reset, value = data[4]..iWRBase.Colors.Reset.."-"..data[7]},
+            {label = iWRBase.Colors.Default .. "Type:" .. iWRBase.Colors[data[2]], value = iWRBase.Types[tonumber(data[2])]},
+            {label = iWRBase.Colors.Default .. "Note:" .. iWRBase.Colors[data[2]], value = data[1], isNote = true},
+            {label = iWRBase.Colors.Default .. "Author:" .. iWRBase.Colors.Reset, value = data[6]},
+            {label = iWRBase.Colors.Default .. "Date:", value = data[5]},
         }
     else
         detailsContent = {
-            {label = Colors.Default .. "Name:" .. Colors.Reset, value = data[4]},
-            {label = Colors.Default .. "Type:" .. Colors[data[2]], value = iWRBase.Types[tonumber(data[2])]},
-            {label = Colors.Default .. "Note:" .. Colors[data[2]], value = data[1], isNote = true},
-            {label = Colors.Default .. "Author:" .. Colors.Reset, value = data[6]},
-            {label = Colors.Default .. "Date:", value = data[5]},
+            {label = iWRBase.Colors.Default .. "Name:" .. iWRBase.Colors.Reset, value = data[4]},
+            {label = iWRBase.Colors.Default .. "Type:" .. iWRBase.Colors[data[2]], value = iWRBase.Types[tonumber(data[2])]},
+            {label = iWRBase.Colors.Default .. "Note:" .. iWRBase.Colors[data[2]], value = data[1], isNote = true},
+            {label = iWRBase.Colors.Default .. "Author:" .. iWRBase.Colors.Reset, value = data[6]},
+            {label = iWRBase.Colors.Default .. "Date:", value = data[5]},
         }
     end
     for _, item in ipairs(detailsContent) do
@@ -1286,7 +1295,7 @@ end
 
 function iWR:VerifyTargetClassinDB(targetName, targetClass)
     if iWRDatabase[targetName][2] ~= 0 then
-        if Colors.Gray .. targetName == iWRDatabase[targetName][4] or targetName == iWRDatabase[targetName][4] then
+        if iWRBase.Colors.Gray .. targetName == iWRDatabase[targetName][4] or targetName == iWRDatabase[targetName][4] then
             iWRDatabase[targetName][4] = iWR:ColorizePlayerNameByClass(targetName, targetClass)
             print(L["CharNoteStart"] .. iWRDatabase[targetName][4] .. L["CharNoteColorUpdate"])
             iWR:PopulateDatabase()
@@ -1423,7 +1432,7 @@ function iWR:AddNewNote(Name, Note, Type)
         iWR:PopulateDatabase()
     else
         print(L["NameInputError"])
-        iWR:DebugMsg("NameInput error: [|r" .. (Name or "nil") .. Colors.iWR .. "].")
+        iWR:DebugMsg("NameInput error: [|r" .. (Name or "nil") .. iWRBase.Colors.iWR .. "].")
     end
 end
 
@@ -1434,7 +1443,7 @@ function iWR:ClearNote(Name)
     -- Validate input name
     if not iWR:VerifyInputName(Name) then
         print(L["ClearInputError"])
-        iWR:DebugMsg("NameInput error: [|r" .. (Name or "nil") .. Colors.iWR .. "].")
+        iWR:DebugMsg("NameInput error: [|r" .. (Name or "nil") .. iWRBase.Colors.iWR .. "].")
         return
     end
 
@@ -1490,7 +1499,7 @@ function iWR:ClearNote(Name)
         end
     else
         -- Notify that the name was not found in the database
-        print(Colors.iWR .. "[iWR]: Name [|r" .. databaseKey .. Colors.iWR .. "] does not exist in the database.")
+        print(iWRBase.Colors.iWR .. "[iWR]: Name [|r" .. databaseKey .. iWRBase.Colors.iWR .. "] does not exist in the database.")
         iWR:DebugMsg("Deletion failed, key not found: " .. databaseKey, 1)
     end
 end
@@ -1500,9 +1509,9 @@ end
 -- ╰─────────────────────────────────╯
 function iWR:CreateNote(Name, Note, Type)
     -- Debug logging
-    iWR:DebugMsg("New note Name: [|r" .. Name .. Colors.iWR .. "].", 3)
-    iWR:DebugMsg("New note Note: [" .. (Note ~= "" and ("|r" .. Note .. Colors.iWR) or Colors.Reset .. "Nothing" .. Colors.iWR) .. "].", 3)
-    iWR:DebugMsg("New note Type: [|r" .. Colors[Type] .. iWRBase.Types[Type] .. Colors.iWR .. "].", 3)
+    iWR:DebugMsg("New note Name: [|r" .. Name .. iWRBase.Colors.iWR .. "].", 3)
+    iWR:DebugMsg("New note Note: [" .. (Note ~= "" and ("|r" .. Note .. iWRBase.Colors.iWR) or iWRBase.Colors.Reset .. "Nothing" .. iWRBase.Colors.iWR) .. "].", 3)
+    iWR:DebugMsg("New note Type: [|r" .. iWRBase.Colors[Type] .. iWRBase.Types[Type] .. iWRBase.Colors.iWR .. "].", 3)
 
     local playerName = UnitName("player")
     local currentTime, currentDate = iWR:GetCurrentTimeByHours()
@@ -1554,9 +1563,9 @@ function iWR:CreateNote(Name, Note, Type)
     else
         if targetName == capitalizedName then
             local targetClass = select(2, UnitClass("target"))
-            dbName = targetClass and (Colors.Classes[targetClass] .. capitalizedName)
+            dbName = targetClass and (iWRBase.Colors.Classes[targetClass] .. capitalizedName)
         else
-            dbName = Colors.Gray .. capitalizedName
+            dbName = iWRBase.Colors.Gray .. capitalizedName
         end
     end
 
@@ -1594,7 +1603,7 @@ function iWR:CreateNote(Name, Note, Type)
     -- Print confirmation message
     local updateMessage = playerUpdate and L["CharNoteUpdated"] or L["CharNoteCreated"]
     if capitalizedRealm ~= iWRCurrentRealm then
-        print(L["CharNoteStart"] .. dbName .. Colors.Reset .. "-" .. capitalizedRealm .. updateMessage)
+        print(L["CharNoteStart"] .. dbName .. iWRBase.Colors.Reset .. "-" .. capitalizedRealm .. updateMessage)
     else
         print(L["CharNoteStart"] .. dbName .. updateMessage)
     end
@@ -1612,7 +1621,7 @@ function iWR:CreateOptionsPanel()
     -- Title
     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOP", panel, "TOP", 0, -2)
-    title:SetText(Title .. Colors.iWR .." Options")
+    title:SetText(Title .. iWRBase.Colors.iWR .." Options")
 
     -- Content Frames
     local optionsPanel = {
@@ -1644,7 +1653,7 @@ function iWR:CreateOptionsPanel()
     -- Debug Mode Category Title
     local debugCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     debugCategoryTitle:SetPoint("TOPLEFT", optionsPanel.General, "TOPLEFT", 20, -20)
-    debugCategoryTitle:SetText(Colors.iWR .. "Developer Settings")
+    debugCategoryTitle:SetText(iWRBase.Colors.iWR .. "Developer Settings")
 
     -- Debug Mode Checkbox
     local debugCheckbox = CreateFrame("CheckButton", "iWRDebugCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
@@ -1654,13 +1663,13 @@ function iWR:CreateOptionsPanel()
     debugCheckbox:SetScript("OnClick", function(self)
         local isDebugEnabled = self:GetChecked()
         iWRSettings.DebugMode = isDebugEnabled
-        iWR:DebugMsg("Debug Mode is activated." .. Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
+        iWR:DebugMsg("Debug Mode is activated." .. iWRBase.Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
     end)
 
     -- Data Sharing Category Title
     local dataSharingCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     dataSharingCategoryTitle:SetPoint("TOPLEFT", debugCheckbox, "BOTTOMLEFT", 0, -15)
-    dataSharingCategoryTitle:SetText(Colors.iWR .. "Sync Settings")
+    dataSharingCategoryTitle:SetText(iWRBase.Colors.iWR .. "Sync Settings")
 
     -- Data Sharing Checkbox
     local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
@@ -1675,7 +1684,7 @@ function iWR:CreateOptionsPanel()
     -- Target Frame and Chat Icons Category Title
     local targetChatCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     targetChatCategoryTitle:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", 0, -15)
-    targetChatCategoryTitle:SetText(Colors.iWR .. "Display Settings")
+    targetChatCategoryTitle:SetText(iWRBase.Colors.iWR .. "Display Settings")
 
     -- Target Frames Visibility Checkbox
     local targetFrameCheckbox = CreateFrame("CheckButton", "iWRTargetFrameCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
@@ -1700,7 +1709,7 @@ function iWR:CreateOptionsPanel()
     -- Group Warnings Category Title
     local groupWarningCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     groupWarningCategoryTitle:SetPoint("TOPLEFT", chatIconCheckbox, "BOTTOMLEFT", 0, -15)
-    groupWarningCategoryTitle:SetText(Colors.iWR .. "Warning Settings")
+    groupWarningCategoryTitle:SetText(iWRBase.Colors.iWR .. "Warning Settings")
 
     -- Group Warning Checkbox
     local groupWarningCheckbox = CreateFrame("CheckButton", "iWRGroupWarningCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
@@ -1737,7 +1746,7 @@ function iWR:CreateOptionsPanel()
     -- ╰──────────────────────╯
     local backupCategoryTitle = optionsPanel.Backup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     backupCategoryTitle:SetPoint("TOPLEFT", optionsPanel.Backup, "TOPLEFT", 20, -20)
-    backupCategoryTitle:SetText(Colors.iWR .. "Backup Settings|r")
+    backupCategoryTitle:SetText(iWRBase.Colors.iWR .. "Backup Settings|r")
 
     -- Backup Checkbox
     local backupCheckbox = CreateFrame("CheckButton", nil, optionsPanel.Backup, "InterfaceOptionsCheckButtonTemplate")
@@ -1758,7 +1767,7 @@ function iWR:CreateOptionsPanel()
     restoreButton:SetScript("OnClick", function()
         if iWRDatabaseBackup then
             StaticPopupDialogs["CONFIRM_RESTORE_DATABASE"] = {
-                text = Colors.Red .. "Are you sure you want to overwrite the current iWR Database with the backup data?|nThis is non-reversible.\n\nBackup made on "
+                text = iWRBase.Colors.Red .. "Are you sure you want to overwrite the current iWR Database with the backup data?|nThis is non-reversible.\n\nBackup made on "
                     .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupDate or "Unknown Date"))
                     .. " at "
                     .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupTime or "Unknown Time")) .. ".",
@@ -1766,7 +1775,7 @@ function iWR:CreateOptionsPanel()
                 button2 = "No",
                 OnAccept = function()
                     iWRDatabase = CopyTable(iWRDatabaseBackup)
-                    print(Colors.iWR .. "[iWR]: Database restored from backup made on "
+                    print(iWRBase.Colors.iWR .. "[iWR]: Database restored from backup made on "
                         .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupDate or "Unknown Date"))
                         .. " at "
                         .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupTime or "Unknown Time"))
@@ -1780,7 +1789,7 @@ function iWR:CreateOptionsPanel()
             }
             StaticPopup_Show("CONFIRM_RESTORE_DATABASE")
         else
-            print(Colors.Red .. "[iWR]: No backup found to restore.")
+            print(iWRBase.Colors.Red .. "[iWR]: No backup found to restore.")
         end
     end)
 
@@ -1813,27 +1822,27 @@ function iWR:CreateOptionsPanel()
     -- About Category Title
     local aboutCategoryTitle = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     aboutCategoryTitle:SetPoint("TOP", optionsPanel.About, "TOP", 0, -30)
-    aboutCategoryTitle:SetText(Colors.iWR .. "About|r")
+    aboutCategoryTitle:SetText(iWRBase.Colors.iWR .. "About|r")
 
     -- Addon Name and Version
     local aboutAddonName = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     aboutAddonName:SetPoint("TOP", aboutCategoryTitle, "BOTTOM", 0, -10)
-    aboutAddonName:SetText(Colors.iWR .. Title)
+    aboutAddonName:SetText(iWRBase.Colors.iWR .. Title)
 
     -- Author Information
     local aboutAuthor = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     aboutAuthor:SetPoint("TOP", aboutAddonName, "BOTTOM", 0, -10)
-    aboutAuthor:SetText("Created by: " .. Colors.Cyan .. Author .. Colors.Reset)
+    aboutAuthor:SetText("Created by: " .. iWRBase.Colors.Cyan .. Author .. iWRBase.Colors.Reset)
 
     -- Description
     local aboutDescription = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     aboutDescription:SetPoint("TOP", aboutAuthor, "BOTTOM", 0, -30)
-    aboutDescription:SetText(Colors.iWR .. "iWillRemember " .. Colors.Reset .. "is an addon designed to help you track and easily share player notes with friends.")
+    aboutDescription:SetText(iWRBase.Colors.iWR .. "iWillRemember " .. iWRBase.Colors.Reset .. "is an addon designed to help you track and easily share player notes with friends.")
 
     -- Support Information
     local aboutSupport = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     aboutSupport:SetPoint("TOP", aboutDescription, "BOTTOM", 0, -10)
-    aboutSupport:SetText(Colors.iWR .. "iWR " .. Colors.Reset .. "is in early development. Join the Discord for help with issues, questions, or suggestions.")
+    aboutSupport:SetText(iWRBase.Colors.iWR .. "iWR " .. iWRBase.Colors.Reset .. "is in early development. Join the Discord for help with issues, questions, or suggestions.")
 
     -- Discord Link
     local aboutDiscord = CreateFrame("EditBox", nil, optionsPanel.About, "InputBoxTemplate")
@@ -1862,22 +1871,22 @@ function iWR:CreateOptionsPanel()
         -- Game Version Label
         local aboutGameVersion = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         aboutGameVersion:SetPoint("TOP", aboutDiscord, "BOTTOM", 0, -20)
-        aboutGameVersion:SetText(Colors.iWR .. "Game Version: " .. Colors.Reset .. iWRGameVersion)
+        aboutGameVersion:SetText(iWRBase.Colors.iWR .. "Game Version: " .. iWRBase.Colors.Reset .. iWRGameVersion)
 
         -- TOC Version Label
         local aboutTocVersion = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         aboutTocVersion:SetPoint("TOP", aboutGameVersion, "BOTTOM", 0, -10)
-        aboutTocVersion:SetText(Colors.iWR .. "TOC Version: " .. Colors.Reset .. iWRGameTocVersion)
+        aboutTocVersion:SetText(iWRBase.Colors.iWR .. "TOC Version: " .. iWRBase.Colors.Reset .. iWRGameTocVersion)
 
         -- TOC Version Label
         local aboutBuildVersion = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         aboutBuildVersion:SetPoint("TOP", aboutTocVersion, "BOTTOM", 0, -10)
-        aboutBuildVersion:SetText(Colors.iWR .. "Build Version: " .. Colors.Reset .. iWRGameBuild)
+        aboutBuildVersion:SetText(iWRBase.Colors.iWR .. "Build Version: " .. iWRBase.Colors.Reset .. iWRGameBuild)
 
         -- TOC Version Label
         local aboutBuildDate = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         aboutBuildDate:SetPoint("TOP", aboutBuildVersion, "BOTTOM", 0, -10)
-        aboutBuildDate:SetText(Colors.iWR .. "Build Date: " .. Colors.Reset .. iWRGameBuildDate)
+        aboutBuildDate:SetText(iWRBase.Colors.iWR .. "Build Date: " .. iWRBase.Colors.Reset .. iWRGameBuildDate)
     end
 
     -- Tabs

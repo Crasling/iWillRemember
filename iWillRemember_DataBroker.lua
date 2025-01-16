@@ -28,7 +28,7 @@ local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
     -- Tooltip handling
     OnTooltipShow = function(tooltip)
         -- Name
-        tooltip:SetText(Colors.iWR .. "iWillRemember" .. Colors.Green .. " v" .. Version, 1, 1, 1)
+        tooltip:SetText(iWRBase.Colors.iWR .. "iWillRemember" .. iWRBase.Colors.Green .. " v" .. Version, 1, 1, 1)
 
         -- Desc
         tooltip:AddLine(" ", 1, 1, 1) 

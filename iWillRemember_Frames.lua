@@ -51,7 +51,7 @@ titleBar:SetBackdropColor(0.07, 0.07, 0.12, 1)
 -- Add title text
 local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
-titleText:SetText(Colors.iWR .. "iWillRemember Menu" .. Colors.Green .. " v" .. Version)
+titleText:SetText(iWRBase.Colors.iWR .. "iWillRemember Menu" .. iWRBase.Colors.Green .. " v" .. Version)
 titleText:SetTextColor(0.9, 0.9, 1, 1)
 
 
@@ -350,7 +350,7 @@ dbTitleBar:SetBackdropColor(0.07, 0.07, 0.12, 1)
 -- Add title text
 local dbTitleText = dbTitleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 dbTitleText:SetPoint("CENTER", dbTitleBar, "CENTER", 0, 0)
-dbTitleText:SetText(Colors.iWR .. "iWillRemember Personal Database")
+dbTitleText:SetText(iWRBase.Colors.iWR .. "iWillRemember Personal Database")
 dbTitleText:SetTextColor(0.9, 0.9, 1, 1)
 
 -- Create a scrollable frame to list database entries
@@ -380,12 +380,12 @@ clearDatabaseButton:SetText("Clear All")
 clearDatabaseButton:SetScript("OnClick", function()
     -- Confirm before clearing the database
     StaticPopupDialogs["CLEAR_DATABASE_CONFIRM"] = {
-        text = Colors.iWR .. "Are you sure you want to" .. Colors.Red ..  "|n clear all data" .. Colors.iWR .. "|n in the database?",
+        text = iWRBase.Colors.iWR .. "Are you sure you want to" .. iWRBase.Colors.Red ..  "|n clear all data" .. iWRBase.Colors.iWR .. "|n in the database?",
         button1 = "Yes",
         button2 = "No",
         OnAccept = function()
             iWRDatabase = {}
-            print(Colors.iWR .. "[iWR]: Database cleared.")
+            print(iWRBase.Colors.iWR .. "[iWR]: Database cleared.")
             iWR:PopulateDatabase()
         end,
         timeout = 0,
@@ -406,7 +406,7 @@ shareDatabaseButton:SetText("Share Full DB")
 shareDatabaseButton:SetScript("OnClick", function()
     -- Check if the database is empty
     if not next(iWRDatabase) then
-        print(Colors.iWR .. "[iWR]: The database is empty. Nothing to share.")
+        print(iWRBase.Colors.iWR .. "[iWR]: The database is empty. Nothing to share.")
         return
     end
 
@@ -418,7 +418,7 @@ shareDatabaseButton:SetScript("OnClick", function()
         OnAccept = function()
             -- Function to share the full database
             iWR:SendFullDBUpdateToFriends()
-            print(Colors.iWR .. "[iWR]: Full database synced to friends.")
+            print(iWRBase.Colors.iWR .. "[iWR]: Full database synced to friends.")
         end,
         timeout = 0,
         whileDead = true,
@@ -554,7 +554,7 @@ searchDatabaseButton:SetScript("OnClick", function()
                         local entryText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
                         entryText:SetPoint("LEFT", iconTexture, "RIGHT", 5, 0)
                         if data[7] ~= iWRCurrentRealm then
-                            entryText:SetText(data[4]..Colors.Reset.."-"..data[7])
+                            entryText:SetText(data[4]..iWRBase.Colors.Reset.."-"..data[7])
                         else
                             entryText:SetText(data[4])
                         end
@@ -565,16 +565,16 @@ searchDatabaseButton:SetScript("OnClick", function()
                             GameTooltip:SetOwner(entryFrame, "ANCHOR_RIGHT")
                             print(data[7])
                             if data[7] ~= iWRCurrentRealm then
-                                GameTooltip:AddLine(data[4]..Colors.Reset.."-"..data[7], 1, 1, 1) -- Title (Player Name)
+                                GameTooltip:AddLine(data[4]..iWRBase.Colors.Reset.."-"..data[7], 1, 1, 1) -- Title (Player Name)
                             else
                                 GameTooltip:AddLine(data[4], 1, 1, 1) -- Title (Player Name)
                             end
                             if #data[1] <= 30 then
-                                GameTooltip:AddLine("Note: " .. Colors[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
+                                GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
                             else
                                 local firstLine, secondLine = iWR:splitOnSpace(data[1], 30) -- Split text on the nearest space
-                                GameTooltip:AddLine("Note: " .. Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
-                                GameTooltip:AddLine(Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
+                                GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
+                                GameTooltip:AddLine(iWRBase.Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
                             end
                             if data[6] ~= "" and data[6] ~= nil then
                                 GameTooltip:AddLine("Author: " .. data[6], 1, 0.82, 0) -- Add author in tooltip
@@ -609,9 +609,9 @@ searchDatabaseButton:SetScript("OnClick", function()
                         removeButton:SetScript("OnClick", function()
                             local removeText
                             if iWRDatabase[playerName][7] ~= iWRCurrentRealm then
-                                removeText = Colors.iWR .. "Are you sure you want to remove" .. Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. "-" .. iWRDatabase[playerName][7] .. Colors.iWR .. "]|n|n from the iWR database?"
+                                removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. "-" .. iWRDatabase[playerName][7] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
                             else
-                                removeText = Colors.iWR .. "Are you sure you want to remove" .. Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. Colors.iWR .. "]|n|n from the iWR database?"
+                                removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
                             end
                             StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
                                 text = removeText,
@@ -787,13 +787,13 @@ function iWR:PopulateDatabase()
             playerNameText:SetPoint("LEFT", iconTexture, "RIGHT", 5, 0)
             if data[1] ~= "" then
                 if data[7] and data[7] ~= iWRCurrentRealm then
-                    playerNameText:SetText(data[4]..Colors.Reset.."-"..data[7])
+                    playerNameText:SetText(data[4]..iWRBase.Colors.Reset.."-"..data[7])
                 else
-                    playerNameText:SetText(data[4] .. Colors.iWR .. " (" .. Colors[data[2]] .. truncatedNote .. Colors.iWR .. ")")
+                    playerNameText:SetText(data[4] .. iWRBase.Colors.iWR .. " (" .. iWRBase.Colors[data[2]] .. truncatedNote .. iWRBase.Colors.iWR .. ")")
                 end
             else
                 if data[7] and data[7] ~= iWRCurrentRealm then
-                    playerNameText:SetText(data[4]..Colors.Reset.."-"..data[7])
+                    playerNameText:SetText(data[4]..iWRBase.Colors.Reset.."-"..data[7])
                 else
                     playerNameText:SetText(data[4])
                 end
@@ -804,16 +804,16 @@ function iWR:PopulateDatabase()
             entryFrame:SetScript("OnEnter", function()
                 GameTooltip:SetOwner(entryFrame, "ANCHOR_RIGHT")
                 if data[7] ~= iWRCurrentRealm then
-                    GameTooltip:AddLine(data[4]..Colors.Reset.."-"..data[7], 1, 1, 1) -- Title (Player Name)
+                    GameTooltip:AddLine(data[4]..iWRBase.Colors.Reset.."-"..data[7], 1, 1, 1) -- Title (Player Name)
                 else
                     GameTooltip:AddLine(data[4], 1, 1, 1) -- Title (Player Name)
                 end
                 if #data[1] <= 30 then
-                    GameTooltip:AddLine("Note: " .. Colors[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
+                    GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
                 else
                     local firstLine, secondLine = iWR:splitOnSpace(data[1], 30) -- Split text on the nearest space
-                    GameTooltip:AddLine("Note: " .. Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
-                    GameTooltip:AddLine(Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
+                    GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
+                    GameTooltip:AddLine(iWRBase.Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
                 end
 
                 if data[6] ~= "" and data[6] ~= nil then
@@ -858,9 +858,9 @@ function iWR:PopulateDatabase()
             removeButton:SetScript("OnClick", function()
                 local removeText
                 if iWRDatabase[playerName][7] ~= iWRCurrentRealm then
-                    removeText = Colors.iWR .. "Are you sure you want to remove" .. Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. "-" .. iWRDatabase[playerName][7] .. Colors.iWR .. "]|n|n from the iWR database?"
+                    removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. "-" .. iWRDatabase[playerName][7] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
                 else
-                    removeText = Colors.iWR .. "Are you sure you want to remove" .. Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. Colors.iWR .. "]|n|n from the iWR database?"
+                    removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
                 end
                 StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
                     text = removeText,

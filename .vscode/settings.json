@@ -121,7 +121,16 @@
         "CopyTable",
         "tContains",
         "UIFrameFadeOut",
-        "INFO"
+        "INFO",
+        "PaperDollFrame",
+        "ContainerFrame1",
+        "UIPanelWindows",
+        "CharacterFrame",
+        "CharacterLevelText",
+        "InspectFrame",
+        "BackpackTokenFrame",
+        "CharacterFrameInsetRight",
+        "InspectModelFrame"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {
