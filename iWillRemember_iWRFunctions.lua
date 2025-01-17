@@ -390,9 +390,12 @@ function iWR:FormatNameAndRealm(name, realm)
 end
 
 function iWR:SetTargetFrameDragonFlightUI()
-    local portraitParent = _G["DragonflightUITargetFramePortraitExtra"]:GetParent()
-    if portraitParent then
-        iWR:DebugMsg("Using Portrait Parent: " .. tostring(portraitParent), 3)
+    local portraitParent = _G["TargetFrame"]
+    -- local portrait = _G["TargetFramePortrait"]
+    -- TODO: check if addon is loaded _and_ unitframe module active
+    local dragonflight = true;
+    if dragonflight then
+        iWR:DebugMsg("Using Portrait Parent: " .. portraitParent:GetName(), 3)
         
         -- Get the target's name and realm for database lookup
         local targetNameWithRealm = GetUnitName("target", true)
@@ -447,9 +450,11 @@ function iWR:SetTargetFrameDragonFlightUI()
             dragonTexture:SetSize(99, 81)
             dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 54.5, 8)
             dragonTexture:SetVertexColor(0.9, 0, 0, 1)
-        end
+        else 
+            dragonFrame:Hide()
+        end  
 
-        iWR:DebugMsg("Custom frame successfully anchored to: DragonflightUITargetFramePortraitExtra.", 3)
+        iWR:DebugMsg("Custom frame successfully anchored to:" .. portraitParent:GetName() .. ".", 3)
     else
         iWR:DebugMsg("DragonFlightUI portrait frame not found.", 1)
     end
