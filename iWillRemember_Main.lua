@@ -44,6 +44,7 @@ iWRisPopupActive = false
 iWRWarnedPlayers = {}
 iWRActiveTimers = {}
 iWRSettingsDefault = {
+    TooltipShowAuthor = true,
     DataSharing = true,
     DebugMode = false,
     GroupWarnings = true,

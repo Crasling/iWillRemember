@@ -146,7 +146,7 @@ function iWR:AddNoteToGameTooltip(self, ...)
         end
     end
 
-    if author and date then
+    if author and date and iWRSettings.TooltipShowAuthor then
         GameTooltip:AddLine(iWRBase.Colors.Default .. "Author: " .. iWRBase.Colors[typeIndex] .. author .. iWRBase.Colors.Default .. " (" .. date .. ")")
     end
 end
@@ -1745,6 +1745,22 @@ function iWR:CreateOptionsPanel()
     soundWarningCheckbox:SetScript("OnClick", function(self)
         iWRSettings.SoundWarnings = self:GetChecked()
         iWR:DebugMsg("SoundWarnings: " .. tostring(iWRSettings.SoundWarnings),3)
+    end)
+
+    -- Tooltip Category Title
+    local tooltipCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    tooltipCategoryTitle:SetPoint("TOPLEFT", soundWarningCheckbox, "BOTTOMLEFT", -30, -15)
+    tooltipCategoryTitle:SetText(iWRBase.Colors.iWR .. "Tooltip Settings")
+
+    -- Tooltip Author Checkbox
+    local tooltipAuthorCheckbox = CreateFrame("CheckButton", "iWRTooltipAuthorCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
+    tooltipAuthorCheckbox:SetPoint("TOPLEFT", tooltipCategoryTitle, "BOTTOMLEFT", 0, -5)
+    tooltipAuthorCheckbox.Text:SetText("Show Author on Tooltip")
+    tooltipAuthorCheckbox:SetChecked(iWRSettings.TooltipShowAuthor)
+    tooltipAuthorCheckbox:SetScript("OnClick", function(self)
+        local isEnabled = self:GetChecked()
+        iWRSettings.TooltipShowAuthor = isEnabled
+        iWR:DebugMsg("TooltipShowAuthor: " .. tostring(iWRSettings.TooltipShowAuthor), 3)
     end)
 
     -- ╭──────────────────────╮
