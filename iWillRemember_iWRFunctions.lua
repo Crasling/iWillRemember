@@ -392,7 +392,7 @@ end
 function iWR:SetTargetFrameDragonFlightUI()
     local portraitParent = _G["TargetFrame"]
     -- local portrait = _G["TargetFramePortrait"]
-    -- TODO: check if addon is loaded _and_ unitframe module active
+    -- TODO: check if dragonflight target unitframe module active
     local dragonflight = true;
     if dragonflight then
         iWR:DebugMsg("Using Portrait Parent: " .. portraitParent:GetName(), 3)
@@ -450,9 +450,10 @@ function iWR:SetTargetFrameDragonFlightUI()
             dragonTexture:SetSize(99, 81)
             dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 54.5, 8)
             dragonTexture:SetVertexColor(0.9, 0, 0, 1)
-        else 
+        else
+            iWR:DebugMsg("Relationship type is missing. [SetTargetFrameDragonFlightUI]", 1)
             dragonFrame:Hide()
-        end  
+        end
 
         iWR:DebugMsg("Custom frame successfully anchored to:" .. portraitParent:GetName() .. ".", 3)
     else
