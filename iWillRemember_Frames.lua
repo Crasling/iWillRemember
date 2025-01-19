@@ -308,9 +308,43 @@ local openDatabaseButtonLabel = iWRPanel:CreateFontString(nil, "OVERLAY", "GameF
 openDatabaseButtonLabel:SetPoint("TOP", openDatabaseButton, "BOTTOM", 0, -5)
 openDatabaseButtonLabel:SetText("Open DB")
 
----------------------
+-- Create Tab
+function iWR:CreateTab(panel, index, name, onClick)
+    -- Create the tab
+    local tab = CreateFrame("Button", "$parentTab" .. index, panel, "OptionsFrameTabButtonTemplate")
+    tab:SetText(name)
+    tab:SetID(index)
+
+    -- Adjust the positioning of the tabs to the top of the panel
+    if index == 1 then
+        tab:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -20)
+    else
+        tab:SetPoint("LEFT", "$parentTab" .. (index - 1), "RIGHT", -5, 0)
+    end
+
+    -- Adjust the tab size
+    tab:SetScale(1.3)
+    tab:SetHeight(25)
+
+    -- Ensure the font string (text) follows the tab movement
+    local fontString = tab:GetFontString()
+    if fontString then
+        fontString:ClearAllPoints()
+        fontString:SetPoint("CENTER", tab, "CENTER")
+    end
+    tab:SetScript("OnClick", function()
+        PanelTemplates_SetTab(panel, index)
+        if onClick then
+        onClick()
+        fontString:SetPoint("CENTER", tab, "CENTER", 0, -2)
+        end
+    end)
+        PanelTemplates_TabResize(tab, 0)
+    return tab
+end
+
 -- Create a new frame to display the database
-iWRDatabaseFrame = iWR:CreateiWRStyleFrame(UIParent, 400, 500, {"CENTER", UIParent, "CENTER"})
+iWRDatabaseFrame = iWR:CreateiWRStyleFrame(UIParent, 700, 400, {"CENTER", UIParent, "CENTER"})
 iWRDatabaseFrame:Hide()
 iWRDatabaseFrame:EnableMouse(true)
 iWRDatabaseFrame:SetMovable(true)
@@ -356,11 +390,11 @@ dbTitleText:SetTextColor(0.9, 0.9, 1, 1)
 -- Create a scrollable frame to list database entries
 local dbScrollFrame = CreateFrame("ScrollFrame", nil, iWRDatabaseFrame, "UIPanelScrollFrameTemplate")
 dbScrollFrame:SetPoint("TOP", dbTitleBar, "BOTTOM", -10, -10)
-dbScrollFrame:SetSize(350, 420)
+dbScrollFrame:SetSize(iWRDatabaseFrame:GetWidth()-40, iWRDatabaseFrame:GetHeight()-80)
 
 -- Create a container for the database entries (this will be scrollable)
 local dbContainer = CreateFrame("Frame", nil, dbScrollFrame)
-dbContainer:SetSize(360, 500) -- Make sure it's larger than the scroll area
+dbContainer:SetSize(dbScrollFrame:GetWidth()+10, dbScrollFrame:GetHeight()+10) -- Make sure it's larger than the scroll area
 dbScrollFrame:SetScrollChild(dbContainer)
 
 -- Create a close button for the database frame
@@ -380,7 +414,7 @@ clearDatabaseButton:SetText("Clear All")
 clearDatabaseButton:SetScript("OnClick", function()
     -- Confirm before clearing the database
     StaticPopupDialogs["CLEAR_DATABASE_CONFIRM"] = {
-        text = iWRBase.Colors.iWR .. "Are you sure you want to" .. iWRBase.Colors.Red ..  "|n clear all data" .. iWRBase.Colors.iWR .. "|n in the database?",
+        text = iWRBase.Colors.Red .. "Are you sure you want to clear the current iWR Database?|nThis is non-reversible.",
         button1 = "Yes",
         button2 = "No",
         OnAccept = function()
@@ -563,7 +597,6 @@ searchDatabaseButton:SetScript("OnClick", function()
                         entryFrame:SetScript("OnEnter", function()
                             ---@diagnostic disable-next-line: param-type-mismatch
                             GameTooltip:SetOwner(entryFrame, "ANCHOR_RIGHT")
-                            print(data[7])
                             if data[7] ~= iWRCurrentRealm then
                                 GameTooltip:AddLine(data[4]..iWRBase.Colors.Reset.."-"..data[7], 1, 1, 1) -- Title (Player Name)
                             else
@@ -681,216 +714,212 @@ searchDatabaseButton:SetScript("OnClick", function()
     StaticPopup_Show("SEARCH_DATABASE")
 end)
 
-function iWR:CreateTab(panel, index, name, onClick)
-    -- Create the tab
-    local tab = CreateFrame("Button", "$parentTab" .. index, panel, "OptionsFrameTabButtonTemplate")
-    tab:SetText(name)
-    tab:SetID(index)
-
-    -- Adjust the positioning of the tabs to the top of the panel
-    if index == 1 then
-        tab:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -20)
-    else
-        tab:SetPoint("LEFT", "$parentTab" .. (index - 1), "RIGHT", -5, 0)
-    end
-
-    -- Adjust the tab size
-    tab:SetScale(1.3)
-    tab:SetHeight(25)
-
-    -- Ensure the font string (text) follows the tab movement
-    local fontString = tab:GetFontString()
-    if fontString then
-        fontString:ClearAllPoints()
-        fontString:SetPoint("CENTER", tab, "CENTER")
-    end
-    tab:SetScript("OnClick", function()
-        PanelTemplates_SetTab(panel, index)
-        if onClick then
-        onClick()
-        fontString:SetPoint("CENTER", tab, "CENTER", 0, -2)
-        end
-    end)
-        PanelTemplates_TabResize(tab, 0)
-    return tab
-end
-
 -- ╭─────────────────────────────────────────╮
 -- │      Function to Populate Database      │
 -- ╰─────────────────────────────────────────╯
 function iWR:PopulateDatabase()
-    -- Clear the container first by hiding all existing child frames
-    for _, child in ipairs({dbContainer:GetChildren()}) do
-        ---@diagnostic disable-next-line: undefined-field
-        child:Hide()
+    -- Create sub-containers for columns if they don't already exist
+    if not dbContainer.col1 then
+        dbContainer.col1 = CreateFrame("Frame", nil, dbContainer)
+        dbContainer.col1:SetSize(dbContainer:GetWidth() * 0.3, dbContainer:GetHeight())
+        dbContainer.col1:SetPoint("TOPLEFT", dbContainer, "TOPLEFT", 0, 0)
     end
+
+    if not dbContainer.col2 then
+        dbContainer.col2 = CreateFrame("Frame", nil, dbContainer)
+        dbContainer.col2:SetSize(dbContainer:GetWidth() * 0.45, dbContainer:GetHeight())
+        dbContainer.col2:SetPoint("TOPLEFT", dbContainer.col1, "TOPRIGHT", 0, 0)
+    end
+
+    if not dbContainer.col3 then
+        dbContainer.col3 = CreateFrame("Frame", nil, dbContainer)
+        dbContainer.col3:SetSize(dbContainer:GetWidth() * 0.25, dbContainer:GetHeight())
+        dbContainer.col3:SetPoint("TOPLEFT", dbContainer.col2, "TOPRIGHT", 0, 0)
+    end
+
+    -- Reuse or hide existing frames in columns
+    local function resetColumn(column)
+        for _, child in ipairs({column:GetChildren()}) do
+            child:Hide()
+        end
+    end
+
+    resetColumn(dbContainer.col1)
+    resetColumn(dbContainer.col2)
+    resetColumn(dbContainer.col3)
 
     -- Categorize entries
     local categorizedData = {}
     for playerName, data in pairs(iWRDatabase) do
         local category = data[2] or "Uncategorized"
         categorizedData[category] = categorizedData[category] or {}
-        table.insert(categorizedData[category], { name = playerName, data = data })
+        table.insert(categorizedData[category], { name = data[4], data = data })
     end
 
-    -- Sort categories
+    -- Sort categories in the correct order
     local sortedCategories = {}
     for category in pairs(categorizedData) do
         table.insert(sortedCategories, category)
     end
-    table.sort(sortedCategories, function(a, b)
-        return a > b
-    end)
+    table.sort(sortedCategories, function(a, b) return a > b end)
+
     for _, category in ipairs(sortedCategories) do
         table.sort(categorizedData[category], function(a, b)
             return a.name < b.name
         end)
     end
 
-    -- Iterate over categorized data and create entries
+    -- Iterate over categorized data and create or reuse frames
     local yOffset = -5
+    local reusedFrames = { col1 = {}, col2 = {}, col3 = {} }
+
     for _, category in ipairs(sortedCategories) do
-        -- Add category label
-        local categoryLabel = dbContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        categoryLabel:SetPoint("TOPLEFT", dbContainer, "TOPLEFT", 5, yOffset)
-        yOffset = yOffset - 20
+        if #categorizedData[category] > 0 then
+            for _, entry in ipairs(categorizedData[category]) do
+                local playerName, data = entry.name, entry.data
 
-        for _, entry in ipairs(categorizedData[category]) do
-            local playerName, data = entry.name, entry.data
+                -- Reuse or create frame in Col1 (Type Icon and Player Name)
+                local col1Frame = reusedFrames.col1[#reusedFrames.col1 + 1] or CreateFrame("Frame", nil, dbContainer.col1)
+                col1Frame:SetSize(dbContainer.col1:GetWidth(), 30)
+                col1Frame:SetPoint("TOPLEFT", dbContainer.col1, "TOPLEFT", 0, yOffset)
+                col1Frame:Show()
+                table.insert(reusedFrames.col1, col1Frame)
 
-            -- Create a frame to hold the player name, icon, and buttons
-            local entryFrame = CreateFrame("Frame", nil, dbContainer)
-            entryFrame:SetSize(340, 30)
-            entryFrame:SetPoint("TOP", dbContainer, "TOP", 0, yOffset)
+                local iconTexture = col1Frame.iconTexture or col1Frame:CreateTexture(nil, "ARTWORK")
+                iconTexture:SetSize(20, 20)
+                iconTexture:SetPoint("LEFT", col1Frame, "LEFT", 10, 0)
+                iconTexture:SetTexture(iWRBase.Icons[data[2]] or "Interface\\Icons\\INV_Misc_QuestionMark")
+                col1Frame.iconTexture = iconTexture
 
-            -- Add the icon for the type
-            local iconTexture = entryFrame:CreateTexture(nil, "ARTWORK")
-            iconTexture:SetSize(20, 20)
-            iconTexture:SetPoint("LEFT", entryFrame, "LEFT", 5, 0)
-
-            -- Set the icon texture based on the type in `iWRBase.Types`
-            local typeIcon = iWRBase.Icons[data[2]]
-            if typeIcon then
-                iconTexture:SetTexture(typeIcon)
-            else
-                iconTexture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark") -- Fallback icon if no match is found
-            end
-
-            -- Truncate the note if it exceeds the character limit
-            local truncatedNote = StripColorCodes(data[1])
-            if truncatedNote and #truncatedNote > 15 then
-                truncatedNote = truncatedNote:sub(1, 12) .. "..."
-            end
-
-            -- Create the player name text with truncated note
-            local playerNameText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            playerNameText:SetPoint("LEFT", iconTexture, "RIGHT", 5, 0)
-            if data[1] ~= "" then
+                local playerNameText = col1Frame.playerNameText or col1Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                playerNameText:SetPoint("LEFT", iconTexture, "RIGHT", 10, 0)
+                local displayName = data[4]
+                local listdisplayName = displayName
                 if data[7] and data[7] ~= iWRCurrentRealm then
-                    playerNameText:SetText(data[4]..iWRBase.Colors.Reset.."-"..data[7])
-                else
-                    playerNameText:SetText(data[4] .. iWRBase.Colors.iWR .. " (" .. iWRBase.Colors[data[2]] .. truncatedNote .. iWRBase.Colors.iWR .. ")")
+                    listdisplayName = displayName .. " (*)"
+                    displayName = displayName .. "-" .. data[7]
                 end
-            else
-                if data[7] and data[7] ~= iWRCurrentRealm then
-                    playerNameText:SetText(data[4]..iWRBase.Colors.Reset.."-"..data[7])
-                else
-                    playerNameText:SetText(data[4])
-                end
+                local databasekey = StripColorCodes(data[4]) .. "-" .. data[7]
+                playerNameText:SetText(iWRBase.Colors.iWR .. string.format("%-16s", listdisplayName))
+                playerNameText:SetTextColor(1, 1, 1, 1)
+                col1Frame.playerNameText = playerNameText
+
+                -- Tooltip and Click for Name column
+                col1Frame:SetScript("OnEnter", function()
+                    GameTooltip:SetOwner(col1Frame, "ANCHOR_RIGHT")
+                    GameTooltip:AddLine(listdisplayName, 1, 1, 1)
+                    if data[7] then
+                        GameTooltip:AddLine("Server: " .. iWRBase.Colors.Reset .. data[7], 1, 0.82, 0)
+                    end
+                    if data[1] then
+                        GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. data[1], 1, 0.82, 0)
+                    end
+                    if data[6] then
+                        GameTooltip:AddLine("Author: " .. data[6], 1, 0.82, 0)
+                    end
+                    if data[5] then
+                        GameTooltip:AddLine("Date: " .. data[5], 1, 0.82, 0)
+                    end
+                    GameTooltip:Show()
+                end)
+                col1Frame:SetScript("OnLeave", function()
+                    GameTooltip:Hide()
+                end)
+                col1Frame:SetScript("OnMouseDown", function()
+                    iWR:ShowDetailWindow(databasekey)
+                end)
+
+                -- Reuse or create frame in Col2 (Notes)
+                local col2Frame = reusedFrames.col2[#reusedFrames.col2 + 1] or CreateFrame("Frame", nil, dbContainer.col2)
+                col2Frame:SetSize(dbContainer.col2:GetWidth(), 30)
+                col2Frame:SetPoint("TOPLEFT", dbContainer.col2, "TOPLEFT", 0, yOffset)
+                col2Frame:Show()
+                table.insert(reusedFrames.col2, col2Frame)
+
+                local noteText = col2Frame.noteText or col2Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                noteText:SetPoint("LEFT", col2Frame, "LEFT", 10, 0)
+                local noteColor = iWRBase.Colors[data[2]] or iWRBase.Colors.Default
+                local truncatedNote = data[1] and #data[1] > 30 and data[1]:sub(1, 27) .. "..." or data[1] or ""
+                noteText:SetText(noteColor .. truncatedNote)
+                col2Frame.noteText = noteText
+
+                -- Tooltip and Click for Notes column
+                col2Frame:SetScript("OnEnter", function()
+                    GameTooltip:SetOwner(col2Frame, "ANCHOR_RIGHT")
+                    GameTooltip:AddLine(listdisplayName, 1, 1, 1)
+                    if data[7] then
+                        GameTooltip:AddLine("Server: " .. iWRBase.Colors.Reset .. data[7], 1, 0.82, 0)
+                    end
+                    if data[1] then
+                        GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. data[1], 1, 0.82, 0)
+                    end
+                    if data[6] then
+                        GameTooltip:AddLine("Author: " .. data[6], 1, 0.82, 0)
+                    end
+                    if data[5] then
+                        GameTooltip:AddLine("Date: " .. data[5], 1, 0.82, 0)
+                    end
+                    GameTooltip:Show()
+                end)
+                col2Frame:SetScript("OnLeave", function()
+                    GameTooltip:Hide()
+                end)
+                col2Frame:SetScript("OnMouseDown", function()
+                    iWR:ShowDetailWindow(databasekey)
+                end)
+
+                -- Reuse or create frame in Col3 (Buttons)
+                local col3Frame = reusedFrames.col3[#reusedFrames.col3 + 1] or CreateFrame("Frame", nil, dbContainer.col3)
+                col3Frame:SetSize(dbContainer.col3:GetWidth(), 30)
+                col3Frame:SetPoint("TOPLEFT", dbContainer.col3, "TOPLEFT", 0, yOffset)
+                col3Frame:Show()
+                table.insert(reusedFrames.col3, col3Frame)
+
+                local editButton = col3Frame.editButton or CreateFrame("Button", nil, col3Frame, "UIPanelButtonTemplate")
+                editButton:SetSize(50, 24)
+                editButton:SetPoint("LEFT", col3Frame, "LEFT", 10, 0)
+                editButton:SetText("Edit")
+                editButton:SetScript("OnClick", function()
+                    iWR:MenuOpen(databasekey)
+                end)
+                col3Frame.editButton = editButton
+
+                local removeButton = col3Frame.removeButton or CreateFrame("Button", nil, col3Frame, "UIPanelButtonTemplate")
+                removeButton:SetSize(60, 24)
+                removeButton:SetPoint("LEFT", editButton, "RIGHT", 10, 0)
+                removeButton:SetText("Remove")
+                removeButton:SetScript("OnClick", function()
+                    local removeText
+                    if iWRDatabase[databasekey][7] ~= iWRCurrentRealm then
+                        removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[databasekey][4] .. "-" .. iWRDatabase[databasekey][7] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
+                    else
+                        removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[databasekey][4] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
+                    end
+                    StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
+                        text = removeText,
+                        button1 = "Yes",
+                        button2 = "No",
+                        OnAccept = function()
+                            print(L["CharNoteStart"] .. iWRDatabase[databasekey][4]  .. L["CharNoteRemoved"])
+                            iWRDatabase[databasekey] = nil
+                            if searchResultsFrame then
+                                searchResultsFrame:Hide()
+                            end
+                            iWR:PopulateDatabase()
+                            iWR:SendRemoveRequestToFriends(databasekey)
+                        end,
+                        timeout = 0,
+                        whileDead = true,
+                        hideOnEscape = true,
+                        preferredIndex = 3,
+                    }
+                    StaticPopup_Show("REMOVE_PLAYER_CONFIRM")
+                end)
+                col3Frame.removeButton = removeButton
+
+                yOffset = yOffset - 30
             end
-            playerNameText:SetTextColor(1, 1, 1, 1) -- White text
-
-            -- Tooltip functionality
-            entryFrame:SetScript("OnEnter", function()
-                GameTooltip:SetOwner(entryFrame, "ANCHOR_RIGHT")
-                if data[7] ~= iWRCurrentRealm then
-                    GameTooltip:AddLine(data[4]..iWRBase.Colors.Reset.."-"..data[7], 1, 1, 1) -- Title (Player Name)
-                else
-                    GameTooltip:AddLine(data[4], 1, 1, 1) -- Title (Player Name)
-                end
-                if #data[1] <= 30 then
-                    GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
-                else
-                    local firstLine, secondLine = iWR:splitOnSpace(data[1], 30) -- Split text on the nearest space
-                    GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
-                    GameTooltip:AddLine(iWRBase.Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
-                end
-
-                if data[6] ~= "" and data[6] ~= nil then
-                    GameTooltip:AddLine("Author: " .. data[6], 1, 0.82, 0) -- Add author in tooltip
-                end
-                if data[5] ~= "" and data[5] ~= nil then
-                    GameTooltip:AddLine("Date: " .. data[5], 1, 0.82, 0) -- Add date in tooltip
-                end
-                GameTooltip:Show()
-            end)
-            entryFrame:SetScript("OnLeave", function()
-                GameTooltip:Hide()
-            end)
-
-            -- Add OnClick event to open the detail window
-            entryFrame:SetScript("OnMouseDown", function()
-                iWR:ShowDetailWindow(playerName)
-            end)
-
-            -- Create the Edit button for each player
-            local editButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
-            editButton:SetSize(50, 30)
-            editButton:SetPoint("RIGHT", entryFrame, "RIGHT", -60, 0)
-            editButton:SetText("Edit")
-
-            -- Store playerName and note in the button
-            editButton.playerName = data[4]
-            editButton.note = data[1]
-
-            -- OnClick event to set inputs and open the menu
-            editButton:SetScript("OnClick", function(self)
-                iWR:MenuOpen(self.playerName)
-                iWRNameInput:SetText(self.playerName)
-                iWRNoteInput:SetText(self.note or "")
-            end)
-
-            -- Create the Remove button for each player
-            local removeButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
-            removeButton:SetSize(60, 30)
-            removeButton:SetPoint("RIGHT", entryFrame, "RIGHT", 0, 0)
-            removeButton:SetText("Remove")
-            removeButton:SetScript("OnClick", function()
-                local removeText
-                if iWRDatabase[playerName][7] ~= iWRCurrentRealm then
-                    removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. "-" .. iWRDatabase[playerName][7] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
-                else
-                    removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
-                end
-                StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
-                    text = removeText,
-                    button1 = "Yes",
-                    button2 = "No",
-                    OnAccept = function()
-                        print(L["CharNoteStart"] .. iWRDatabase[playerName][4]  .. L["CharNoteRemoved"])
-                        iWRDatabase[playerName] = nil
-                        if searchResultsFrame then
-                            searchResultsFrame:Hide()
-                        end
-                        iWR:PopulateDatabase()
-                        iWR:SendRemoveRequestToFriends(playerName)
-                    end,
-                    timeout = 0,
-                    whileDead = true,
-                    hideOnEscape = true,
-                    preferredIndex = 3,
-                }
-                StaticPopup_Show("REMOVE_PLAYER_CONFIRM")
-            end)
-
-            -- Add a divider below the current entry
-            local divider = entryFrame:CreateTexture(nil, "BACKGROUND")
-            divider:SetPoint("BOTTOMLEFT", entryFrame, "BOTTOMLEFT", 0, -6)
-            divider:SetPoint("BOTTOMRIGHT", entryFrame, "BOTTOMRIGHT", 0, -6)
-            divider:SetHeight(1)
-            divider:SetColorTexture(0.3, 0.3, 0.3, 1)
-
-            yOffset = yOffset - 40
         end
     end
+    dbContainer:SetHeight(math.abs(yOffset))
 end

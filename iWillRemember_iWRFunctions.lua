@@ -25,7 +25,7 @@ end
 
 function iWR:VerifyRealm(playerName)
     if not playerName:find("-") then
-        return playerName .. "-" .. iWRcurrentRealm
+        return playerName .. "-" .. iWRCurrentRealm
     else
         return playerName
     end
@@ -480,7 +480,7 @@ function iWR:SetTargetFrameDefault()
 
     -- Ensure the database entry exists
     if not iWRDatabase[databaseKey] then
-        iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database. [SetTargetFrameDragonFlightUI]", 1)
+        iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database. [SetTargetFrameDefault]", 1)
         return
     end
 
@@ -1093,7 +1093,7 @@ function iWR:ShowDetailWindow(playerName)
     -- Populate new content
     local yOffset = -5
     local detailsContent = {}
-    if data[7] and data[7] ~= iWRcurrentRealm then
+    if data[7] and data[7] ~= iWRCurrentRealm then
         detailsContent = {
             {label = iWRBase.Colors.Default .. "Name:" .. iWRBase.Colors.Reset, value = data[4]..iWRBase.Colors.Reset.."-"..data[7]},
             {label = iWRBase.Colors.Default .. "Type:" .. iWRBase.Colors[data[2]], value = iWRBase.Types[tonumber(data[2])]},
@@ -1299,21 +1299,32 @@ function iWR:RegisterChatFilters()
     end
 end
 
-function iWR:VerifyTargetClassinDB(targetName, targetClass)
-    if iWRDatabase[targetName][2] ~= 0 then
-        if iWRBase.Colors.Gray .. targetName == iWRDatabase[targetName][4] or targetName == iWRDatabase[targetName][4] then
-            iWRDatabase[targetName][4] = iWR:ColorizePlayerNameByClass(targetName, targetClass)
-            print(L["CharNoteStart"] .. iWRDatabase[targetName][4] .. L["CharNoteColorUpdate"])
+function iWR:VerifyTargetClassinDB(databasekey, targetClass)
+    if iWRDatabase[databasekey][2] ~= 0 then
+
+        -- Get target name and realm
+        local targetNameWithRealm = GetUnitName("target", true)
+        local targetName = GetUnitName("target", false)
+        local targetRealm = select(2, strsplit("-", targetNameWithRealm or ""))
+        targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
+
+        -- Use current realm if no realm is found
+        if not targetRealm or targetRealm == "" then
+            targetRealm = iWRCurrentRealm
+        end
+        if iWRBase.Colors.Gray .. targetName == iWRDatabase[databasekey][4] or targetName == iWRDatabase[databasekey][4] then
+            iWRDatabase[databasekey][4] = iWR:ColorizePlayerNameByClass(targetName, targetClass)
+            print(L["CharNoteStart"] .. iWRDatabase[databasekey][4] .. L["CharNoteColorUpdate"])
             iWR:PopulateDatabase()
             if iWRSettings.DataSharing ~= false then
                 wipe(iWRDataCacheTable)
-                iWRDataCacheTable[tostring(targetName)] = {
-                    iWRDatabase[targetName][1],     --Data[1]
-                    iWRDatabase[targetName][2],     --Data[2]
-                    iWRDatabase[targetName][3],     --Data[3]
-                    iWRDatabase[targetName][4],     --Data[4]
-                    iWRDatabase[targetName][5],     --Data[5]
-                    iWRDatabase[targetName][6],     --Data[6]
+                iWRDataCacheTable[tostring(databasekey)] = {
+                    iWRDatabase[databasekey][1],     --Data[1]
+                    iWRDatabase[databasekey][2],     --Data[2]
+                    iWRDatabase[databasekey][3],     --Data[3]
+                    iWRDatabase[databasekey][4],     --Data[4]
+                    iWRDatabase[databasekey][5],     --Data[5]
+                    iWRDatabase[databasekey][6],     --Data[6]
                 }
                 iWRDataCache = iWR:Serialize(iWRDataCacheTable)
                 iWR:SendNewDBUpdateToFriends()
@@ -1486,7 +1497,7 @@ function iWR:ClearNote(Name)
     end
 
     -- Format name and realm for database key
-    local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(finalName, finalRealm)
+    local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(StripColorCodes(finalName), finalRealm)
     local databaseKey = capitalizedName .. "-" .. capitalizedRealm
 
     -- Check if the key exists in the database
@@ -2065,3 +2076,4 @@ iWR:ModifyMenuForContext("MENU_UNIT_PARTY")
 iWR:ModifyMenuForContext("MENU_UNIT_RAID_PLAYER")
 iWR:ModifyMenuForContext("MENU_UNIT_ENEMY_PLAYER")
 iWR:ModifyMenuForContext("MENU_UNIT_FRIEND") -- Chat and Social Panel (fyrye)
+
