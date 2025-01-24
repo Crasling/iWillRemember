@@ -977,9 +977,11 @@ local function AddRelationshipIconToChat(self, event, message, author, flags, ..
 
         if not authorName then
             iWR:DebugMsg("AddRelationshipIconToChat tried to add icon to message with missing authorName")
+            return false, message, author, flags, ...
         end
         if not authorRealm then
             iWR:DebugMsg("AddRelationshipIconToChat tried to add icon to message with missing authorRealm")
+            return false, message, author, flags, ...
         end
 
         -- Construct the key as name-realm
@@ -1643,6 +1645,7 @@ function iWR:CreateOptionsPanel()
     -- Content Frames
     local optionsPanel = {
         General = CreateFrame("Frame", "$parentGeneralTabContent", panel, "BackdropTemplate"),
+        Sync = CreateFrame("Frame", "$parentSyncTabContent", panel, "BackdropTemplate"),
         Backup = CreateFrame("Frame", "$parentBackupTabContent", panel, "BackdropTemplate"),
         About = CreateFrame("Frame", "$parentAboutTabContent", panel, "BackdropTemplate"),
     }
@@ -1667,40 +1670,9 @@ function iWR:CreateOptionsPanel()
     -- ╭───────────────────────╮
     -- │      General Tab      │
     -- ╰───────────────────────╯
-    -- Debug Mode Category Title
-    local debugCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    debugCategoryTitle:SetPoint("TOPLEFT", optionsPanel.General, "TOPLEFT", 20, -20)
-    debugCategoryTitle:SetText(iWRBase.Colors.iWR .. "Developer Settings")
-
-    -- Debug Mode Checkbox
-    local debugCheckbox = CreateFrame("CheckButton", "iWRDebugCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
-    debugCheckbox:SetPoint("TOPLEFT", debugCategoryTitle, "BOTTOMLEFT", 0, -5)
-    debugCheckbox.Text:SetText("Enable Debug Mode")
-    debugCheckbox:SetChecked(iWRSettings.DebugMode)
-    debugCheckbox:SetScript("OnClick", function(self)
-        local isDebugEnabled = self:GetChecked()
-        iWRSettings.DebugMode = isDebugEnabled
-        iWR:DebugMsg("Debug Mode is activated." .. iWRBase.Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
-    end)
-
-    -- Data Sharing Category Title
-    local dataSharingCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    dataSharingCategoryTitle:SetPoint("TOPLEFT", debugCheckbox, "BOTTOMLEFT", 0, -15)
-    dataSharingCategoryTitle:SetText(iWRBase.Colors.iWR .. "Sync Settings")
-
-    -- Data Sharing Checkbox
-    local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
-    dataSharingCheckbox:SetPoint("TOPLEFT", dataSharingCategoryTitle, "BOTTOMLEFT", 0, -5)
-    dataSharingCheckbox.Text:SetText("Enable Sync with Friends")
-    dataSharingCheckbox:SetChecked(iWRSettings.DataSharing)
-    dataSharingCheckbox:SetScript("OnClick", function(self)
-        iWRSettings.DataSharing = self:GetChecked()
-        iWR:DebugMsg("Sync with Friends: " .. tostring(iWRSettings.DataSharing),3)
-    end)
-
     -- Target Frame and Chat Icons Category Title
     local targetChatCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    targetChatCategoryTitle:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", 0, -15)
+    targetChatCategoryTitle:SetPoint("TOPLEFT", optionsPanel.General, "TOPLEFT", 20, -20)
     targetChatCategoryTitle:SetText(iWRBase.Colors.iWR .. "Display Settings")
 
     -- Target Frames Visibility Checkbox
@@ -1773,6 +1745,178 @@ function iWR:CreateOptionsPanel()
         iWRSettings.TooltipShowAuthor = isEnabled
         iWR:DebugMsg("TooltipShowAuthor: " .. tostring(iWRSettings.TooltipShowAuthor), 3)
     end)
+
+    -- ╭────────────────────╮
+    -- │      Sync Tab      │
+    -- ╰────────────────────╯
+    -- Data Sharing Category Title
+    local dataSharingCategoryTitle = optionsPanel.Sync:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    dataSharingCategoryTitle:SetPoint("TOPLEFT", optionsPanel.Sync, "TOPLEFT", 20, -20)
+    dataSharingCategoryTitle:SetText(iWRBase.Colors.iWR .. "Sync Settings (work in progress)")
+
+    -- Data Sharing Checkbox
+    local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel.Sync, "InterfaceOptionsCheckButtonTemplate")
+    dataSharingCheckbox:SetPoint("TOPLEFT", dataSharingCategoryTitle, "BOTTOMLEFT", 0, -10)
+    dataSharingCheckbox.Text:SetText("Enable Sync with Friends")
+    dataSharingCheckbox:SetChecked(iWRSettings.DataSharing)
+    dataSharingCheckbox:SetScript("OnClick", function(self)
+        iWRSettings.DataSharing = self:GetChecked()
+        iWR:DebugMsg("Sync with Friends: " .. tostring(iWRSettings.DataSharing), 3)
+    end)
+
+    -- Sync Type Dropdown Menu
+    local syncTypeDropdown = CreateFrame("Frame", "iWRSyncTypeDropdown", optionsPanel.Sync, "UIDropDownMenuTemplate")
+    syncTypeDropdown:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", -16, -10)
+    UIDropDownMenu_SetWidth(syncTypeDropdown, 200)
+    UIDropDownMenu_SetText(syncTypeDropdown, iWRSettings.SyncType or "Friends")
+
+    -- Dropdown Initialization
+    local function InitializeDropdown(self, level)
+        local info = UIDropDownMenu_CreateInfo()
+        info.func = function(self)
+            iWRSettings.SyncType = self.value
+            UIDropDownMenu_SetText(syncTypeDropdown, self.value)
+            iWR:DebugMsg("Sync Type set to: " .. self.value, 3)
+        end
+        info.text, info.value = "Friends", "Friends"
+        UIDropDownMenu_AddButton(info, level)
+        info.text, info.value = "Whitelist", "Whitelist"
+        UIDropDownMenu_AddButton(info, level)
+    end
+    UIDropDownMenu_Initialize(syncTypeDropdown, InitializeDropdown)
+
+    -- Friend List Title
+    local friendListTitle = optionsPanel.Sync:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    friendListTitle:SetPoint("TOPLEFT", syncTypeDropdown, "BOTTOMLEFT", 16, -20)
+    friendListTitle:SetText(iWRBase.Colors.iWR .. "Friend List:")
+
+    -- Dropdown Menu for Adding Friends
+    local friendDropdownMenu = CreateFrame("Frame", "iWRFriendDropdownMenu", optionsPanel.Sync, "UIDropDownMenuTemplate")
+    friendDropdownMenu:SetPoint("TOPLEFT", friendListTitle, "BOTTOMLEFT", -10, -20)
+    UIDropDownMenu_SetWidth(friendDropdownMenu, 200)
+    UIDropDownMenu_SetText(friendDropdownMenu, "Select a Friend")
+
+    -- Populate Dropdown Menu
+    local function PopulateFriendDropdown()
+        local friendsList = {}
+        local numFriends = C_FriendList.GetNumFriends()
+        local numBNetFriends = BNGetNumFriends()
+
+        -- WoW Friends
+        for i = 1, numFriends do
+            local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+            if friendInfo and friendInfo.name then
+                table.insert(friendsList, friendInfo.name)
+            end
+        end
+
+        -- Battle.net Friends
+        for i = 1, numBNetFriends do
+            local _, accountName, _, _, _, _, isOnline = BNGetFriendInfo(i)
+            if isOnline and accountName then
+                table.insert(friendsList, "Bnet ID: " .. accountName)
+            end
+        end
+
+        local menuItems = {}
+        for _, name in ipairs(friendsList) do
+            table.insert(menuItems, {
+                text = name,
+                value = name,
+                func = function(self)
+                    if not iWRSettings.SyncList then iWRSettings.SyncList = {} end
+                    if not tContains(iWRSettings.SyncList, self.value) then
+                        table.insert(iWRSettings.SyncList, self.value)
+                        iWR:UpdateSyncListDisplay()
+                    end
+                end,
+                notCheckable = true,
+            })
+        end
+
+        return menuItems
+    end
+
+    -- Initialize Dropdown Menu
+    UIDropDownMenu_Initialize(friendDropdownMenu, function(self, level, menuList)
+        local info = UIDropDownMenu_CreateInfo()
+        for _, item in ipairs(PopulateFriendDropdown()) do
+            info.text = item.text
+            info.value = item.value
+            info.func = item.func
+            UIDropDownMenu_AddButton(info, level)
+        end
+    end)
+
+    -- Add Name Button and Input
+    local addNameInput = CreateFrame("EditBox", nil, optionsPanel.Sync, "InputBoxTemplate")
+    addNameInput:SetSize(150, 25)
+    addNameInput:SetPoint("TOPLEFT", friendDropdownMenu, "BOTTOMLEFT", 0, -10)
+    addNameInput:SetAutoFocus(false)
+    addNameInput:SetText("Enter Name")
+
+    local addNameButton = CreateFrame("Button", nil, optionsPanel.Sync, "UIPanelButtonTemplate")
+    addNameButton:SetSize(100, 25)
+    addNameButton:SetPoint("LEFT", addNameInput, "RIGHT", 10, 0)
+    addNameButton:SetText("Add Name")
+    addNameButton:SetScript("OnClick", function()
+        local customName = addNameInput:GetText()
+        if customName and customName ~= "" then
+            if not iWRSettings.SyncList then iWRSettings.SyncList = {} end
+            if not tContains(iWRSettings.SyncList, customName) then
+                table.insert(iWRSettings.SyncList, customName)
+                iWR:UpdateSyncListDisplay()
+            end
+            addNameInput:SetText("")
+        end
+    end)
+
+    -- Sync List Container
+    local syncListContainer = CreateFrame("Frame", nil, optionsPanel.Sync, "BackdropTemplate")
+    syncListContainer:SetSize(300, 200)
+    syncListContainer:SetPoint("TOPRIGHT", optionsPanel.Sync, "TOPRIGHT", -20, -50)
+    syncListContainer:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background" })
+
+    -- Whitelist Title
+    local whitelistTitle = optionsPanel.Sync:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    whitelistTitle:SetPoint("BOTTOM", syncListContainer, "TOP", 0, 5)
+    whitelistTitle:SetText(iWRBase.Colors.iWR .. "Whitelist")
+
+    -- Update Sync List Display
+    function iWR:UpdateSyncListDisplay()
+        -- Clear Existing Children
+        for _, child in ipairs({syncListContainer:GetChildren()}) do
+            child:Hide()
+        end
+
+        local yOffset = -5
+        for index, name in ipairs(iWRSettings.SyncList or {}) do
+            -- Create a frame to hold the name and button
+            local entryFrame = CreateFrame("Frame", nil, syncListContainer)
+            entryFrame:SetSize(syncListContainer:GetWidth() - 20, 20)
+            entryFrame:SetPoint("TOPLEFT", syncListContainer, "TOPLEFT", 10, yOffset)
+
+            -- Display the name
+            local nameText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+            nameText:SetPoint("LEFT", entryFrame, "LEFT", 0, 0)
+            nameText:SetText(name)
+
+            -- Create the "Remove" button
+            local removeButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
+            removeButton:SetSize(60, 20)
+            removeButton:SetPoint("RIGHT", entryFrame, "RIGHT", 0, 0)
+            removeButton:SetText("Remove")
+            removeButton:SetScript("OnClick", function()
+                -- Remove the name from the sync list
+                table.remove(iWRSettings.SyncList, index)
+                -- Update the display
+                iWR:UpdateSyncListDisplay()
+            end)
+
+            yOffset = yOffset - 25
+        end
+    end
+    iWR:UpdateSyncListDisplay()
 
     -- ╭──────────────────────╮
     -- │      Backup Tab      │
@@ -1852,6 +1996,22 @@ function iWR:CreateOptionsPanel()
     -- ╭─────────────────────╮
     -- │      About Tab      │
     -- ╰─────────────────────╯
+    -- Debug Mode Category Title
+    local debugCategoryTitle = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    debugCategoryTitle:SetPoint("TOPLEFT", optionsPanel.About, "TOPLEFT", 20, -20)
+    debugCategoryTitle:SetText(iWRBase.Colors.iWR .. "Developer Settings")
+
+    -- Debug Mode Checkbox
+    local debugCheckbox = CreateFrame("CheckButton", "iWRDebugCheckbox", optionsPanel.About, "InterfaceOptionsCheckButtonTemplate")
+    debugCheckbox:SetPoint("TOPLEFT", debugCategoryTitle, "BOTTOMLEFT", 0, -5)
+    debugCheckbox.Text:SetText("Enable Debug Mode")
+    debugCheckbox:SetChecked(iWRSettings.DebugMode)
+    debugCheckbox:SetScript("OnClick", function(self)
+        local isDebugEnabled = self:GetChecked()
+        iWRSettings.DebugMode = isDebugEnabled
+        iWR:DebugMsg("Debug Mode is activated." .. iWRBase.Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
+    end)
+
     -- About Category Title
     local aboutCategoryTitle = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     aboutCategoryTitle:SetPoint("TOP", optionsPanel.About, "TOP", 0, -30)
@@ -1929,12 +2089,17 @@ function iWR:CreateOptionsPanel()
                 frame:SetShown(name == "General")
             end
         end),
-        Backup = iWR:CreateTab(panel, 2, "Backup", function()
+        Sync = iWR:CreateTab(panel, 2, "Sync", function()
+            for name, frame in pairs(optionsPanel) do
+                frame:SetShown(name == "Sync")
+            end
+        end),
+        Backup = iWR:CreateTab(panel, 3, "Backup", function()
             for name, frame in pairs(optionsPanel) do
                 frame:SetShown(name == "Backup")
             end
         end),
-        About = iWR:CreateTab(panel, 3, "About", function()
+        About = iWR:CreateTab(panel, 4, "About", function()
             for name, frame in pairs(optionsPanel) do
                 frame:SetShown(name == "About")
             end
@@ -1942,7 +2107,7 @@ function iWR:CreateOptionsPanel()
     }
 
     -- Tab Switching Logic
-    PanelTemplates_SetNumTabs(panel, 3)
+    PanelTemplates_SetNumTabs(panel, 4)
     PanelTemplates_SetTab(panel, 1)
 
     -- Register the options panel
@@ -1977,90 +2142,6 @@ function iWR:ModifyMenuForContext(menuType)
             -- Show the iWRPanel and pass the player's name
             iWR:MenuOpen(playerName)
         end)
-    end)
-end
-
--- Add Icons to LFG Browser
-local lastScanTime = 0
-local scanCooldown = 0.1 -- Cooldown time in seconds
-function iWR:AddChatIconToLFGResults()
-    local currentTime = GetTime() -- Get the current time in seconds
-    if currentTime - lastScanTime < scanCooldown then
-        iWR:DebugMsg("Skipping scan due to cooldown.",3)
-        return
-    end
-
-    lastScanTime = currentTime -- Update the last scan time
-
-    local scrollBox = LFGBrowseFrameScrollBox
-    if not scrollBox or not scrollBox.ScrollTarget then
-        iWR:DebugMsg("LFGBrowseFrameScrollBox or ScrollTarget not found.")
-        return
-    end
-
-    local children = {scrollBox.ScrollTarget:GetChildren()}
-
-    for _, child in ipairs(children) do
-        local nameText
-        for _, region in ipairs({child:GetRegions()}) do
-            if region and region:GetObjectType() == "FontString" and region:GetText() then
-                nameText = region
-                break
-            end
-        end
-
-        if nameText then
-            local playerName = nameText:GetText()
-            if playerName then
-                playerName = playerName:match("^[^-]+")
-            end
-
-            if playerName and iWRDatabase[playerName] then
-                if not child.chatIcon then
-                    iWR:DebugMsg("Adding icon for player: [" .. iWRDatabase[playerName][4] .. "].",3)
-                    child.chatIcon = child:CreateTexture(nil, "OVERLAY")
-                    child.chatIcon:SetSize(18, 18)
-                    child.chatIcon:SetPoint("LEFT", child, "LEFT", 154, 0)
-                end
-                child.chatIcon:SetTexture(iWRBase.ChatIcons[iWRDatabase[playerName][2]] or "Interface\\Icons\\INV_Misc_QuestionMark")
-                child.chatIcon:Show()
-            elseif child.chatIcon then
-                child.chatIcon:Hide()
-            end
-        else
-            iWR:DebugMsg("No FontString found for this child.",2)
-        end
-    end
-end
-
-local function HookLFGScrollBox()
-    if LFGBrowseFrameScrollBox then
-        -- Add throttling using a timer
-        local lastUpdate = 0
-        LFGBrowseFrame:HookScript("OnUpdate", function()
-            if GetTime() - lastUpdate >= scanCooldown then
-                iWR:AddChatIconToLFGResults()
-                lastUpdate = GetTime()
-            end
-        end)
-    else
-        iWR:DebugMsg("LFGBrowseFrameScrollBox not available yet.",2)
-    end
-end
-
-function iWR:InitializeLFGHook()
-    local frame = CreateFrame("Frame")
-    frame:RegisterEvent("ADDON_LOADED")
-    frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-
-    frame:SetScript("OnEvent", function(self, event, addon)
-        if event == "ADDON_LOADED" and addon == "Blizzard_LookingForGroupUI" then
-            HookLFGScrollBox()
-            frame:UnregisterEvent("ADDON_LOADED")
-         elseif event == "PLAYER_ENTERING_WORLD" then
-             C_Timer.After(2, HookLFGScrollBox)
-            frame:UnregisterEvent("PLAYER_ENTERING_WORLD")
-        end
     end)
 end
 

@@ -753,7 +753,7 @@ function iWR:PopulateDatabase()
     for playerName, data in pairs(iWRDatabase) do
         local category = data[2] or "Uncategorized"
         categorizedData[category] = categorizedData[category] or {}
-        table.insert(categorizedData[category], { name = data[4], data = data })
+        table.insert(categorizedData[category], { name = playerName, data = data })
     end
 
     -- Sort categories in the correct order

@@ -55,15 +55,6 @@ groupFrame:SetScript("OnEvent", function(_, event)
     end
 end)
 
--- ╭─────────────────────────────────────────────────────╮
--- │      Event and Function Handler for LFG Browser     │
--- ╰─────────────────────────────────────────────────────╯
-if iWRGameVersionName == "Classic Era" then
-    iWR:InitializeLFGHook()
-else
-    iWR:DebugMsg("LFG Browser integration is not functional in this version yet.")
-end
-
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Event Handlers                                │
 -- ├──────────────────────┬─────────────────────────────────────────────────────────╯

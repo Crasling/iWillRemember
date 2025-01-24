@@ -86,6 +86,9 @@ end
 if not iWRMemory then
     iWRMemory = {}
 end
+if not iWRSettings.SyncList then
+    iWRSettings.SyncList = {}
+end
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                     Colors                                     │
