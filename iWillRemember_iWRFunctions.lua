@@ -545,12 +545,6 @@ function iWR:SendFullDBUpdateToFriends()
     if iWRSettings.DataSharing ~= false then
         iWR:DebugMsg("Starting full database sync process...", 3)
 
-        -- Ensure LibCompress is available
-        if not LibCompress then
-            iWR:DebugMsg("LibCompress not found. Unable to compress data.", 1)
-            return
-        end
-
         -- Get the current time
         local currentTime, _ = iWR:GetCurrentTimeByHours()
 
@@ -565,28 +559,22 @@ function iWR:SendFullDBUpdateToFriends()
                 -- Filter database entries for the last 100 days
                 for k, v in pairs(iWRDatabase) do
                     local entryTime = v[3]
-                    local lastDays = 100 * 24
+                    local lastDays = 100 * 24 -- 100 days in hours
                     if currentTime - entryTime <= lastDays then
                         iWRDataCacheTable[k] = v
                     end
                 end
 
-                -- Serialize and compress the data
+                -- Serialize the data
                 local serializedData = iWR:Serialize(iWRDataCacheTable)
                 if not serializedData then
                     iWR:DebugMsg("Serialization failed. Could not send data to: " .. recipientName, 1)
                     return
                 end
 
-                local compressedData = LibCompress:Compress(serializedData)
-                if not compressedData then
-                    iWR:DebugMsg("Compression failed. Could not send data to: " .. recipientName, 1)
-                    return
-                end
-
                 -- Split data into chunks
                 local chunkSize = 240
-                local totalChunks = math.ceil(#compressedData / chunkSize)
+                local totalChunks = math.ceil(#serializedData / chunkSize)
 
                 -- Notify the recipient about the incoming chunks
                 iWR:SendCommMessage("iWRFullDBUpdate", "START:" .. totalChunks, "WHISPER", recipientName)
@@ -594,7 +582,7 @@ function iWR:SendFullDBUpdateToFriends()
 
                 -- Send chunks
                 for i = 1, totalChunks do
-                    local chunk = compressedData:sub((i - 1) * chunkSize + 1, i * chunkSize)
+                    local chunk = serializedData:sub((i - 1) * chunkSize + 1, i * chunkSize)
                     iWR:SendCommMessage("iWRFullDBUpdate", "CHUNK:" .. i .. ":" .. chunk, "WHISPER", recipientName)
                 end
 
@@ -609,6 +597,7 @@ function iWR:SendFullDBUpdateToFriends()
             end
         end
 
+        -- Handle SyncType logic
         if iWRSettings.SyncType == "Friends" then
             iWR:DebugMsg("Sync type is 'Friends'. Gathering online friends...", 3)
             for i = 1, C_FriendList.GetNumFriends() do
@@ -635,6 +624,8 @@ function iWR:SendFullDBUpdateToFriends()
         else
             iWR:DebugMsg("No recipients found to send the database to.", 2)
         end
+    else
+        iWR:DebugMsg("Data sharing is disabled. Sync process aborted.", 2)
     end
 end
 
@@ -770,36 +761,46 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
             if iWR.ReceivingChunks and chunkIndex and chunkData then
                 iWR.ReceivingChunks.received[chunkIndex] = chunkData
                 iWR.ReceivingChunks.count = iWR.ReceivingChunks.count + 1
-                iWR:DebugMsg("Received chunk " .. chunkIndex .. " from " .. sender, 3)
+                iWR:DebugMsg("Received chunk " .. chunkIndex .. "/" .. iWR.ReceivingChunks.total .. " from " .. sender, 3)
             end
 
         elseif message == "END" then
-            if iWR.ReceivingChunks and iWR.ReceivingChunks.count == iWR.ReceivingChunks.total then
-                local fullData = table.concat(iWR.ReceivingChunks.received)
-                local decompressedData = LibCompress:Decompress(fullData)
+            iWR:DebugMsg("Received all chunks from: " .. sender, 3)
+            if iWR.ReceivingChunks then
+                if iWR.ReceivingChunks.count == iWR.ReceivingChunks.total then
+                    -- Concatenate received chunks
+                    local fullData = table.concat(iWR.ReceivingChunks.received)
+                    iWR:DebugMsg("Concatenated data size: " .. tostring(#fullData), 3)
 
-                if decompressedData then
-                    local success, FullNotesTable = iWR:Deserialize(decompressedData)
-                    if success then
-                        for k, v in pairs(FullNotesTable) do
-                            if iWRDatabase[k] then
-                                if iWR:IsNeedToUpdate(iWRDatabase[k][3], v[3]) then
-                                    iWRDatabase[k] = v
-                                end
-                            else
+                    -- Deserialize the data
+                    local success, FullNotesTable = iWR:Deserialize(fullData)
+                    if not success then
+                        iWR:DebugMsg("Deserialization failed. Invalid data format.", 1)
+                        return
+                    end
+
+                    -- Update the database
+                    iWR:DebugMsg("Updating database with received data.", 3)
+                    for k, v in pairs(FullNotesTable) do
+                        if iWRDatabase[k] then
+                            if iWR:IsNeedToUpdate(iWRDatabase[k][3], v[3]) then
                                 iWRDatabase[k] = v
                             end
+                        else
+                            iWRDatabase[k] = v
                         end
-                        iWR:UpdateTargetFrame()
-                        iWR:PopulateDatabase()
-                        iWR:UpdateTooltip()
-                        iWR:DebugMsg("Successfully synced data from " .. sender, 3)
-                    else
-                        iWR:DebugMsg("Failed to deserialize data from " .. sender, 1)
                     end
+
+                    -- Final updates
+                    iWR:UpdateTargetFrame()
+                    iWR:PopulateDatabase()
+                    iWR:UpdateTooltip()
+                    iWR:DebugMsg("Successfully synced data from " .. sender .. ".", 3)
                 else
-                    iWR:DebugMsg("Decompression failed for data from " .. sender, 1)
+                    iWR:DebugMsg("Mismatch in received chunks count. Expected " .. iWR.ReceivingChunks.total .. " but got " .. iWR.ReceivingChunks.count .. ".", 2)
                 end
+            else
+                iWR:DebugMsg("No chunk data available to process.", 2)
             end
         end
     end
