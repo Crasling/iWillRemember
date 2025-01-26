@@ -756,36 +756,21 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
             return
         end
 
-        -- Decompress the message
-        local decompressedData, decompressionError = LibCompress:Decompress(message)
-        if not decompressedData then
-            iWR:DebugMsg("OnFullDBUpdate Decompression failed: " .. (decompressionError or "Unknown error"), 1)
-            return
-        end
-
-        iWR:DebugMsg("Decompression successful.", 3)
-
-        -- Deserialize the decompressed message
-        local success, FullNotesTable = iWR:Deserialize(decompressedData)
-        if not success then
-            iWR:DebugMsg("OnFullDBUpdate Deserialization failed. Invalid data received from " .. sender .. ".", 1)
-            iWR:DebugMsg("ErrorCode: " .. tostring(FullNotesTable), 1)
-            return
-        end
-
-        iWR:DebugMsg("Deserialization successful. Processing database updates...", 3)
-
-        -- Update the database with the received data
-        for k, v in pairs(FullNotesTable) do
-            if iWRDatabase[k] then
-                if iWR:IsNeedToUpdate((iWRDatabase[k][3]), v[3]) then
+        -- Deserialize the message
+        iWRSuccess, FullNotesTable = iWR:Deserialize(message)
+        if not iWRSuccess then
+            iWR:DebugMsg("OnFullDBUpdate Error.")
+        else
+            for k, v in pairs(FullNotesTable) do
+                if iWRDatabase[k] then
+                    if iWR:IsNeedToUpdate((iWRDatabase[k][3]), v[3]) then
+                        iWRDatabase[k] = v
+                    end
+                else
                     iWRDatabase[k] = v
                 end
-            else
-                iWRDatabase[k] = v
             end
         end
-
         -- Update UI components
         iWR:UpdateTargetFrame()
         iWR:PopulateDatabase()
