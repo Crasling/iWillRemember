@@ -572,42 +572,14 @@ function iWR:SendFullDBUpdateToFriends()
                     end
                 end
 
-                -- Serialize the filtered table
-                local iWRFullTableToSend = iWR:Serialize(iWRDataCacheTable)
-                if not iWRFullTableToSend then
-                    iWR:DebugMsg("Serialization failed. Could not send data to: " .. recipientName, 1)
-                    return
-                end
+                -- Serialize the full table
+                iWRFullTableToSend = iWR:Serialize(iWRDataCacheTable)
 
-                -- Determine the size of the serialized data
-                local dataSize = #iWRFullTableToSend
+                -- Send the serialized table to the friend
+                iWR:SendCommMessage("iWRFullDBUpdate", iWRFullTableToSend, "WHISPER", recipientName)
 
-                iWR:DebugMsg("Data size " .. dataSize .. " bytes. Compressing and encoding data...", 3)
-
-                -- Compress the serialized data
-                local compressedData = LibCompress:Compress(iWRFullTableToSend)
-                if not compressedData then
-                    iWR:DebugMsg("Compression failed. Could not send data to: " .. recipientName, 1)
-                    return
-                end
-
-                -- Encode the compressed data for transmission
-                local finalData = LibCompressAddonEncodeTable:Encode(compressedData)
-                if not finalData then
-                    iWR:DebugMsg("Encoding failed. Could not send data to: " .. recipientName, 1)
-                    return
-                end
-
-                iWR:DebugMsg("Compressed and encoded data size: " .. #finalData .. " bytes.", 3)
-
-                -- Send the data to the recipient
-                iWR:SendCommMessage("iWRFullDBUpdate", finalData, "WHISPER", recipientName)
-                iWR:DebugMsg("Database update sent to: " .. recipientName, 3)
-
-                -- Add the recipient's name to the list of sent targets
+                -- Add the friend's name to the list of recipients
                 table.insert(recipientsSentTo, recipientName)
-            else
-                iWR:DebugMsg("Attempted to send data, but recipient name was invalid.", 1)
             end
         end
 
