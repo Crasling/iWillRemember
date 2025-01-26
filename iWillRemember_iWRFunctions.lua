@@ -566,7 +566,8 @@ function iWR:SendFullDBUpdateToFriends()
                 -- Populate DataCacheTable with the full database, filtering entries within the last 30 days
                 for k, v in pairs(iWRDatabase) do
                     local entryTime = v[3] -- Assuming `v[3]` is the time value to compare
-                    if currentTime - entryTime <= 10 * 24 then -- 30 days in hours
+                    local lastDays = 14 * 24
+                    if currentTime - entryTime <= lastDays then
                         iWRDataCacheTable[k] = v
                     end
                 end

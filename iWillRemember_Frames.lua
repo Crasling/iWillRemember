@@ -350,7 +350,7 @@ iWRDatabaseFrame:EnableMouse(true)
 iWRDatabaseFrame:SetMovable(true)
 iWRDatabaseFrame:SetFrameStrata("MEDIUM")
 iWRDatabaseFrame:SetClampedToScreen(true)
-iWRDatabaseFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.9)
+iWRDatabaseFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.95)
 iWRDatabaseFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1)
 
 -- Add a shadow effect
