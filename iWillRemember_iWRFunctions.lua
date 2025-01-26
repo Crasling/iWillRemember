@@ -550,84 +550,91 @@ function iWR:SendFullDBUpdateToFriends()
             iWR:DebugMsg("LibCompress not found. Unable to compress data.", 1)
             return
         end
-        local LibCompressAddonEncodeTable = LibCompress:GetAddonEncodeTable()
 
         -- Get the current time
-        local currentTime, _ = iWR:GetCurrentTimeByHours() -- Assuming currentTime is in a comparable format
+        local currentTime, _ = iWR:GetCurrentTimeByHours()
 
         -- Initialize a table to track friends the data is sent to
         local recipientsSentTo = {}
 
-        -- Function to populate the data cache, process it, and send it
-        local function sendToRecipient(recipientName)
+        -- Function to send chunks
+        local function sendChunksToRecipient(recipientName)
             if recipientName then
                 wipe(iWRDataCacheTable)
 
-                -- Populate DataCacheTable with the full database, filtering entries within the last 30 days
+                -- Filter database entries for the last 100 days
                 for k, v in pairs(iWRDatabase) do
-                    local entryTime = v[3] -- Assuming `v[3]` is the time value to compare
-                    local lastDays = 14 * 24
+                    local entryTime = v[3]
+                    local lastDays = 100 * 24
                     if currentTime - entryTime <= lastDays then
                         iWRDataCacheTable[k] = v
                     end
                 end
 
-                -- Serialize the full table
-                iWRFullTableToSend = iWR:Serialize(iWRDataCacheTable)
+                -- Serialize and compress the data
+                local serializedData = iWR:Serialize(iWRDataCacheTable)
+                if not serializedData then
+                    iWR:DebugMsg("Serialization failed. Could not send data to: " .. recipientName, 1)
+                    return
+                end
 
-                -- Send the serialized table to the friend
-                iWR:SendCommMessage("iWRFullDBUpdate", iWRFullTableToSend, "WHISPER", recipientName)
+                local compressedData = LibCompress:Compress(serializedData)
+                if not compressedData then
+                    iWR:DebugMsg("Compression failed. Could not send data to: " .. recipientName, 1)
+                    return
+                end
 
-                -- Add the friend's name to the list of recipients
+                -- Split data into chunks
+                local chunkSize = 240
+                local totalChunks = math.ceil(#compressedData / chunkSize)
+
+                -- Notify the recipient about the incoming chunks
+                iWR:SendCommMessage("iWRFullDBUpdate", "START:" .. totalChunks, "WHISPER", recipientName)
+                iWR:DebugMsg("Notified recipient " .. recipientName .. " of " .. totalChunks .. " chunks.", 3)
+
+                -- Send chunks
+                for i = 1, totalChunks do
+                    local chunk = compressedData:sub((i - 1) * chunkSize + 1, i * chunkSize)
+                    iWR:SendCommMessage("iWRFullDBUpdate", "CHUNK:" .. i .. ":" .. chunk, "WHISPER", recipientName)
+                end
+
+                -- Notify completion
+                iWR:SendCommMessage("iWRFullDBUpdate", "END", "WHISPER", recipientName)
+                iWR:DebugMsg("Database chunks sent to: " .. recipientName, 3)
+
+                -- Add recipient to the list
                 table.insert(recipientsSentTo, recipientName)
+            else
+                iWR:DebugMsg("Invalid recipient name.", 1)
             end
         end
 
         if iWRSettings.SyncType == "Friends" then
             iWR:DebugMsg("Sync type is 'Friends'. Gathering online friends...", 3)
-            -- Loop through all friends in the friend list
             for i = 1, C_FriendList.GetNumFriends() do
                 local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
                 local friendName = friendInfo and friendInfo.name
                 local isOnline = friendInfo and friendInfo.connected
 
-                -- Ensure friendName is valid and the friend is online
                 if friendName and isOnline then
-                    iWR:DebugMsg("Online friend found: " .. friendName, 3)
-                    sendToRecipient(friendName)
-                elseif friendName then
-                    iWR:DebugMsg("Friend " .. friendName .. " is offline. Skipping...", 3)
-                else
-                    iWR:DebugMsg("No valid friend found at index " .. i .. ".", 1)
+                    sendChunksToRecipient(friendName)
                 end
             end
         elseif iWRSettings.SyncType == "Whitelist" then
             iWR:DebugMsg("Sync type is 'Whitelist'. Processing sync list...", 3)
-            -- Use the SyncList to determine whisper targets
             for _, syncEntry in ipairs(iWRSettings.SyncList or {}) do
-                local friendName = syncEntry.name
-
-                -- Ensure friendName is valid
-                if friendName then
-                    iWR:DebugMsg("Whitelist target found: " .. friendName, 3)
-                    sendToRecipient(friendName)
-                else
-                    iWR:DebugMsg("Invalid entry in whitelist. Name is missing.", 1)
+                if syncEntry.name then
+                    sendChunksToRecipient(syncEntry.name)
                 end
             end
-        else
-            iWR:DebugMsg("Invalid SyncType detected: " .. tostring(iWRSettings.SyncType), 1)
         end
 
-        -- Generate a single debug message with all recipients
+        -- Debug message
         if #recipientsSentTo > 0 then
-            local recipientListString = table.concat(recipientsSentTo, ", ")
-            iWR:DebugMsg("Full database synced with: " .. recipientListString, 3)
+            iWR:DebugMsg("Full database synced with: " .. table.concat(recipientsSentTo, ", "), 3)
         else
             iWR:DebugMsg("No recipients found to send the database to.", 2)
         end
-    else
-        iWR:DebugMsg("Data sharing is disabled. Sync process aborted.", 2)
     end
 end
 
@@ -728,55 +735,73 @@ end
 -- ╰────────────────────────────────────────────╯
 function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
     if iWRSettings.DataSharing ~= false then
-        -- Check if the sender is the player itself
         if GetUnitName("player", false) == sender then return end
 
-        iWR:DebugMsg("Database full update request received by " .. sender .. ".", 3)
+        iWR:DebugMsg("Database update received from: " .. sender, 3)
 
-        -- Verify the sender based on SyncType
+        -- Verify the sender
         local isValidSender = false
         if iWRSettings.SyncType == "Friends" then
-            iWR:DebugMsg("SyncType is 'Friends'. Verifying sender against friends list...", 3)
             isValidSender = iWR:VerifyFriend(sender)
         elseif iWRSettings.SyncType == "Whitelist" then
-            iWR:DebugMsg("SyncType is 'Whitelist'. Verifying sender against whitelist...", 3)
             for _, entry in ipairs(iWRSettings.SyncList or {}) do
                 if entry.name == sender and entry.type == "wow" then
                     isValidSender = true
                     break
                 end
             end
-        else
-            iWR:DebugMsg("OnFullDBUpdate Invalid SyncType detected: " .. tostring(iWRSettings.SyncType), 1)
-            return
         end
 
         if not isValidSender then
-            iWR:DebugMsg("Sender " .. sender .. " is not authorized to sync. Ignoring request.", 3)
+            iWR:DebugMsg("Unauthorized sender: " .. sender, 2)
             return
         end
 
-        -- Deserialize the message
-        iWRSuccess, FullNotesTable = iWR:Deserialize(message)
-        if not iWRSuccess then
-            iWR:DebugMsg("OnFullDBUpdate Error.")
-        else
-            for k, v in pairs(FullNotesTable) do
-                if iWRDatabase[k] then
-                    if iWR:IsNeedToUpdate((iWRDatabase[k][3]), v[3]) then
-                        iWRDatabase[k] = v
+        -- Handle chunked data
+        if message:match("^START:") then
+            local totalChunks = tonumber(message:match("^START:(%d+)"))
+            iWR.ReceivingChunks = { total = totalChunks, received = {}, count = 0 }
+            iWR:DebugMsg("Preparing to receive " .. totalChunks .. " chunks from " .. sender, 3)
+
+        elseif message:match("^CHUNK:") then
+            local chunkIndex, chunkData = message:match("^CHUNK:(%d+):(.*)")
+            chunkIndex = tonumber(chunkIndex)
+
+            if iWR.ReceivingChunks and chunkIndex and chunkData then
+                iWR.ReceivingChunks.received[chunkIndex] = chunkData
+                iWR.ReceivingChunks.count = iWR.ReceivingChunks.count + 1
+                iWR:DebugMsg("Received chunk " .. chunkIndex .. " from " .. sender, 3)
+            end
+
+        elseif message == "END" then
+            if iWR.ReceivingChunks and iWR.ReceivingChunks.count == iWR.ReceivingChunks.total then
+                local fullData = table.concat(iWR.ReceivingChunks.received)
+                local decompressedData = LibCompress:Decompress(fullData)
+
+                if decompressedData then
+                    local success, FullNotesTable = iWR:Deserialize(decompressedData)
+                    if success then
+                        for k, v in pairs(FullNotesTable) do
+                            if iWRDatabase[k] then
+                                if iWR:IsNeedToUpdate(iWRDatabase[k][3], v[3]) then
+                                    iWRDatabase[k] = v
+                                end
+                            else
+                                iWRDatabase[k] = v
+                            end
+                        end
+                        iWR:UpdateTargetFrame()
+                        iWR:PopulateDatabase()
+                        iWR:UpdateTooltip()
+                        iWR:DebugMsg("Successfully synced data from " .. sender, 3)
+                    else
+                        iWR:DebugMsg("Failed to deserialize data from " .. sender, 1)
                     end
                 else
-                    iWRDatabase[k] = v
+                    iWR:DebugMsg("Decompression failed for data from " .. sender, 1)
                 end
             end
         end
-        -- Update UI components
-        iWR:UpdateTargetFrame()
-        iWR:PopulateDatabase()
-        iWR:UpdateTooltip()
-
-        iWR:DebugMsg("Successfully synced full database data from: " .. sender .. ".", 3)
     end
 end
 
