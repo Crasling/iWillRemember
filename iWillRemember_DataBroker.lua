@@ -18,6 +18,7 @@ local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
         if button == "LeftButton" and IsShiftKeyDown() then
             iWR:DatabaseToggle()
             iWR:PopulateDatabase()
+            iWR:MenuClose()
         elseif button == "LeftButton" then
             iWR:MenuToggle()
         elseif button == "RightButton" then

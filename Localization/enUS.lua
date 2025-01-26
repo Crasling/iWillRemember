@@ -70,7 +70,7 @@ L["HelpDiscord"] = Colors.Yellow .."Help Discord: " .. Colors.iWR .. "Click the 
 
 L["iWRLoaded"] = Msg("iWillRemember")
 L["iWRWelcomeStart"] = Msg("Thank you ")
-L["iWRWelcomeEnd"] = Colors.iWR .. (" for being part of the development of iWillRemember, if you get into any issues please reach out on CurseForge in the comment section or Discord [https://discord.gg/8nnt25aw8B], can be copied from the Question Mark in the iWR menu.")
+L["iWRWelcomeEnd"] = Colors.iWR .. (" for being part of the development of iWillRemember, if you get into any issues please reach out on CurseForge in the comment section or Discord.")
 L["DiscordCopiedToNote"] = Msg("Discord link was copied to note field.")
 L["DiscordLink"] = ("https://discord.gg/8nnt25aw8B")
 L["InCombat"] = Msg("Cannot be used in combat.")
@@ -82,3 +82,5 @@ L["NameInputError"] = Msg("Unable to add player: The name contains invalid chara
 L["ClearInputError"] = Msg("Unable to clear player: The name contains invalid characters or is empty. Please remove spaces, numbers, or special symbols and try again.")
 L["GroupWarning"] = Msg((Colors.Red .. "Warning: Database Matches in group.|r"))
 L["NewVersionAvailable"] = Msg("A new version is available on CurseForge.")
+L["FullDBSucess"] = Msg("Database successfully sent to: ")
+L["FullDBRetrieve"] = Msg("Estimated time for full database retrieval: ")

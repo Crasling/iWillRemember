@@ -295,6 +295,7 @@ openDatabaseButton:SetPoint("TOP", iWRNameInput, "BOTTOM", -140, 45)
 openDatabaseButton:SetScript("OnClick", function()
     iWR:DatabaseToggle()
     iWR:PopulateDatabase()
+    iWR:MenuClose()
 end)
 
 -- Add an icon to the openDatabaseButton
@@ -452,7 +453,7 @@ shareDatabaseButton:SetScript("OnClick", function()
         OnAccept = function()
             -- Function to share the full database
             iWR:SendFullDBUpdateToFriends()
-            print(iWRBase.Colors.iWR .. "[iWR]: Full database synced to friends.")
+            print(iWRBase.Colors.iWR .. "[iWR]: Full database sync process initiated. This can take up to a few minutes.")
         end,
         timeout = 0,
         whileDead = true,
@@ -880,7 +881,22 @@ function iWR:PopulateDatabase()
                 editButton:SetPoint("LEFT", col3Frame, "LEFT", 10, 0)
                 editButton:SetText("Edit")
                 editButton:SetScript("OnClick", function()
-                    iWR:MenuOpen(databasekey)
+                    -- Check if databaseKey[7] matches the current realm
+                    if data[7] == iWRCurrentRealm then
+                        -- Open with data[4]
+                        iWR:MenuOpen(data[4])
+                        if data[1] ~= "" or data[1] ~= nil then
+                            iWRNoteInput:SetText(data[1])
+                        end
+                    else
+                        -- Open with data[4] concatenated with "-" and data[7]
+                        iWR:MenuOpen(data[4] .. "-" .. data[7])
+                        if data[1] ~= "" or data[1] ~= nil then
+                            iWRNoteInput:SetText(data[1])
+                        end
+                    end
+                    -- Close the database menu
+                    iWR:DatabaseClose()
                 end)
                 col3Frame.editButton = editButton
 
