@@ -543,50 +543,120 @@ end
 -- ╰──────────────────────────────────────────────────────╯
 function iWR:SendFullDBUpdateToFriends()
     if iWRSettings.DataSharing ~= false then
+        iWR:DebugMsg("Starting full database sync process...", 3)
+
+        -- Ensure LibCompress is available
+        if not LibCompress then
+            iWR:DebugMsg("LibCompress not found. Unable to compress data.", 1)
+            return
+        end
+        local LibCompressAddonEncodeTable = LibCompress:GetAddonEncodeTable()
+
+        -- Get the current time
+        local currentTime, _ = iWR:GetCurrentTimeByHours() -- Assuming currentTime is in a comparable format
+
         -- Initialize a table to track friends the data is sent to
-        local friendsSentTo = {}
+        local recipientsSentTo = {}
 
-        -- Loop through all friends in the friend list
-        for i = 1, C_FriendList.GetNumFriends() do
-            -- Get friend's info (which includes friendName and online status)
-            local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-            local friendName = friendInfo and friendInfo.name
-            local isOnline = friendInfo and friendInfo.connected
-
-            -- Ensure friendName is valid and the friend is online before sending
-            if friendName and isOnline then
+        -- Function to populate the data cache, process it, and send it
+        local function sendToRecipient(recipientName)
+            if recipientName then
                 wipe(iWRDataCacheTable)
 
-                -- Populate DataCacheTable with the full database
+                -- Populate DataCacheTable with the full database, filtering entries within the last 30 days
                 for k, v in pairs(iWRDatabase) do
-                    iWRDataCacheTable[k] = v
+                    local entryTime = v[3] -- Assuming `v[3]` is the time value to compare
+                    if currentTime - entryTime <= 10 * 24 then -- 30 days in hours
+                        iWRDataCacheTable[k] = v
+                    end
                 end
 
-                -- Serialize the full table
-                iWRFullTableToSend = iWR:Serialize(iWRDataCacheTable)
+                -- Serialize the filtered table
+                local iWRFullTableToSend = iWR:Serialize(iWRDataCacheTable)
+                if not iWRFullTableToSend then
+                    iWR:DebugMsg("Serialization failed. Could not send data to: " .. recipientName, 1)
+                    return
+                end
 
-                -- Send the serialized table to the friend
-                iWR:SendCommMessage("iWRFullDBUpdate", iWRFullTableToSend, "WHISPER", friendName)
+                -- Determine the size of the serialized data
+                local dataSize = #iWRFullTableToSend
 
-                -- Add the friend's name to the list of recipients
-                table.insert(friendsSentTo, friendName)
-            elseif friendName and not isOnline then
-                -- Nothing
+                iWR:DebugMsg("Data size " .. dataSize .. " bytes. Compressing and encoding data...", 3)
+
+                -- Compress the serialized data
+                local compressedData = LibCompress:Compress(iWRFullTableToSend)
+                if not compressedData then
+                    iWR:DebugMsg("Compression failed. Could not send data to: " .. recipientName, 1)
+                    return
+                end
+
+                -- Encode the compressed data for transmission
+                local finalData = LibCompressAddonEncodeTable:Encode(compressedData)
+                if not finalData then
+                    iWR:DebugMsg("Encoding failed. Could not send data to: " .. recipientName, 1)
+                    return
+                end
+
+                iWR:DebugMsg("Compressed and encoded data size: " .. #finalData .. " bytes.", 3)
+
+                -- Send the data to the recipient
+                iWR:SendCommMessage("iWRFullDBUpdate", finalData, "WHISPER", recipientName)
+                iWR:DebugMsg("Database update sent to: " .. recipientName, 3)
+
+                -- Add the recipient's name to the list of sent targets
+                table.insert(recipientsSentTo, recipientName)
             else
-                iWR:DebugMsg("No valid friend found at index " .. i .. ".", 1)
+                iWR:DebugMsg("Attempted to send data, but recipient name was invalid.", 1)
             end
         end
 
-        -- Generate a single debug message with all recipients
-        if #friendsSentTo > 0 then
-            local friendListString = table.concat(friendsSentTo, ", ")
-            iWR:DebugMsg("Full database synced with: " .. friendListString, 3)
+        if iWRSettings.SyncType == "Friends" then
+            iWR:DebugMsg("Sync type is 'Friends'. Gathering online friends...", 3)
+            -- Loop through all friends in the friend list
+            for i = 1, C_FriendList.GetNumFriends() do
+                local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+                local friendName = friendInfo and friendInfo.name
+                local isOnline = friendInfo and friendInfo.connected
+
+                -- Ensure friendName is valid and the friend is online
+                if friendName and isOnline then
+                    iWR:DebugMsg("Online friend found: " .. friendName, 3)
+                    sendToRecipient(friendName)
+                elseif friendName then
+                    iWR:DebugMsg("Friend " .. friendName .. " is offline. Skipping...", 3)
+                else
+                    iWR:DebugMsg("No valid friend found at index " .. i .. ".", 1)
+                end
+            end
+        elseif iWRSettings.SyncType == "Whitelist" then
+            iWR:DebugMsg("Sync type is 'Whitelist'. Processing sync list...", 3)
+            -- Use the SyncList to determine whisper targets
+            for _, syncEntry in ipairs(iWRSettings.SyncList or {}) do
+                local friendName = syncEntry.name
+
+                -- Ensure friendName is valid
+                if friendName then
+                    iWR:DebugMsg("Whitelist target found: " .. friendName, 3)
+                    sendToRecipient(friendName)
+                else
+                    iWR:DebugMsg("Invalid entry in whitelist. Name is missing.", 1)
+                end
+            end
         else
-            iWR:DebugMsg("No online friends found to send the database to.", 2)
+            iWR:DebugMsg("Invalid SyncType detected: " .. tostring(iWRSettings.SyncType), 1)
         end
+
+        -- Generate a single debug message with all recipients
+        if #recipientsSentTo > 0 then
+            local recipientListString = table.concat(recipientsSentTo, ", ")
+            iWR:DebugMsg("Full database synced with: " .. recipientListString, 3)
+        else
+            iWR:DebugMsg("No recipients found to send the database to.", 2)
+        end
+    else
+        iWR:DebugMsg("Data sharing is disabled. Sync process aborted.", 2)
     end
 end
-
 
 -- ╭────────────────────────────────────────╮
 -- │      Function: Add new line if long    │
@@ -687,31 +757,67 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
     if iWRSettings.DataSharing ~= false then
         -- Check if the sender is the player itself
         if GetUnitName("player", false) == sender then return end
-        iWR:DebugMsg("Database full update request successfully received by " .. sender .. ".",3)
-        -- If the sender is not a friend, skip processing
-        if not iWR:VerifyFriend(sender) then
-            iWR:DebugMsg("Sender " .. sender .. " is not on the friends list. Ignoring sync request.",3)
-            return
-        end
-        -- Deserialize the message
-        iWRSuccess, FullNotesTable = iWR:Deserialize(message)
-        if not iWRSuccess then
-            iWR:DebugMsg("OnFullDBUpdate Error.")
-        else
-            for k, v in pairs(FullNotesTable) do
-                if iWRDatabase[k] then
-                    if iWR:IsNeedToUpdate((iWRDatabase[k][3]), v[3]) then
-                        iWRDatabase[k] = v
-                    end
-                else
-                    iWRDatabase[k] = v
+
+        iWR:DebugMsg("Database full update request received by " .. sender .. ".", 3)
+
+        -- Verify the sender based on SyncType
+        local isValidSender = false
+        if iWRSettings.SyncType == "Friends" then
+            iWR:DebugMsg("SyncType is 'Friends'. Verifying sender against friends list...", 3)
+            isValidSender = iWR:VerifyFriend(sender)
+        elseif iWRSettings.SyncType == "Whitelist" then
+            iWR:DebugMsg("SyncType is 'Whitelist'. Verifying sender against whitelist...", 3)
+            for _, entry in ipairs(iWRSettings.SyncList or {}) do
+                if entry.name == sender and entry.type == "wow" then
+                    isValidSender = true
+                    break
                 end
             end
-            iWR:UpdateTargetFrame()
-            iWR:PopulateDatabase()
-            iWR:UpdateTooltip()
-            iWR:DebugMsg("Successfully synced full database data from:  " .. sender .. ".",3)
+        else
+            iWR:DebugMsg("Invalid SyncType detected: " .. tostring(iWRSettings.SyncType), 1)
+            return
         end
+
+        if not isValidSender then
+            iWR:DebugMsg("Sender " .. sender .. " is not authorized to sync. Ignoring request.", 3)
+            return
+        end
+
+        -- Decompress the message
+        local decompressedData, decompressionError = LibCompress:Decompress(message)
+        if not decompressedData then
+            iWR:DebugMsg("Decompression failed: " .. (decompressionError or "Unknown error"), 1)
+            return
+        end
+
+        iWR:DebugMsg("Decompression successful.", 3)
+
+        -- Deserialize the decompressed message
+        local success, FullNotesTable = iWR:Deserialize(decompressedData)
+        if not success then
+            iWR:DebugMsg("Deserialization failed. Invalid data received from " .. sender .. ".", 1)
+            return
+        end
+
+        iWR:DebugMsg("Deserialization successful. Processing database updates...", 3)
+
+        -- Update the database with the received data
+        for k, v in pairs(FullNotesTable) do
+            if iWRDatabase[k] then
+                if iWR:IsNeedToUpdate((iWRDatabase[k][3]), v[3]) then
+                    iWRDatabase[k] = v
+                end
+            else
+                iWRDatabase[k] = v
+            end
+        end
+
+        -- Update UI components
+        iWR:UpdateTargetFrame()
+        iWR:PopulateDatabase()
+        iWR:UpdateTooltip()
+
+        iWR:DebugMsg("Successfully synced full database data from: " .. sender .. ".", 3)
     end
 end
 
@@ -1786,103 +1892,112 @@ function iWR:CreateOptionsPanel()
     UIDropDownMenu_Initialize(syncTypeDropdown, InitializeDropdown)
 
     -- Friend List Title
-    local friendListTitle = optionsPanel.Sync:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local friendListTitle = optionsPanel.Sync:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     friendListTitle:SetPoint("TOPLEFT", syncTypeDropdown, "BOTTOMLEFT", 16, -20)
     friendListTitle:SetText(iWRBase.Colors.iWR .. "Friend List:")
 
-    -- Dropdown Menu for Adding Friends
-    local friendDropdownMenu = CreateFrame("Frame", "iWRFriendDropdownMenu", optionsPanel.Sync, "UIDropDownMenuTemplate")
+    -- Scrollable Dropdown Menu for Adding Friends
+    local friendDropdownMenu = CreateFrame("Frame", "iWRFriendDropdownMenu", optionsPanel.Sync, "BackdropTemplate")
     friendDropdownMenu:SetPoint("TOPLEFT", friendListTitle, "BOTTOMLEFT", -10, -20)
-    UIDropDownMenu_SetWidth(friendDropdownMenu, 200)
-    UIDropDownMenu_SetText(friendDropdownMenu, "Select a Friend")
+    friendDropdownMenu:SetSize(250, 300)
+    friendDropdownMenu:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        edgeSize = 12,
+    })
 
-    -- Populate Dropdown Menu
-    local function PopulateFriendDropdown()
+    local friendScrollFrame = CreateFrame("ScrollFrame", "iWRFriendScrollFrame", friendDropdownMenu, "UIPanelScrollFrameTemplate")
+    friendScrollFrame:SetPoint("TOPLEFT", 5, -5)
+    friendScrollFrame:SetPoint("BOTTOMRIGHT", -25, 5)
+
+    local friendScrollChild = CreateFrame("Frame", nil, friendScrollFrame)
+    friendScrollChild:SetSize(200, 400)
+    friendScrollFrame:SetScrollChild(friendScrollChild)
+
+    -- Populate Scrollable Friend List with Icons and Add Button
+    local function PopulateScrollableFriendList()
+        -- Clear existing children
+        for _, child in ipairs({friendScrollChild:GetChildren()}) do
+            child:Hide()
+        end
+
+        local yOffset = -5
         local friendsList = {}
         local numFriends = C_FriendList.GetNumFriends()
-        local numBNetFriends = BNGetNumFriends()
 
         -- WoW Friends
         for i = 1, numFriends do
             local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
             if friendInfo and friendInfo.name then
-                table.insert(friendsList, friendInfo.name)
-            end
-        end
-
-        -- Battle.net Friends
-        for i = 1, numBNetFriends do
-            local _, accountName, _, _, _, _, isOnline = BNGetFriendInfo(i)
-            if isOnline and accountName then
-                table.insert(friendsList, "Bnet ID: " .. accountName)
-            end
-        end
-
-        local menuItems = {}
-        for _, name in ipairs(friendsList) do
-            table.insert(menuItems, {
-                text = name,
-                value = name,
-                func = function(self)
-                    if not iWRSettings.SyncList then iWRSettings.SyncList = {} end
-                    if not tContains(iWRSettings.SyncList, self.value) then
-                        table.insert(iWRSettings.SyncList, self.value)
-                        iWR:UpdateSyncListDisplay()
+                -- Avoid adding friends already in the whitelist
+                local isInWhitelist = false
+                for _, entry in ipairs(iWRSettings.SyncList or {}) do
+                    if entry.name == friendInfo.name then
+                        isInWhitelist = true
+                        break
                     end
-                end,
-                notCheckable = true,
-            })
+                end
+
+                if not isInWhitelist then
+                    table.insert(friendsList, { name = friendInfo.name, type = "wow" })
+                end
+            end
         end
 
-        return menuItems
+        for _, friend in ipairs(friendsList) do
+            -- Create a frame for each entry
+            local entryFrame = CreateFrame("Frame", nil, friendScrollChild)
+            entryFrame:SetSize(200, 20)
+            entryFrame:SetPoint("TOPLEFT", friendScrollChild, "TOPLEFT", 10, yOffset)
+
+            -- Display the icon
+            local icon = entryFrame:CreateTexture(nil, "OVERLAY")
+            icon:SetSize(16, 16)
+            icon:SetPoint("LEFT", entryFrame, "LEFT", 0, 0)
+            icon:SetTexture("Interface\\Icons\\INV_Misc_GroupNeedMore")
+
+            -- Display the name
+            local nameText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+            nameText:SetPoint("LEFT", icon, "RIGHT", 5, 0)
+            nameText:SetText(friend.name)
+
+            -- Add button
+            local addButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
+            addButton:SetSize(50, 20)
+            addButton:SetPoint("RIGHT", entryFrame, "RIGHT", 0, 0)
+            addButton:SetText("Add")
+            addButton:SetScript("OnClick", function()
+                if not iWRSettings.SyncList then iWRSettings.SyncList = {} end
+                -- Add the friend to the whitelist
+                table.insert(iWRSettings.SyncList, { name = friend.name, type = friend.type })
+                iWR:UpdateSyncListDisplay()
+                PopulateScrollableFriendList() -- Refresh the friend list to remove the added friend
+            end)
+
+            yOffset = yOffset - 25
+        end
+        friendScrollChild:SetHeight(math.abs(yOffset))
     end
 
-    -- Initialize Dropdown Menu
-    UIDropDownMenu_Initialize(friendDropdownMenu, function(self, level, menuList)
-        local info = UIDropDownMenu_CreateInfo()
-        for _, item in ipairs(PopulateFriendDropdown()) do
-            info.text = item.text
-            info.value = item.value
-            info.func = item.func
-            UIDropDownMenu_AddButton(info, level)
-        end
-    end)
-
-    -- Add Name Button and Input
-    local addNameInput = CreateFrame("EditBox", nil, optionsPanel.Sync, "InputBoxTemplate")
-    addNameInput:SetSize(150, 25)
-    addNameInput:SetPoint("TOPLEFT", friendDropdownMenu, "BOTTOMLEFT", 0, -10)
-    addNameInput:SetAutoFocus(false)
-    addNameInput:SetText("Enter Name")
-
-    local addNameButton = CreateFrame("Button", nil, optionsPanel.Sync, "UIPanelButtonTemplate")
-    addNameButton:SetSize(100, 25)
-    addNameButton:SetPoint("LEFT", addNameInput, "RIGHT", 10, 0)
-    addNameButton:SetText("Add Name")
-    addNameButton:SetScript("OnClick", function()
-        local customName = addNameInput:GetText()
-        if customName and customName ~= "" then
-            if not iWRSettings.SyncList then iWRSettings.SyncList = {} end
-            if not tContains(iWRSettings.SyncList, customName) then
-                table.insert(iWRSettings.SyncList, customName)
-                iWR:UpdateSyncListDisplay()
-            end
-            addNameInput:SetText("")
-        end
-    end)
+    -- Call the function to populate the friend list
+    PopulateScrollableFriendList()
 
     -- Sync List Container
     local syncListContainer = CreateFrame("Frame", nil, optionsPanel.Sync, "BackdropTemplate")
     syncListContainer:SetSize(300, 200)
     syncListContainer:SetPoint("TOPRIGHT", optionsPanel.Sync, "TOPRIGHT", -20, -50)
-    syncListContainer:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background" })
+    syncListContainer:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        edgeSize = 12,
+    })
 
     -- Whitelist Title
-    local whitelistTitle = optionsPanel.Sync:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local whitelistTitle = syncListContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
     whitelistTitle:SetPoint("BOTTOM", syncListContainer, "TOP", 0, 5)
     whitelistTitle:SetText(iWRBase.Colors.iWR .. "Whitelist")
 
-    -- Update Sync List Display
+    -- Update Sync List Display with Icons
     function iWR:UpdateSyncListDisplay()
         -- Clear Existing Children
         for _, child in ipairs({syncListContainer:GetChildren()}) do
@@ -1890,16 +2005,24 @@ function iWR:CreateOptionsPanel()
         end
 
         local yOffset = -5
-        for index, name in ipairs(iWRSettings.SyncList or {}) do
-            -- Create a frame to hold the name and button
+        for index, syncEntry in ipairs(iWRSettings.SyncList or {}) do
+            local entryName, entryType = syncEntry.name, syncEntry.type
+
+            -- Create a frame to hold the name, icon, and button
             local entryFrame = CreateFrame("Frame", nil, syncListContainer)
             entryFrame:SetSize(syncListContainer:GetWidth() - 20, 20)
             entryFrame:SetPoint("TOPLEFT", syncListContainer, "TOPLEFT", 10, yOffset)
 
+            -- Display the icon
+            local icon = entryFrame:CreateTexture(nil, "OVERLAY")
+            icon:SetSize(16, 16)
+            icon:SetPoint("LEFT", entryFrame, "LEFT", 0, 0)
+            icon:SetTexture("Interface\\Icons\\INV_Misc_GroupNeedMore")
+
             -- Display the name
             local nameText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-            nameText:SetPoint("LEFT", entryFrame, "LEFT", 0, 0)
-            nameText:SetText(name)
+            nameText:SetPoint("LEFT", icon, "RIGHT", 5, 0)
+            nameText:SetText(entryName)
 
             -- Create the "Remove" button
             local removeButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
@@ -1907,10 +2030,11 @@ function iWR:CreateOptionsPanel()
             removeButton:SetPoint("RIGHT", entryFrame, "RIGHT", 0, 0)
             removeButton:SetText("Remove")
             removeButton:SetScript("OnClick", function()
-                -- Remove the name from the sync list
+                -- Remove the entry from the sync list
                 table.remove(iWRSettings.SyncList, index)
                 -- Update the display
                 iWR:UpdateSyncListDisplay()
+                PopulateScrollableFriendList() -- Refresh the friend list to re-add the removed friend
             end)
 
             yOffset = yOffset - 25
@@ -2121,14 +2245,20 @@ end
 -- Function to modify the right-click menu for a given context
 function iWR:ModifyMenuForContext(menuType)
     Menu.ModifyMenu(menuType, function(ownerRegion, rootDescription, contextData)
+        -- Exit early if the LFG browser is visible
+        if LFGBrowseFrame and LFGBrowseFrame:IsVisible() and menuType == "MENU_UNIT_FRIEND" then
+            iWR:DebugMsg("Skipping menu modification because LFG browser is visible.", 2)
+            return
+        end
+
         -- Retrieve the name of the player for whom the menu is opened
         local playerName = contextData and contextData.name
 
         -- Check if playerName is available and valid
         if playerName then
-            iWR:DebugMsg("Right-click menu opened for: [" .. playerName .. "].",3)
+            iWR:DebugMsg("Right-click menu opened for: [" .. playerName .. "].", 3)
         else
-            iWR:DebugMsg("No player name found for menu type: [" .. menuType .. "].",2)
+            iWR:DebugMsg("No player name found for menu type: [" .. menuType .. "].", 2)
         end
 
         -- Create a divider to visually separate this custom section from other menu items

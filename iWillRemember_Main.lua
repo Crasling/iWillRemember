@@ -22,6 +22,7 @@ iWR = LibStub("AceAddon-3.0"):NewAddon("iWR", "AceSerializer-3.0", "AceComm-3.0"
 L = LibStub("AceLocale-3.0"):GetLocale("iWR")
 LDBroker = LibStub("LibDataBroker-1.1")
 LDBIcon = LibStub("LibDBIcon-1.0")
+LibCompress = LibStub("LibCompress")
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                     Variables                                  │

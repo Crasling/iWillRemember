@@ -131,7 +131,10 @@
         "BackpackTokenFrame",
         "CharacterFrameInsetRight",
         "InspectModelFrame",
-        "ID"
+        "ID",
+        "UIDropDownMenu_ClearAll",
+        "BNGetNumFriendGameAccounts",
+        "BNGetFriendInfo"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {
