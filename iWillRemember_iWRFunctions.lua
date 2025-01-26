@@ -774,7 +774,7 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
                 end
             end
         else
-            iWR:DebugMsg("Invalid SyncType detected: " .. tostring(iWRSettings.SyncType), 1)
+            iWR:DebugMsg("OnFullDBUpdate Invalid SyncType detected: " .. tostring(iWRSettings.SyncType), 1)
             return
         end
 
@@ -786,7 +786,7 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
         -- Decompress the message
         local decompressedData, decompressionError = LibCompress:Decompress(message)
         if not decompressedData then
-            iWR:DebugMsg("Decompression failed: " .. (decompressionError or "Unknown error"), 1)
+            iWR:DebugMsg("OnFullDBUpdate Decompression failed: " .. (decompressionError or "Unknown error"), 1)
             return
         end
 
@@ -795,7 +795,8 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
         -- Deserialize the decompressed message
         local success, FullNotesTable = iWR:Deserialize(decompressedData)
         if not success then
-            iWR:DebugMsg("Deserialization failed. Invalid data received from " .. sender .. ".", 1)
+            iWR:DebugMsg("OnFullDBUpdate Deserialization failed. Invalid data received from " .. sender .. ".", 1)
+            iWR:DebugMsg("ErrorCode: " .. tostring(FullNotesTable), 1)
             return
         end
 
@@ -840,7 +841,8 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
         -- Deserialize the message
         iWRSuccess, iWRTempTable = iWR:Deserialize(message)
         if not iWRSuccess then
-            iWR:DebugMsg("OnNewDBUpdate Error.")
+            iWR:DebugMsg("OnNewDBUpdate Deserialization failed. Invalid data received from " .. sender .. ".", 1)
+            iWR:DebugMsg("ErrorCode: " .. tostring(iWRTempTable), 1)
         else
             for k, v in pairs(iWRTempTable) do
                 iWRDatabase[k] = v

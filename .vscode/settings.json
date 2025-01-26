@@ -134,7 +134,8 @@
         "ID",
         "UIDropDownMenu_ClearAll",
         "BNGetNumFriendGameAccounts",
-        "BNGetFriendInfo"
+        "BNGetFriendInfo",
+        "LibCompress"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {
