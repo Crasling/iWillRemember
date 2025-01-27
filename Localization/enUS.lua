@@ -82,5 +82,6 @@ L["NameInputError"] = Msg("Unable to add player: The name contains invalid chara
 L["ClearInputError"] = Msg("Unable to clear player: The name contains invalid characters or is empty. Please remove spaces, numbers, or special symbols and try again.")
 L["GroupWarning"] = Msg((Colors.Red .. "Warning: Database Matches in group.|r"))
 L["NewVersionAvailable"] = Msg("A new version is available on CurseForge.")
-L["FullDBSucess"] = Msg("Database successfully sent to: ")
+L["FullDBSendSuccess"] = Msg("Database successfully sent to: ")
 L["FullDBRetrieve"] = Msg("Estimated time for full database retrieval: ")
+L["FullDBRetrieveSuccess"] = Msg("Successfully synced data from: ")

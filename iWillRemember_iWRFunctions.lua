@@ -632,7 +632,7 @@ function iWR:SendFullDBUpdateToFriends()
 
         -- Debug message
         if #recipientsSentTo > 0 then
-            iWR:DebugMsg(L["FullDBSucess"] .. table.concat(recipientsSentTo, ", "), 3)
+            iWR:DebugMsg(L["FullDBSendSuccess"] .. table.concat(recipientsSentTo, ", "), 3)
         else
             iWR:DebugMsg("No recipients found to send the database to.", 2)
         end
@@ -820,7 +820,7 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
                     iWR:UpdateTargetFrame()
                     iWR:PopulateDatabase()
                     iWR:UpdateTooltip()
-                    iWR:DebugMsg("Successfully synced data from " .. sender .. ".", 3)
+                    print(L["FullDBRetrieveSuccess"] .. sender .. ".", 3)
                 else
                     iWR:DebugMsg("Deserialization failed.", 1)
                 end
@@ -1693,6 +1693,7 @@ function iWR:CreateNote(Name, Note, Type)
 
     -- Determine display name with color
     local dbName = ""
+    local noClass = false
     local colorCode = string.match(Name, "|c%x%x%x%x%x%x%x%x")
     if colorCode then
         dbName = colorCode .. capitalizedName
@@ -1702,6 +1703,7 @@ function iWR:CreateNote(Name, Note, Type)
             dbName = targetClass and (iWRBase.Colors.Classes[targetClass] .. capitalizedName)
         else
             dbName = iWRBase.Colors.Gray .. capitalizedName
+            noClass = true
         end
     end
 
@@ -1739,9 +1741,17 @@ function iWR:CreateNote(Name, Note, Type)
     -- Print confirmation message
     local updateMessage = playerUpdate and L["CharNoteUpdated"] or L["CharNoteCreated"]
     if capitalizedRealm ~= iWRCurrentRealm then
-        print(L["CharNoteStart"] .. dbName .. iWRBase.Colors.Reset .. "-" .. capitalizedRealm .. updateMessage)
+        if noClass then
+            print(L["CharNoteStart"] .. dbName .. iWRBase.Colors.Reset .. "-" .. capitalizedRealm .. updateMessage .. iWRBase.Colors.iWR .. " Class information is missing, will be added the next time player is targeted.")
+        else
+            print(L["CharNoteStart"] .. dbName .. iWRBase.Colors.Reset .. "-" .. capitalizedRealm .. updateMessage)
+        end
     else
-        print(L["CharNoteStart"] .. dbName .. updateMessage)
+        if noClass then
+            print(L["CharNoteStart"] .. dbName .. updateMessage .. iWRBase.Colors.iWR .. " Class information is missing, will be added the next time player is targeted.")
+        else
+            print(L["CharNoteStart"] .. dbName .. updateMessage)
+        end
     end
 end
 
