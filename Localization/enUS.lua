@@ -60,6 +60,7 @@ L["MinimapButtonRightClick"] = (Colors.Yellow .. "Right Click: " .. Colors.Orang
 L["CharNoteCreated"] = Colors.iWR .."] added to the iWR Database.|r"
 L["CharNoteUpdated"] = Colors.iWR .."] was updated in the iWR Database.|r"
 L["CharNoteRemoved"] = Colors.iWR .."] was removed from the iWR Database.|r"
+L["CharNoteClassMissing"] = " Class information is missing, will be added the next time player is targeted."
 L["CharNoteColorUpdate"] = Colors.iWR .."] was found with missing class information in the iWR Database. Class color was added to the iWR Database."
 
 L["HelpSync"] = Colors.Yellow .. "How to sync: " .. Colors.iWR .. "Add your friends in the social panel in-game, It will not share to Battle.Net friends(REAL ID), only the friends added to the World of Warcraft friendslist, and you both need to add each other for sync to go through."

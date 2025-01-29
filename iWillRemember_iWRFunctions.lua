@@ -1742,13 +1742,13 @@ function iWR:CreateNote(Name, Note, Type)
     local updateMessage = playerUpdate and L["CharNoteUpdated"] or L["CharNoteCreated"]
     if capitalizedRealm ~= iWRCurrentRealm then
         if noClass then
-            print(L["CharNoteStart"] .. dbName .. iWRBase.Colors.Reset .. "-" .. capitalizedRealm .. updateMessage .. iWRBase.Colors.iWR .. " Class information is missing, will be added the next time player is targeted.")
+            print(L["CharNoteStart"] .. dbName .. iWRBase.Colors.Reset .. "-" .. capitalizedRealm .. updateMessage .. iWRBase.Colors.iWR .. L["CharNoteClassMissing"])
         else
             print(L["CharNoteStart"] .. dbName .. iWRBase.Colors.Reset .. "-" .. capitalizedRealm .. updateMessage)
         end
     else
         if noClass then
-            print(L["CharNoteStart"] .. dbName .. updateMessage .. iWRBase.Colors.iWR .. " Class information is missing, will be added the next time player is targeted.")
+            print(L["CharNoteStart"] .. dbName .. updateMessage .. iWRBase.Colors.iWR .. L["CharNoteClassMissing"])
         else
             print(L["CharNoteStart"] .. dbName .. updateMessage)
         end
@@ -1784,6 +1784,7 @@ function iWR:ModifyMenuForContext(menuType)
         rootDescription:CreateButton("Create Note", function()
             -- Show the iWRPanel and pass the player's name
             iWR:MenuOpen(playerName)
+            iWR:DatabaseClose()
         end)
     end)
 end

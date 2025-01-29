@@ -21,6 +21,7 @@ local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
             iWR:MenuClose()
         elseif button == "LeftButton" then
             iWR:MenuToggle()
+            iWR:DatabaseClose()
         elseif button == "RightButton" then
             Settings.OpenToCategory(optionsCategory:GetID())
         end
