@@ -300,12 +300,20 @@ function iWR:CheckGroupMembersAgainstDatabase()
         end
     end
 
-    -- Show a notification popup if any matches were found
+    -- Show a notification popup and print a message if any matches were found
     if #matches > 0 then
         iWR:ShowNotificationPopup(matches)
+
+        -- Construct chat message
+        local chatMessage = L["GroupWarning"]
+        for _, match in ipairs(matches) do
+            chatMessage = chatMessage .. match.name .. " (" .. iWRBase.Types[match.relation] .. "), "
+        end
+
+        -- Print message to chat
+        print(chatMessage:sub(1, -3)) -- Remove the trailing comma
     end
 end
-
 
 -- ╭────────────────────────────────────────╮
 -- │      Function: Update the Tooltip      │
@@ -344,35 +352,54 @@ end
 -- ╰────────────────────────────────────────────────────────╯
 function iWR:SendRemoveRequestToFriends(name)
     iWR:UpdateTargetFrame()
+    
     if iWRSettings.DataSharing ~= false then
         local sentTo = {} -- Table to store friend names
-        -- Loop through all friends in the friend list
-        for i = 1, C_FriendList.GetNumFriends() do
-            -- Get friend's info (which includes friendName and connected status)
-            local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-            -- Extract the friend's name and connection status
-            local friendName = friendInfo and friendInfo.name
-            local isOnline = friendInfo and friendInfo.connected
-            iWRDataCache = iWR:Serialize(name)
-            -- Ensure friendName is valid and the friend is online before sending
-            if friendName and isOnline then
-                iWR:SendCommMessage("iWRRemDBUpdate", iWRDataCache, "WHISPER", friendName)
-                table.insert(sentTo, friendName)
-            elseif friendName and not isOnline then
-                -- Nothing
-            else
-                iWR:DebugMsg("No friend found at index " .. i .. ".", 1)
+        local iWRDataCache = iWR:Serialize(name)
+
+        -- Function to send remove request
+        local function sendRemoveRequest(targetName)
+            if targetName then
+                iWR:SendCommMessage("iWRRemDBUpdate", iWRDataCache, "WHISPER", targetName)
+                table.insert(sentTo, targetName)
             end
         end
+
+        if iWRSettings.SyncType == "Friends" then
+            iWR:DebugMsg("Sync type is 'Friends'. Sending remove request to online friends...", 3)
+
+            for i = 1, C_FriendList.GetNumFriends() do
+                local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+                local friendName = friendInfo and friendInfo.name
+                local isOnline = friendInfo and friendInfo.connected
+
+                if friendName and isOnline then
+                    sendRemoveRequest(friendName)
+                end
+            end
+
+        elseif iWRSettings.SyncType == "Whitelist" then
+            iWR:DebugMsg("Sync type is 'Whitelist'. Sending remove request to whitelisted players...", 3)
+
+            for _, syncEntry in ipairs(iWRSettings.SyncList or {}) do
+                local friendInfo = C_FriendList.GetFriendInfo(syncEntry.name)
+                local friendName = friendInfo and friendInfo.name
+                local isOnline = friendInfo and friendInfo.connected
+
+                if friendName and isOnline then
+                    sendRemoveRequest(friendName)
+                end
+            end
+        end
+
         -- Print a single message listing all recipients
         if #sentTo > 0 then
-            iWR:DebugMsg("Remove request sent to online friends: " .. table.concat(sentTo, ", "), 3)
+            iWR:DebugMsg("Remove request sent to: " .. table.concat(sentTo, ", "), 3)
         else
-            iWR:DebugMsg("No online friends available to send the remove request.", 2)
+            iWR:DebugMsg("No online recipients available to send the remove request.", 2)
         end
     end
 end
-
 
 function iWR:FormatNameAndRealm(name, realm)
     -- Ensure the inputs are strings to prevent errors
@@ -420,7 +447,7 @@ function iWR:SetTargetFrameDragonFlightUI()
         end
 
         local dragonFrame = iWR.customFrame
-        dragonFrame:SetFrameLevel(2)
+        dragonFrame:SetFrameLevel(1)
         dragonFrame:Show()
 
         local dragonTexture = dragonFrame.texture
@@ -1150,7 +1177,7 @@ function iWR:ShowDetailWindow(playerName)
 
     -- Create the detail frame if it doesn't exist
     if not self.detailFrame then
-        self.detailFrame = iWR:CreateiWRStyleFrame(UIParent, 300, 250, {"TOP", UIParent, "TOP"})
+        self.detailFrame = iWR:CreateiWRStyleFrame(UIParent, 300, 250, {"TOP", UIParent, "TOP", 0, -100})
         self.detailFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.9)
         self.detailFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1)
         self.detailFrame:EnableMouse(true)
@@ -1755,38 +1782,134 @@ function iWR:CreateNote(Name, Note, Type)
     end
 end
 
--- Function to modify the right-click menu for a given context
 function iWR:ModifyMenuForContext(menuType)
     Menu.ModifyMenu(menuType, function(ownerRegion, rootDescription, contextData)
-        -- Exit early if the LFG browser is visible
+        -- Exit early if the LFG browser is open
         if LFGBrowseFrame and LFGBrowseFrame:IsVisible() and menuType == "MENU_UNIT_FRIEND" then
             iWR:DebugMsg("Skipping menu modification because LFG browser is visible.", 2)
             return
         end
 
-        -- Retrieve the name of the player for whom the menu is opened
+        -- Extract player details
         local playerName = contextData and contextData.name
+        local playerRealm = contextData and contextData.realm
+        local playerClass = nil
 
-        -- Check if playerName is available and valid
-        if playerName then
-            iWR:DebugMsg("Right-click menu opened for: [" .. playerName .. "].", 3)
-        else
-            iWR:DebugMsg("No player name found for menu type: [" .. menuType .. "].", 2)
+        -- Try extracting realm from fullName (e.g., "Player-Realm")
+        if not playerRealm and contextData and contextData.fullName then
+            local extractedName, extractedRealm = strmatch(contextData.fullName, "([^%-]+)%-(.+)")
+            if extractedName and extractedRealm then
+                playerName = extractedName
+                playerRealm = extractedRealm
+            end
         end
 
-        -- Create a divider to visually separate this custom section from other menu items
+        -- Extract class and realm from GUID (if available)
+        if contextData and contextData.guid then
+            local _, realmID = strsplit("-", contextData.guid)
+            playerRealm = playerRealm or GetRealmNameByID(realmID) -- Custom function to resolve realm ID
+
+            -- Get player class using GUID
+            local _, classFileName = GetPlayerInfoByGUID(contextData.guid)
+            if classFileName then
+                playerClass = classFileName -- Returns class identifier (e.g., "WARRIOR", "MAGE")
+            end
+        end
+
+        -- Use UnitFullName as a fallback
+        if not playerRealm and playerName then
+            local _, realm = UnitFullName(playerName)
+            playerRealm = realm or GetRealmName()
+        end
+
+        -- Final fallback: Default to the player's own realm
+        playerRealm = playerRealm or GetRealmName()
+
+        -- Apply class color to name if available
+        if playerClass then
+            playerName = iWR:ColorizePlayerNameByClass(playerName, playerClass)
+        end
+
+        -- Debug output
+        local fullPlayerName = playerRealm and playerName .. "-" .. playerRealm or playerName
+        iWR:DebugMsg("Right-click menu opened for: [" .. fullPlayerName .. "].", 3)
+
+        -- Create UI elements
         rootDescription:CreateDivider()
-
-        -- Create a title for the custom section of the menu, labeled "iWillRemember"
         rootDescription:CreateTitle("iWillRemember")
-
-        -- Add a new button to the menu with the text "Create Note"
         rootDescription:CreateButton("Create Note", function()
-            -- Show the iWRPanel and pass the player's name
-            iWR:MenuOpen(playerName)
+            local fullEntryName = (playerRealm ~= iWRCurrentRealm and playerRealm ~= "") and fullPlayerName or playerName
+            iWR:MenuOpen(fullEntryName)
             iWR:DatabaseClose()
         end)
     end)
+end
+
+function iWR:EnsureWhitelistedPlayersInFriends()
+    if not iWRSettings.SyncList or #iWRSettings.SyncList == 0 then
+        iWR:DebugMsg("Whitelist is empty. No players to add to the friends list.", 2)
+        return
+    end
+    
+    if not iWRSettings.SyncType == "Whitelist"then
+        iWR:DebugMsg("SyncType is not Whitelist. Do not check whitelist.", 2)
+        return
+    end
+
+    iWR:EnsureWhitelistHasRealm()
+    local currentRealm = GetRealmName()
+    iWR:DebugMsg("Checking if whitelisted players from realm [" .. currentRealm .. "] are in the friends list...", 3)
+
+    -- Get current friends list
+    local friends = {}
+    for i = 1, C_FriendList.GetNumFriends() do
+        local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+        if friendInfo and friendInfo.name then
+            friends[friendInfo.name] = true -- Store friends in a table for fast lookup
+        end
+    end
+
+    -- Track added friends
+    local addedFriends = {}
+
+    -- Loop through the whitelist and add players if they're missing & from the same realm
+    for _, entry in ipairs(iWRSettings.SyncList) do
+        if entry.name and entry.realm == currentRealm and not friends[entry.name] then
+            C_FriendList.AddFriend(entry.name)
+            table.insert(addedFriends, entry.name)
+            iWR:DebugMsg("Added " .. entry.name .. " to the friends list (whitelisted, same realm).", 3)
+        end
+    end
+
+    -- Print message if any friends were added
+    if #addedFriends > 0 then
+        print(L["WhitelistFriendsAdded"])
+    end
+end
+
+
+function iWR:EnsureWhitelistHasRealm()
+    if not iWRSettings.SyncList or #iWRSettings.SyncList == 0 then
+        iWR:DebugMsg("Whitelist is empty. No entries to check.", 2)
+        return
+    end
+
+    local currentRealm = GetRealmName()
+    local updatedEntries = 0
+
+    for _, entry in ipairs(iWRSettings.SyncList) do
+        if entry.name and (not entry.realm or entry.realm == "") then
+            entry.realm = currentRealm
+            updatedEntries = updatedEntries + 1
+            iWR:DebugMsg("Updated whitelist entry: " .. entry.name .. " now assigned to realm [" .. currentRealm .. "].", 3)
+        end
+    end
+
+    if updatedEntries > 0 then
+        iWR:DebugMsg("Whitelist check complete. Updated " .. updatedEntries .. " entries with realm.", 3)
+    else
+        iWR:DebugMsg("All whitelist entries already have a realm assigned.", 3)
+    end
 end
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮

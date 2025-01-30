@@ -37,6 +37,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
         C_Timer.After(5, function()
             iWR:SendFullDBUpdateToFriends()
+            iWR:EnsureWhitelistedPlayersInFriends()
         end)
     end
 end)

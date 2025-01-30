@@ -135,7 +135,8 @@
         "UIDropDownMenu_ClearAll",
         "BNGetNumFriendGameAccounts",
         "BNGetFriendInfo",
-        "LibCompress"
+        "LibCompress",
+        "GetRealmNameByID"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {

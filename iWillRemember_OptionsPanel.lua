@@ -198,26 +198,31 @@ function iWR:CreateOptionsPanel()
         local yOffset = -5
         local friendsList = {}
         local numFriends = C_FriendList.GetNumFriends()
+        local currentRealm = GetRealmName()
 
-        -- WoW Friends
+        -- Ensure the friend list is fully loaded
+        C_FriendList.ShowFriends()
+
+        -- WoW Friends (Filter by whitelist and realm)
         for i = 1, numFriends do
             local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
             if friendInfo and friendInfo.name then
-                -- Avoid adding friends already in the whitelist
+                -- Check if this friend is already in the whitelist for the same realm
                 local isInWhitelist = false
                 for _, entry in ipairs(iWRSettings.SyncList or {}) do
-                    if entry.name == friendInfo.name then
+                    if entry.name == friendInfo.name and entry.realm == currentRealm then
                         isInWhitelist = true
                         break
                     end
                 end
 
                 if not isInWhitelist then
-                    table.insert(friendsList, { name = friendInfo.name, type = "wow" })
+                    table.insert(friendsList, { name = friendInfo.name, realm = currentRealm, type = "wow" })
                 end
             end
         end
 
+        -- Display friends in the scrollable UI
         for _, friend in ipairs(friendsList) do
             -- Create a frame for each entry
             local entryFrame = CreateFrame("Frame", nil, friendScrollChild)
@@ -234,6 +239,7 @@ function iWR:CreateOptionsPanel()
             local nameText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
             nameText:SetPoint("LEFT", icon, "RIGHT", 5, 0)
             nameText:SetText(friend.name)
+            nameText:Show() -- Force UI update
 
             -- Add button
             local addButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
@@ -242,8 +248,8 @@ function iWR:CreateOptionsPanel()
             addButton:SetText("Add")
             addButton:SetScript("OnClick", function()
                 if not iWRSettings.SyncList then iWRSettings.SyncList = {} end
-                -- Add the friend to the whitelist
-                table.insert(iWRSettings.SyncList, { name = friend.name, type = friend.type })
+                -- Save the friend with realm information
+                table.insert(iWRSettings.SyncList, { name = friend.name, realm = friend.realm, type = friend.type })
                 iWR:UpdateSyncListDisplay()
                 PopulateScrollableFriendList() -- Refresh the friend list to remove the added friend
             end)
@@ -251,6 +257,11 @@ function iWR:CreateOptionsPanel()
             yOffset = yOffset - 25
         end
         friendScrollChild:SetHeight(math.abs(yOffset))
+
+        -- Slight delay to ensure UI updates properly
+        C_Timer.After(0.1, function()
+            friendScrollChild:Show()
+        end)
     end
 
     -- Call the function to populate the friend list
@@ -269,10 +280,16 @@ function iWR:CreateOptionsPanel()
     -- Whitelist Title
     local whitelistTitle = syncListContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     whitelistTitle:SetPoint("BOTTOM", syncListContainer, "TOP", 0, 5)
-    whitelistTitle:SetText(iWRBase.Colors.iWR .. "Whitelist")
+    whitelistTitle:SetText(iWRBase.Colors.iWR .. "Whitelist (" .. iWRCurrentRealm .. ")")
 
     -- Update Sync List Display with Icons
     function iWR:UpdateSyncListDisplay()
+        -- Ensure all whitelist entries have a realm assigned
+        iWR:EnsureWhitelistHasRealm()
+
+        -- Get the current realm name
+        local currentRealm = GetRealmName()
+
         -- Clear Existing Children
         for _, child in ipairs({syncListContainer:GetChildren()}) do
             ---@diagnostic disable-next-line: undefined-field
@@ -281,38 +298,41 @@ function iWR:CreateOptionsPanel()
 
         local yOffset = -5
         for index, syncEntry in ipairs(iWRSettings.SyncList or {}) do
-            local entryName, entryType = syncEntry.name, syncEntry.type
+            local entryName, entryType, entryRealm = syncEntry.name, syncEntry.type, syncEntry.realm
 
-            -- Create a frame to hold the name, icon, and button
-            local entryFrame = CreateFrame("Frame", nil, syncListContainer)
-            entryFrame:SetSize(syncListContainer:GetWidth() - 20, 20)
-            entryFrame:SetPoint("TOPLEFT", syncListContainer, "TOPLEFT", 10, yOffset)
+            -- Only display players from the current realm
+            if entryRealm == currentRealm then
+                -- Create a frame to hold the name, icon, and button
+                local entryFrame = CreateFrame("Frame", nil, syncListContainer)
+                entryFrame:SetSize(syncListContainer:GetWidth() - 20, 20)
+                entryFrame:SetPoint("TOPLEFT", syncListContainer, "TOPLEFT", 10, yOffset)
 
-            -- Display the icon
-            local icon = entryFrame:CreateTexture(nil, "OVERLAY")
-            icon:SetSize(16, 16)
-            icon:SetPoint("LEFT", entryFrame, "LEFT", 0, 0)
-            icon:SetTexture("Interface\\Icons\\INV_Misc_GroupNeedMore")
+                -- Display the icon
+                local icon = entryFrame:CreateTexture(nil, "OVERLAY")
+                icon:SetSize(16, 16)
+                icon:SetPoint("LEFT", entryFrame, "LEFT", 0, 0)
+                icon:SetTexture("Interface\\Icons\\INV_Misc_GroupNeedMore")
 
-            -- Display the name
-            local nameText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-            nameText:SetPoint("LEFT", icon, "RIGHT", 5, 0)
-            nameText:SetText(entryName)
+                -- Display the name
+                local nameText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                nameText:SetPoint("LEFT", icon, "RIGHT", 5, 0)
+                nameText:SetText(entryName)
 
-            -- Create the "Remove" button
-            local removeButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
-            removeButton:SetSize(60, 20)
-            removeButton:SetPoint("RIGHT", entryFrame, "RIGHT", 0, 0)
-            removeButton:SetText("Remove")
-            removeButton:SetScript("OnClick", function()
-                -- Remove the entry from the sync list
-                table.remove(iWRSettings.SyncList, index)
-                -- Update the display
-                iWR:UpdateSyncListDisplay()
-                PopulateScrollableFriendList() -- Refresh the friend list to re-add the removed friend
-            end)
+                -- Create the "Remove" button
+                local removeButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
+                removeButton:SetSize(60, 20)
+                removeButton:SetPoint("RIGHT", entryFrame, "RIGHT", 0, 0)
+                removeButton:SetText("Remove")
+                removeButton:SetScript("OnClick", function()
+                    -- Remove the entry from the sync list
+                    table.remove(iWRSettings.SyncList, index)
+                    -- Update the display
+                    iWR:UpdateSyncListDisplay()
+                    PopulateScrollableFriendList() -- Refresh the friend list to re-add the removed friend
+                end)
 
-            yOffset = yOffset - 25
+                yOffset = yOffset - 25
+            end
         end
     end
     iWR:UpdateSyncListDisplay()
@@ -491,6 +511,7 @@ function iWR:CreateOptionsPanel()
         Sync = iWR:CreateTab(panel, 2, "Sync", function()
             for name, frame in pairs(optionsPanel) do
                 frame:SetShown(name == "Sync")
+                PopulateScrollableFriendList()
             end
         end),
         Backup = iWR:CreateTab(panel, 3, "Backup", function()
