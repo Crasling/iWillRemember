@@ -136,7 +136,11 @@
         "BNGetNumFriendGameAccounts",
         "BNGetFriendInfo",
         "LibCompress",
-        "GetRealmNameByID"
+        "GetRealmNameByID",
+        "UIDropDownMenu_SetButtonWidth",
+        "UIDropDownMenu_SetSelectedID",
+        "UIDropDownMenu_JustifyText",
+        "StaticPopup_Hide"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {

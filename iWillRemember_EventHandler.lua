@@ -56,9 +56,7 @@ groupFrame:SetScript("OnEvent", function(_, event)
     end
 end)
 
--- ╭────────────────────────────────────────────────────────────────────────────────╮
--- │                                  Event Handlers                                │
--- ├──────────────────────┬─────────────────────────────────────────────────────────╯
+-- ╭──────────────────────╮
 -- │      On Startup      │
 -- ╰──────────────────────╯
 function iWR:OnEnable()
@@ -68,6 +66,7 @@ function iWR:OnEnable()
     -- Secure hooks to add custom behavior
     self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
     self:SecureHook("TargetFrame_Update", "SetTargetingFrame")
+    
     -- Register callback for handling custom addon links
     EventRegistry:RegisterCallback("SetItemRef", function(_, link, text, button, chatFrame)
         local linkType, addonName, linkData = string.split(":", link, 3)
@@ -120,3 +119,14 @@ function iWR:OnEnable()
         iWRSettings.WelcomeMessage = Version
     end
 end
+
+-- ╭────────────────────────────╮
+-- │      On Target change      │
+-- ╰────────────────────────────╯
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("UNIT_TARGET")
+frame:SetScript("OnEvent", function(_, event, unit)
+    if unit == "player" or unit == "target" then
+        iWR:SetTargetingFrame()
+    end
+end)

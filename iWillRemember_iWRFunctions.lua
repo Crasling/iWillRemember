@@ -416,6 +416,76 @@ function iWR:FormatNameAndRealm(name, realm)
     return formattedName, formattedRealm
 end
 
+function iWR:SetTargetFrameShadowedUnitFrames()
+    local portraitParent = _G["SUFUnittarget"]
+    -- local portrait = _G["TargetFramePortrait"]
+    -- TODO: check if dragonflight target unitframe module active
+    local dragonflight = true;
+    if dragonflight then
+        iWR:DebugMsg("Using Portrait Parent: " .. portraitParent:GetName(), 3)
+        
+        -- Get the target's name and realm for database lookup
+        local targetNameWithRealm = GetUnitName("target", true)
+        local targetName = GetUnitName("target", false)
+        local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWRCurrentRealm
+        targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
+
+        -- Format name and realm for database key
+        local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
+        local databaseKey = capitalizedName .. "-" .. capitalizedRealm
+
+        -- Ensure the database entry exists
+        if not iWRDatabase[databaseKey] then
+            iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database. [SetTargetFrameShadowedUnitFrames]", 1)
+            return
+        end
+
+        -- Create or update the custom frame
+        if not iWR.customFrame then
+            iWR.customFrame = CreateFrame("Frame", nil, portraitParent)
+            iWR.customFrame.texture = iWR.customFrame:CreateTexture(nil, "OVERLAY")
+        end
+
+        local dragonFrame = iWR.customFrame
+        dragonFrame:SetFrameLevel(6)
+        dragonFrame:Show()
+
+        local dragonTexture = dragonFrame.texture
+        dragonTexture:SetDrawLayer('ARTWORK', 3)
+
+        local targetRelation = iWRDatabase[databaseKey][2]
+
+        if targetRelation == iWRBase.Types["Respected"] then
+            dragonTexture:SetTexture('Interface\\Addons\\iWillRemember\\Images\\TargetFrames\\ShadowedUnitFrames\\winged-dragon-elite.blp')
+            dragonTexture:SetSize(77, 75)
+            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 81, -12)
+            dragonTexture:SetVertexColor(0, 0.9, 0, 1)
+        elseif targetRelation == iWRBase.Types["Liked"] then
+            dragonTexture:SetTexture('Interface\\Addons\\iWillRemember\\Images\\TargetFrames\\ShadowedUnitFrames\\dragon-elite.blp')
+            dragonTexture:SetSize(77, 75)
+            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 81, -12)
+            dragonTexture:SetVertexColor(0, 0.7, 0, 1)
+        elseif targetRelation == iWRBase.Types["Disliked"] then
+            dragonTexture:SetTexture('Interface\\Addons\\iWillRemember\\Images\\TargetFrames\\ShadowedUnitFrames\\dragon-elite.blp')
+            dragonTexture:SetSize(77, 75)
+            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 81, -12)
+            dragonTexture:SetVertexColor(0.7, 0, 0, 1)
+        elseif targetRelation == iWRBase.Types["Hated"] then
+            dragonTexture:SetTexture('Interface\\Addons\\iWillRemember\\Images\\TargetFrames\\ShadowedUnitFrames\\winged-dragon-elite.blp')
+            dragonTexture:SetSize(77, 75)
+            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 81, -12)
+            dragonTexture:SetVertexColor(0.9, 0, 0, 1)
+        else
+            iWR:DebugMsg("Relationship type is missing. [SetTargetFrameShadowedUnitFrames]", 1)
+            dragonFrame:Hide()
+        end
+
+        iWR:DebugMsg("Custom frame successfully anchored to:" .. portraitParent:GetName() .. ".", 3)
+    else
+        iWR:DebugMsg("ShadowedUnitFrames portrait frame not found.", 1)
+    end
+end
+
 function iWR:SetTargetFrameDragonFlightUI()
     local portraitParent = _G["TargetFrame"]
     -- local portrait = _G["TargetFramePortrait"]
@@ -1096,9 +1166,10 @@ function iWR:SetTargetingFrame()
         -- Update the target frame based on settings
         if iWRSettings.UpdateTargetFrame then
             iWR:DebugMsg("TargetFrameType = " .. (iWRimagePath or "nil"), 3)
-
             if iWRimagePath == "DragonFlightUI" then
                 iWR:SetTargetFrameDragonFlightUI()
+            elseif iWRimagePath == "ShadowedUnitFrames" then
+                iWR:SetTargetFrameShadowedUnitFrames()
             else
                 iWR:SetTargetFrameDefault()
             end

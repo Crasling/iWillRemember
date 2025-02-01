@@ -158,12 +158,15 @@ iWRBase.Types = {
 -- ├──────────────────────────┬─────────────────────────────────────────────────────╯
 -- │      Check what UI       │
 -- ╰──────────────────────────╯
-if C_AddOns.IsAddOnLoaded("EasyFrames") or C_AddOns.IsAddOnLoaded("Easy Frames") then
-    iWRimagePath = "EasyFrames"
-elseif C_AddOns.IsAddOnLoaded("DragonFlightUI") then
-    iWRimagePath = "DragonFlightUI"
-end
-
+C_Timer.After(2, function()
+    if C_AddOns.IsAddOnLoaded("EasyFrames") or C_AddOns.IsAddOnLoaded("Easy Frames") then
+        iWRimagePath = "EasyFrames"
+    elseif C_AddOns.IsAddOnLoaded("DragonFlightUI") then
+        iWRimagePath = "DragonFlightUI"
+    elseif C_AddOns.IsAddOnLoaded("Shadowed Unit Frames") or C_AddOns.IsAddOnLoaded("ShadowedUnitFrames") then
+        iWRimagePath = "ShadowedUnitFrames"
+    end
+end)
 -- ╭───────────────────────────────────╮
 -- │      List of Targeting Frames     │
 -- ╰───────────────────────────────────╯
