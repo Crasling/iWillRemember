@@ -57,7 +57,7 @@ function iWR:CreateOptionsPanel()
     -- Target Frames Visibility Checkbox
     local targetFrameCheckbox = CreateFrame("CheckButton", "iWRTargetFrameCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
     targetFrameCheckbox:SetPoint("TOPLEFT", targetChatCategoryTitle, "BOTTOMLEFT", 0, -5)
-    targetFrameCheckbox.Text:SetText("Enable TargetFrame Update")
+    targetFrameCheckbox.Text:SetText("Show Enhanced TargetFrame")
     targetFrameCheckbox:SetChecked(iWRSettings.UpdateTargetFrame)
     targetFrameCheckbox:SetScript("OnClick", function(self)
         iWRSettings.UpdateTargetFrame = self:GetChecked()

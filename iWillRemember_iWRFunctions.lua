@@ -418,12 +418,10 @@ end
 
 function iWR:SetTargetFrameShadowedUnitFrames()
     local portraitParent = _G["SUFUnittarget"]
-    -- local portrait = _G["TargetFramePortrait"]
-    -- TODO: check if dragonflight target unitframe module active
-    local dragonflight = true;
-    if dragonflight then
+    local shadowunitframes = true;
+    if shadowunitframes then
         iWR:DebugMsg("Using Portrait Parent: " .. portraitParent:GetName(), 3)
-        
+
         -- Get the target's name and realm for database lookup
         local targetNameWithRealm = GetUnitName("target", true)
         local targetName = GetUnitName("target", false)
