@@ -307,7 +307,7 @@ function iWR:CheckGroupMembersAgainstDatabase()
         -- Construct chat message
         local chatMessage = L["GroupWarning"]
         for _, match in ipairs(matches) do
-            chatMessage = chatMessage .. match.name .. " (" .. iWRBase.Types[match.relation] .. "), "
+            chatMessage = chatMessage .. " " .. match.name .. " (" .. iWRBase.Colors[match.relation] .. iWRBase.Types[match.relation] .. iWRBase.Colors.Reset .. "), "
         end
 
         -- Print message to chat
@@ -1566,6 +1566,7 @@ function iWR:MenuToggle()
         end
     else
         print(L["InCombat"])
+        iWR:MenuClose()
     end
 end
 
@@ -1600,13 +1601,9 @@ end
 -- │      Close Menu Window      │
 -- ╰─────────────────────────────╯
 function iWR:MenuClose()
-    if not iWRInCombat then
-        iWRNameInput:SetText(L["DefaultNameInput"])
-        iWRNoteInput:SetText(L["DefaultNoteInput"])
-        iWRPanel:Hide()
-    else
-        print(L["InCombat"])
-    end
+    iWRNameInput:SetText(L["DefaultNameInput"])
+    iWRNoteInput:SetText(L["DefaultNoteInput"])
+    iWRPanel:Hide()
 end
 
 -- ╭──────────────────────────────────╮
@@ -1621,24 +1618,30 @@ function iWR:DatabaseToggle()
         end
     else
         print(L["InCombat"])
+        iWR:DatabaseClose()
     end
 end
 
 -- ╭────────────────────────────────╮
 -- │      Open Database Window      │
 -- ╰────────────────────────────────╯
-function iWR:DatabaseOpen(Name)
-    iWRDatabaseFrame:Show()
-    iWRNameInput:SetText(L["DefaultNameInput"])
-    iWRNoteInput:SetText(L["DefaultNoteInput"])
-    if UnitExists("target") and UnitIsPlayer("target") then
-        local playerName = UnitName("target")
-        local _, class = UnitClass("target")
-        if class then
-            iWRNameInput:SetText(iWR:ColorizePlayerNameByClass(playerName, class))
-        else
-            iWRNameInput:SetText(playerName)
+function iWR:DatabaseOpen()
+    if not iWRInCombat then
+        iWRDatabaseFrame:Show()
+        iWRNameInput:SetText(L["DefaultNameInput"])
+        iWRNoteInput:SetText(L["DefaultNoteInput"])
+        if UnitExists("target") and UnitIsPlayer("target") then
+            local playerName = UnitName("target")
+            local _, class = UnitClass("target")
+            if class then
+                iWRNameInput:SetText(iWR:ColorizePlayerNameByClass(playerName, class))
+            else
+                iWRNameInput:SetText(playerName)
+            end
         end
+    else
+        print(L["InCombat"])
+        iWR:DatabaseClose()
     end
 end
 

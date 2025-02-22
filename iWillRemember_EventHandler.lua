@@ -126,7 +126,9 @@ end
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("UNIT_TARGET")
 frame:SetScript("OnEvent", function(_, event, unit)
-    if unit == "player" or unit == "target" then
-        iWR:SetTargetingFrame()
+    if iWRimagePath == 'ShadowedUnitFrames' then
+        if unit == "player" or unit == "target" then
+            iWR:SetTargetingFrame()
+        end
     end
 end)
