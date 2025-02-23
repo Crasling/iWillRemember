@@ -1876,31 +1876,8 @@ function iWR:ModifyMenuForContext(menuType)
             end
         end
 
-        -- Extract class and realm from GUID (if available)
-        if contextData and contextData.guid then
-            local _, realmID = strsplit("-", contextData.guid)
-            playerRealm = playerRealm or GetRealmNameByID(realmID) -- Custom function to resolve realm ID
-
-            -- Get player class using GUID
-            local _, classFileName = GetPlayerInfoByGUID(contextData.guid)
-            if classFileName then
-                playerClass = classFileName -- Returns class identifier (e.g., "WARRIOR", "MAGE")
-            end
-        end
-
-        -- Use UnitFullName as a fallback
-        if not playerRealm and playerName then
-            local _, realm = UnitFullName(playerName)
-            playerRealm = realm or GetRealmName()
-        end
-
         -- Final fallback: Default to the player's own realm
         playerRealm = playerRealm or GetRealmName()
-
-        -- Apply class color to name if available
-        if playerClass then
-            playerName = iWR:ColorizePlayerNameByClass(playerName, playerClass)
-        end
 
         -- Debug output
         local fullPlayerName = playerRealm and playerName .. "-" .. playerRealm or playerName
@@ -1937,7 +1914,7 @@ function iWR:EnsureWhitelistedPlayersInFriends()
     for i = 1, C_FriendList.GetNumFriends() do
         local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
         if friendInfo and friendInfo.name then
-            friends[friendInfo.name] = true -- Store friends in a table for fast lookup
+            friends[friendInfo.name] = true
         end
     end
 
