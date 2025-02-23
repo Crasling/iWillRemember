@@ -497,7 +497,7 @@ function iWR:CreateOptionsPanel()
 
     -- List of translators 
     local translatorList = {
-        { name = "ZamestoTV", language = "Russian", flag = "Interface\\AddOns\\iWillRemember\\Images\\Locale\\ruRU.blp" },
+        { name = "ZamestoTV", language = L["Russian"], flag = "Interface\\AddOns\\iWillRemember\\Images\\Locale\\ruRU.blp" },
     }
 
     -- Populate the credits list dynamically

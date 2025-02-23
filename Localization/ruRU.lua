@@ -110,6 +110,8 @@ L["HelpClear"] = Colors.Yellow .. "Как очистить: " .. Colors.iWR .. "
 L["HelpSettings"] = Colors.Yellow .. "Меню настроек: " .. Colors.iWR .. "ПКМ по иконке на миникарте, чтобы открыть меню настроек."
 L["HelpDiscord"] = Colors.Yellow .."Помощь в Discord: " .. Colors.iWR .. "Нажмите кнопку с вопросительным знаком без имени игрока, чтобы вставить код в поле заметки для копирования [https://discord.gg/8nnt25aw8B]"
 
+L["Russian"] = "Russian"
+
 L["iWRLoaded"] = Msg("iWillRemember")
 L["iWRWelcomeStart"] = Msg("Спасибо ")
 L["iWRWelcomeEnd"] = Colors.iWR .. (" за участие в разработке iWillRemember, если у вас возникнут проблемы, пожалуйста, свяжитесь с нами на CurseForge в разделе комментариев или в Discord.")
