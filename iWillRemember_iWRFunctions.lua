@@ -826,7 +826,7 @@ function iWR:CheckLatestVersion()
 
     -- Handle alpha versions (versions with a fourth number)
     if isAlphaVersion then
-        print(iWRBase.Colors.iWR .. "[iWR]: " .. iWRBase.Colors.Yellow.. "WARNING" .. iWRBase.Colors.iWR .. ": This is an alpha version and can be unstable and cause issues with your database. If you do not want to run this version, please downgrade to the latest release.")
+        print(L["VersionWarning"])
         iWR:DebugMsg("Alpha version detected: " .. Version .. ". Version check aborted.", 2)
         return
     end
@@ -1734,7 +1734,7 @@ function iWR:ClearNote(Name)
         end
     else
         -- Notify that the name was not found in the database
-        print(iWRBase.Colors.iWR .. "[iWR]: Name [|r" .. databaseKey .. iWRBase.Colors.iWR .. "] does not exist in the database.")
+        print(L["DBNameNotFound1"] .. databaseKey .. L["DBNameNotFound2"])
         iWR:DebugMsg("Deletion failed, key not found: " .. databaseKey, 1)
     end
 end

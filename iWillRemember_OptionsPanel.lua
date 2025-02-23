@@ -19,7 +19,7 @@ function iWR:CreateOptionsPanel()
     -- Title
     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOP", panel, "TOP", 0, -2)
-    title:SetText(Title .. iWRBase.Colors.iWR .." Options")
+    title:SetText(Title .. L["SettingsTitle"])
 
     -- Content Frames
     local optionsPanel = {
@@ -41,7 +41,7 @@ function iWR:CreateOptionsPanel()
         })
         frame:SetBackdropBorderColor(0.7, 0.7, 0.8, 1)
         frame:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
-        if name ~= "General" then
+        if name ~= L["Tab1General"] then
             frame:Hide()
         end
     end
@@ -52,12 +52,12 @@ function iWR:CreateOptionsPanel()
     -- Target Frame and Chat Icons Category Title
     local targetChatCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     targetChatCategoryTitle:SetPoint("TOPLEFT", optionsPanel.General, "TOPLEFT", 20, -20)
-    targetChatCategoryTitle:SetText(iWRBase.Colors.iWR .. "Display Settings")
+    targetChatCategoryTitle:SetText(L["DisplaySettings"])
 
     -- Target Frames Visibility Checkbox
     local targetFrameCheckbox = CreateFrame("CheckButton", "iWRTargetFrameCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
     targetFrameCheckbox:SetPoint("TOPLEFT", targetChatCategoryTitle, "BOTTOMLEFT", 0, -5)
-    targetFrameCheckbox.Text:SetText("Show Enhanced TargetFrame")
+    targetFrameCheckbox.Text:SetText(L["EnhancedFrame"])
     targetFrameCheckbox:SetChecked(iWRSettings.UpdateTargetFrame)
     targetFrameCheckbox:SetScript("OnClick", function(self)
         iWRSettings.UpdateTargetFrame = self:GetChecked()
@@ -67,7 +67,7 @@ function iWR:CreateOptionsPanel()
     -- Chat Icon Visibility Checkbox
     local chatIconCheckbox = CreateFrame("CheckButton", "iWRChatIconCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
     chatIconCheckbox:SetPoint("TOPLEFT", targetFrameCheckbox, "BOTTOMLEFT", 0, -10)
-    chatIconCheckbox.Text:SetText("Show Chat Icons")
+    chatIconCheckbox.Text:SetText(L["ShowChatIcons"])
     chatIconCheckbox:SetChecked(iWRSettings.ShowChatIcons)
     chatIconCheckbox:SetScript("OnClick", function(self)
         iWRSettings.ShowChatIcons = self:GetChecked()
@@ -77,12 +77,12 @@ function iWR:CreateOptionsPanel()
     -- Group Warnings Category Title
     local groupWarningCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     groupWarningCategoryTitle:SetPoint("TOPLEFT", chatIconCheckbox, "BOTTOMLEFT", 0, -15)
-    groupWarningCategoryTitle:SetText(iWRBase.Colors.iWR .. "Warning Settings")
+    groupWarningCategoryTitle:SetText(L["WarningSettings"])
 
     -- Group Warning Checkbox
     local groupWarningCheckbox = CreateFrame("CheckButton", "iWRGroupWarningCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
     groupWarningCheckbox:SetPoint("TOPLEFT", groupWarningCategoryTitle, "BOTTOMLEFT", 0, -5)
-    groupWarningCheckbox.Text:SetText("Enable Group Warnings")
+    groupWarningCheckbox.Text:SetText(L["EnableGroupWarning"])
     groupWarningCheckbox:SetChecked(iWRSettings.GroupWarnings)
     groupWarningCheckbox:SetScript("OnClick", function(self)
         local isEnabled = self:GetChecked()
@@ -102,7 +102,7 @@ function iWR:CreateOptionsPanel()
     -- Sound Warning Checkbox
     soundWarningCheckbox = CreateFrame("CheckButton", "iWRSoundWarningCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
     soundWarningCheckbox:SetPoint("TOPLEFT", groupWarningCheckbox, "BOTTOMLEFT", 30, -3)
-    soundWarningCheckbox.Text:SetText("Enable Sound Warnings")
+    soundWarningCheckbox.Text:SetText(L["EnableSoundWarning"])
     soundWarningCheckbox:SetChecked(iWRSettings.SoundWarnings)
     soundWarningCheckbox:SetScript("OnClick", function(self)
         iWRSettings.SoundWarnings = self:GetChecked()
@@ -112,12 +112,12 @@ function iWR:CreateOptionsPanel()
     -- Tooltip Category Title
     local tooltipCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     tooltipCategoryTitle:SetPoint("TOPLEFT", soundWarningCheckbox, "BOTTOMLEFT", -30, -15)
-    tooltipCategoryTitle:SetText(iWRBase.Colors.iWR .. "Tooltip Settings")
+    tooltipCategoryTitle:SetText(L["ToolTipSettings"])
 
     -- Tooltip Author Checkbox
     local tooltipAuthorCheckbox = CreateFrame("CheckButton", "iWRTooltipAuthorCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
     tooltipAuthorCheckbox:SetPoint("TOPLEFT", tooltipCategoryTitle, "BOTTOMLEFT", 0, -5)
-    tooltipAuthorCheckbox.Text:SetText("Show Author on Tooltip")
+    tooltipAuthorCheckbox.Text:SetText(L["ShowAuthor"])
     tooltipAuthorCheckbox:SetChecked(iWRSettings.TooltipShowAuthor)
     tooltipAuthorCheckbox:SetScript("OnClick", function(self)
         local isEnabled = self:GetChecked()
@@ -131,12 +131,12 @@ function iWR:CreateOptionsPanel()
     -- Data Sharing Category Title
     local dataSharingCategoryTitle = optionsPanel.Sync:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     dataSharingCategoryTitle:SetPoint("TOPLEFT", optionsPanel.Sync, "TOPLEFT", 20, -20)
-    dataSharingCategoryTitle:SetText(iWRBase.Colors.iWR .. "Sync Settings")
+    dataSharingCategoryTitle:SetText(L["SyncSettings"])
 
     -- Data Sharing Checkbox
     local dataSharingCheckbox = CreateFrame("CheckButton", "iWRDataSharingCheckbox", optionsPanel.Sync, "InterfaceOptionsCheckButtonTemplate")
     dataSharingCheckbox:SetPoint("TOPLEFT", dataSharingCategoryTitle, "BOTTOMLEFT", 0, -10)
-    dataSharingCheckbox.Text:SetText("Enable Sync with Friends")
+    dataSharingCheckbox.Text:SetText(L["EnableSync"])
     dataSharingCheckbox:SetChecked(iWRSettings.DataSharing)
     dataSharingCheckbox:SetScript("OnClick", function(self)
         iWRSettings.DataSharing = self:GetChecked()
@@ -147,7 +147,7 @@ function iWR:CreateOptionsPanel()
     local syncTypeDropdown = CreateFrame("Frame", "iWRSyncTypeDropdown", optionsPanel.Sync, "UIDropDownMenuTemplate")
     syncTypeDropdown:SetPoint("TOPLEFT", dataSharingCheckbox, "BOTTOMLEFT", -16, -10)
     UIDropDownMenu_SetWidth(syncTypeDropdown, 100)
-    UIDropDownMenu_SetText(syncTypeDropdown, iWRSettings.SyncType or "Friends")
+    UIDropDownMenu_SetText(syncTypeDropdown, iWRSettings.SyncType or L["Friends"])
 
     -- Dropdown Initialization
     local function InitializeDropdown(self, level)
@@ -157,9 +157,9 @@ function iWR:CreateOptionsPanel()
             UIDropDownMenu_SetText(syncTypeDropdown, self.value)
             iWR:DebugMsg("Sync Type set to: " .. self.value, 3)
         end
-        info.text, info.value = "All friends", "Friends"
+        info.text, info.value = L["AllFriends"], L["Friends"]
         UIDropDownMenu_AddButton(info, level)
-        info.text, info.value = "Only Whitelist", "Whitelist"
+        info.text, info.value = L["OnlyWhitelist"], L["Whitelist"]
         UIDropDownMenu_AddButton(info, level)
     end
     UIDropDownMenu_Initialize(syncTypeDropdown, InitializeDropdown)
@@ -167,7 +167,7 @@ function iWR:CreateOptionsPanel()
     -- Friend List Title
     local friendListTitle = optionsPanel.Sync:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     friendListTitle:SetPoint("TOPLEFT", syncTypeDropdown, "BOTTOMLEFT", 16, -20)
-    friendListTitle:SetText(iWRBase.Colors.iWR .. "Add friends to whitelist:")
+    friendListTitle:SetText(L["AddtoWhitelist"])
 
     -- Scrollable Dropdown Menu for Adding Friends
     local friendDropdownMenu = CreateFrame("Frame", "iWRFriendDropdownMenu", optionsPanel.Sync, "BackdropTemplate")
@@ -280,7 +280,7 @@ function iWR:CreateOptionsPanel()
     -- Whitelist Title
     local whitelistTitle = syncListContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     whitelistTitle:SetPoint("BOTTOM", syncListContainer, "TOP", 0, 5)
-    whitelistTitle:SetText(iWRBase.Colors.iWR .. "Whitelist (" .. iWRCurrentRealm .. ")")
+    whitelistTitle:SetText(L["WhiteListTitle"] .. " (" .. iWRCurrentRealm .. ")")
 
     -- Update Sync List Display with Icons
     function iWR:UpdateSyncListDisplay()
@@ -347,7 +347,7 @@ function iWR:CreateOptionsPanel()
     -- Backup Checkbox
     local backupCheckbox = CreateFrame("CheckButton", nil, optionsPanel.Backup, "InterfaceOptionsCheckButtonTemplate")
     backupCheckbox:SetPoint("TOPLEFT", backupCategoryTitle, "BOTTOMLEFT", 0, -5)
-    backupCheckbox.Text:SetText("Enable Automatic Backup")
+    backupCheckbox.Text:SetText(L["EnableBackup"])
     backupCheckbox:SetChecked(iWRSettings.HourlyBackup)
     backupCheckbox:SetScript("OnClick", function(self)
         local isEnabled = self:GetChecked()
@@ -359,22 +359,22 @@ function iWR:CreateOptionsPanel()
     local restoreButton = CreateFrame("Button", nil, optionsPanel.Backup, "UIPanelButtonTemplate")
     restoreButton:SetSize(150, 30)
     restoreButton:SetPoint("TOPLEFT", backupCheckbox, "BOTTOMLEFT", 0, -10)
-    restoreButton:SetText("Restore Database")
+    restoreButton:SetText(L["RestoreDatabase"])
     restoreButton:SetScript("OnClick", function()
         if iWRDatabaseBackup then
             StaticPopupDialogs["CONFIRM_RESTORE_DATABASE"] = {
-                text = iWRBase.Colors.Red .. "Are you sure you want to overwrite the current iWR Database with the backup data?|nThis is non-reversible.\n\nBackup made on "
-                    .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupDate or "Unknown Date"))
-                    .. " at "
-                    .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupTime or "Unknown Time")) .. ".",
-                button1 = "Yes",
-                button2 = "No",
+                text = L["RestoreConfirm"]
+                    .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupDate or L["UnknownDate"]))
+                    .. L["at"]
+                    .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupTime or L["UnknownTime"])) .. ".",
+                button1 = L["Yes"],
+                button2 = L["No"],
                 OnAccept = function()
                     iWRDatabase = CopyTable(iWRDatabaseBackup)
-                    print(iWRBase.Colors.iWR .. "[iWR]: Database restored from backup made on "
-                        .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupDate or "Unknown Date"))
-                        .. " at "
-                        .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupTime or "Unknown Time"))
+                    print(L["BackupRestore"]
+                        .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupDate or L["UnknownDate"]))
+                        .. L["at"]
+                        .. (iWRSettings.iWRDatabaseBackupInfo and (iWRSettings.iWRDatabaseBackupInfo.backupTime or L["UnknownTime"]))
                         .. ".")
                     iWR:PopulateDatabase()
                 end,
@@ -385,7 +385,7 @@ function iWR:CreateOptionsPanel()
             }
             StaticPopup_Show("CONFIRM_RESTORE_DATABASE")
         else
-            print(iWRBase.Colors.Red .. "[iWR]: No backup found to restore.")
+            print(L["BackupRestoreError"])
         end
     end)
 
@@ -396,11 +396,11 @@ function iWR:CreateOptionsPanel()
     -- Function to Update Restore Button and Backup Info Display
     local function UpdateBackupInfoDisplay()
         if iWRDatabaseBackup and iWRSettings.iWRDatabaseBackupInfo and iWRSettings.iWRDatabaseBackupInfo.backupDate ~= "" and iWRSettings.iWRDatabaseBackupInfo.backupTime ~= "" then
-            backupInfoDisplay:SetText("Last Backup: " .. iWRSettings.iWRDatabaseBackupInfo.backupDate .. " at " .. iWRSettings.iWRDatabaseBackupInfo.backupTime)
+            backupInfoDisplay:SetText(L["LastBackup1"] .. iWRSettings.iWRDatabaseBackupInfo.backupDate .. L["at"] .. iWRSettings.iWRDatabaseBackupInfo.backupTime)
             restoreButton:Enable()
             restoreButton:SetAlpha(1.0)
         else
-            backupInfoDisplay:SetText("No Backup Available")
+            backupInfoDisplay:SetText(L["NoBackup"])
             restoreButton:Disable()
             restoreButton:SetAlpha(0.5)
         end
@@ -444,17 +444,17 @@ function iWR:CreateOptionsPanel()
     -- Author Information
     local aboutAuthor = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     aboutAuthor:SetPoint("TOP", aboutAddonName, "BOTTOM", 0, -10)
-    aboutAuthor:SetText("Created by: " .. iWRBase.Colors.Cyan .. Author .. iWRBase.Colors.Reset)
+    aboutAuthor:SetText(L["CreatedBy"] .. iWRBase.Colors.Cyan .. Author .. iWRBase.Colors.Reset)
 
     -- Description
     local aboutDescription = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     aboutDescription:SetPoint("TOP", aboutAuthor, "BOTTOM", 0, -30)
-    aboutDescription:SetText(iWRBase.Colors.iWR .. "iWillRemember " .. iWRBase.Colors.Reset .. "is an addon designed to help you track and easily share player notes with friends.")
+    aboutDescription:SetText(L["AboutMessageInfo"])
 
     -- Support Information
     local aboutSupport = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     aboutSupport:SetPoint("TOP", aboutDescription, "BOTTOM", 0, -10)
-    aboutSupport:SetText(iWRBase.Colors.iWR .. "iWR " .. iWRBase.Colors.Reset .. "is in early development. Join the Discord for help with issues, questions, or suggestions.")
+    aboutSupport:SetText(L["AboutMessageEarlyDev"])
 
     -- Discord Link
     local aboutDiscord = CreateFrame("EditBox", nil, optionsPanel.About, "InputBoxTemplate")
@@ -472,12 +472,55 @@ function iWR:CreateOptionsPanel()
     end)
     aboutDiscord:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Copy this link to join our Discord for support and updates.", 1, 1, 1)
+        GameTooltip:SetText(L["DiscordLinkMessage"], 1, 1, 1)
         GameTooltip:Show()
     end)
     aboutDiscord:SetScript("OnLeave", function(self)
         GameTooltip:Hide()
     end)
+
+    -- Create a container for the credits section
+    local creditsContainer = CreateFrame("Frame", nil, optionsPanel.About, "BackdropTemplate")
+    creditsContainer:SetSize(400, 100)
+    creditsContainer:SetPoint("BOTTOM", optionsPanel.About, "BOTTOM", 0, 20)
+    creditsContainer:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        edgeSize = 12,
+    })
+    creditsContainer:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
+
+    -- Title for the credits section
+    local creditsTitle = creditsContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+    creditsTitle:SetPoint("TOP", creditsContainer, "TOP", 0, 20)
+    creditsTitle:SetText(iWRBase.Colors.iWR .. L["Translations"])
+
+    -- List of translators 
+    local translatorList = {
+        { name = "ZamestoTV", language = "Russian", flag = "Interface\\AddOns\\iWillRemember\\Images\\Locale\\ruRU.blp" },
+    }
+
+    -- Populate the credits list dynamically
+    local yOffset = -5
+    for _, translator in ipairs(translatorList) do
+        -- Create a frame to hold the flag and text
+        local entryFrame = CreateFrame("Frame", nil, creditsContainer)
+        entryFrame:SetSize(350, 20)
+        entryFrame:SetPoint("TOPLEFT", creditsContainer, "TOPLEFT", 20, yOffset)
+
+        -- Create the flag icon
+        local flagIcon = entryFrame:CreateTexture(nil, "OVERLAY")
+        flagIcon:SetSize(16, 16)
+        flagIcon:SetPoint("LEFT", entryFrame, "LEFT", 0, 0)
+        flagIcon:SetTexture(translator.flag)
+
+        -- Display the name and language
+        local nameText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        nameText:SetPoint("LEFT", flagIcon, "RIGHT", 5, 0)
+        nameText:SetText(iWRBase.Colors.Yellow .. translator.name .. iWRBase.Colors.Reset .. " - " .. translator.language)
+
+        yOffset = yOffset - 20
+    end
 
     if iWRSettings.DebugMode then
         -- Game Version Label
@@ -505,23 +548,23 @@ function iWR:CreateOptionsPanel()
     local tabs = {
         General = iWR:CreateTab(panel, 1, "General", function()
             for name, frame in pairs(optionsPanel) do
-                frame:SetShown(name == "General")
+                frame:SetShown(name == L["Tab1General"])
             end
         end),
         Sync = iWR:CreateTab(panel, 2, "Sync", function()
             for name, frame in pairs(optionsPanel) do
-                frame:SetShown(name == "Sync")
+                frame:SetShown(name == L["Tab2Sync"])
                 PopulateScrollableFriendList()
             end
         end),
         Backup = iWR:CreateTab(panel, 3, "Backup", function()
             for name, frame in pairs(optionsPanel) do
-                frame:SetShown(name == "Backup")
+                frame:SetShown(name == L["Tab3Backup"])
             end
         end),
         About = iWR:CreateTab(panel, 4, "About", function()
             for name, frame in pairs(optionsPanel) do
-                frame:SetShown(name == "About")
+                frame:SetShown(name == L["Tab4About"])
             end
         end),
     }
