@@ -1,6 +1,6 @@
 ## Interface: 11506, 40401
-## Title: |cffff9716iWillRemember |cFF00FF00v0.13.6|r
-## Version: 0.13.6
+## Title: |cffff9716iWillRemember |cFF00FF00v0.13.7|r
+## Version: 0.13.7
 ## Notes: |cffff9716Personalized Player Notes Addon|n|cFFFF0000Never forget again.|r
 ## Author: Crasling
 ## X-Curse-Project-ID: 1160664

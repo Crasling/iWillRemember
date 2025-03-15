@@ -1180,13 +1180,35 @@ function iWR:SetTargetingFrame()
         end
     end
 end
+-- Function to normalize realm names (Handles both spaced and non-spaced versions)
+local function NormalizeRealmName(realm)
+    if not realm or realm == "" then return iWRCurrentRealm end
+
+    -- Ensure space is added before capital letters if missing (e.g., "LoneWolf" → "Lone Wolf")
+    local formattedRealm = realm:gsub("(%l)(%u)", "%1 %2")
+
+    -- Ensure correct casing (capitalize first letter of each word)
+    formattedRealm = formattedRealm:gsub("(%a)([%w]*)", function(first, rest)
+        return first:upper() .. rest:lower()
+    end)
+
+    -- Check if either format exists in the database
+    if iWRDatabase[realm] then
+        return realm
+    elseif iWRDatabase[formattedRealm] then
+        return formattedRealm
+    end
+
+    -- Default to formatted realm if nothing is found
+    return formattedRealm
+end
 
 -- Function to add relationship icons to chat messages
 local function AddRelationshipIconToChat(self, event, message, author, flags, ...)
     if iWRSettings.ShowChatIcons then
         -- Extract author name and realm
         local authorName, authorRealm = string.match(author, "^([^-]+)-?(.*)$")
-        authorRealm = authorRealm ~= "" and authorRealm or iWRCurrentRealm -- Use current realm if none provided
+        authorRealm = NormalizeRealmName(authorRealm)
 
         if not authorName then
             iWR:DebugMsg("AddRelationshipIconToChat tried to add icon to message with missing authorName")
@@ -1219,7 +1241,6 @@ local function AddRelationshipIconToChat(self, event, message, author, flags, ..
     -- Ensure the message is returned unchanged if no modifications were made
     return false, message, author, flags, ...
 end
-
 
 function iWR:HandleHyperlink(link, text, button, chatFrame)
     local linkType, playerName = string.split(":", link)
