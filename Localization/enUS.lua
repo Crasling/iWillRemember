@@ -35,7 +35,10 @@ local Colors = {
         MAGE = "|cFF40C7EB",
         WARLOCK = "|cFF8788EE",
         DRUID = "|cFFFF7D0A",
-        DEATHKNIGHT = "|cFFC41F3B"
+        DEATHKNIGHT = "|cFFC41F3B",
+        MONK = "|cFF00FF98",
+        DEMONHUNTER = "|cFFA330C9",
+        EVOKER = "|cFF33937F"
     },
 
     -- Reset Color

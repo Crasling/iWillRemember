@@ -126,7 +126,10 @@ iWRBase.Colors = {
         MAGE = "|cFF40C7EB",
         WARLOCK = "|cFF8788EE",
         DRUID = "|cFFFF7D0A",
-        DEATHKNIGHT = "|cFFC41F3B"
+        DEATHKNIGHT = "|cFFC41F3B",
+        MONK = "|cFF00FF98",
+        DEMONHUNTER = "|cFFA330C9",
+        EVOKER = "|cFF33937F"
     },
 
     -- Reset Color
@@ -206,14 +209,17 @@ iWRBase.ChatIcons = {
 local major, minor, patch = string.match(iWRGameTocVersion, "(%d)(%d%d)(%d%d)")
 if major and minor and patch then
     local gameTocNumber = tonumber(major) * 10000 + tonumber(minor) * 100 + tonumber(patch)
-    if gameTocNumber >40000 and gameTocNumber <49999 then
+    if gameTocNumber >50000 and gameTocNumber <59999 then
+        iWRGameVersionName = "Classic MOP"
+    elseif gameTocNumber >40000 and gameTocNumber <49999 then
         iWRGameVersionName = "Classic Cata"
-    elseif gameTocNumber >50000 then
-        iWRGameVersionName =   "Retail"
+    elseif gameTocNumber >30000 and gameTocNumber <39999 then
+        iWRGameVersionName = "Classic WotLK"
+    elseif gameTocNumber >20000 and gameTocNumber <29999 then
+        iWRGameVersionName = "Classic TBC"
     elseif gameTocNumber >10000 and gameTocNumber <19999 then
         iWRGameVersionName = "Classic Era"
     else
-        iWRGameVersionName = "Unknown Game Version"
+        iWRGameVersionName = "Unknown Version"
     end
 end
-
