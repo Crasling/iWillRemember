@@ -16,4 +16,4 @@ iWillRemember_iWRFunctions.lua
 iWillRemember_OptionsPanel.lua
 iWillRemember_EventHandler.lua
 iWillRemember_Frames.lua
-iWillRemember_DataBroker.lu5
+iWillRemember_DataBroker.lua
