@@ -19,6 +19,12 @@ combatEventFrame:SetScript("OnEvent", function(self, event)
         iWR.State.InCombat = true
         iWRPanel:Hide()
         iWRDatabaseFrame:Hide()
+        
+        -- Close popup during combat, it will reopen after via ProcessRemoveRequestQueue
+        if StaticPopup_Visible("REMOVE_PLAYER_CONFIRM") then
+            StaticPopup_Hide("REMOVE_PLAYER_CONFIRM")
+        end
+        
         iWR:DebugMsg("Entered combat, UI interaction disabled.",3)
     elseif event == "PLAYER_REGEN_ENABLED" then
         iWR.State.InCombat = false
