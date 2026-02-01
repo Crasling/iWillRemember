@@ -355,7 +355,7 @@ function iWR:SendRemoveRequestToFriends(name)
     
     if iWRSettings.DataSharing ~= false then
         local sentTo = {} -- Table to store friend names
-        local iWR.Cache.Data = iWR:Serialize(name)
+        iWR.Cache.Data = iWR:Serialize(name)
 
         -- Function to send remove request
         local function sendRemoveRequest(targetName)

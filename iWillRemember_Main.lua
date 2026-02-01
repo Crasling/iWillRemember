@@ -22,14 +22,9 @@ local Author = C_AddOns.GetAddOnMetadata(addonName, "Author")
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 -- Create the main addon object (only global we need)
 iWR = LibStub("AceAddon-3.0"):NewAddon("iWR", "AceSerializer-3.0", "AceComm-3.0", "AceTimer-3.0", "AceHook-3.0")
-
--- Store references in the addon object
-iWR.L = LibStub("AceLocale-3.0"):GetLocale("iWR")
-iWR.LDBroker = LibStub("LibDataBroker-1.1")
-iWR.LDBIcon = LibStub("LibDBIcon-1.0")
-
--- Create shorthand for localization (backward compatible)
-local L = iWR.L
+L = LibStub("AceLocale-3.0"):GetLocale("iWR")
+LDBroker = LibStub("LibDataBroker-1.1")
+LDBIcon = LibStub("LibDBIcon-1.0")
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                     Constants                                  │
@@ -290,7 +285,7 @@ local major, minor, patch = string.match(iWR.GameTocVersion, "(%d)(%d%d)(%d%d)")
 if major and minor and patch then
     local gameTocNumber = tonumber(major) * 10000 + tonumber(minor) * 100 + tonumber(patch)
     if gameTocNumber > 50000 and gameTocNumber < 59999 then
-        iWR.GameVersionName = "Classic MoP"
+        iWR.GameVersionName = "Classic MOP"
     elseif gameTocNumber > 40000 and gameTocNumber < 49999 then
         iWR.GameVersionName = "Classic Cata"
     elseif gameTocNumber > 30000 and gameTocNumber < 39999 then
@@ -314,6 +309,3 @@ end
 Title = iWR.Title
 Version = iWR.Version
 Author = iWR.Author
-L = iWR.L
-LDBroker = iWR.LDBroker
-LDBIcon = iWR.LDBIcon
