@@ -13,7 +13,7 @@
 local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
     type = "data source",
     text = "iWillRemember",
-    icon = iWRBase.Icons.iWRIcon,
+    icon = iWR.Icons.iWRIcon,
     OnClick = function(self, button)
         if button == "LeftButton" and IsShiftKeyDown() then
             iWR:DatabaseToggle()
@@ -23,14 +23,14 @@ local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
             iWR:MenuToggle()
             iWR:DatabaseClose()
         elseif button == "RightButton" then
-            Settings.OpenToCategory(optionsCategory:GetID())
+            Settings.OpenToCategory(OptionsCategory:GetID())
         end
     end,
 
     -- Tooltip handling
     OnTooltipShow = function(tooltip)
         -- Name
-        tooltip:SetText(iWRBase.Colors.iWR .. "iWillRemember" .. iWRBase.Colors.Green .. " v" .. Version, 1, 1, 1)
+        tooltip:SetText(iWR.Colors.iWR .. "iWillRemember" .. iWR.Colors.Green .. " v" .. iWR.Version, 1, 1, 1)
 
         -- Desc
         tooltip:AddLine(" ", 1, 1, 1) 

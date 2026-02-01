@@ -19,7 +19,7 @@ function iWR:CreateOptionsPanel()
     -- Title
     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOP", panel, "TOP", 0, -2)
-    title:SetText(Title .. L["SettingsTitle"])
+    title:SetText(iWR.Title .. L["SettingsTitle"])
 
     -- Content Frames
     local optionsPanel = {
@@ -87,31 +87,31 @@ function iWR:CreateOptionsPanel()
     groupWarningCheckbox:SetScript("OnClick", function(self)
         local isEnabled = self:GetChecked()
         iWRSettings.GroupWarnings = isEnabled
-        soundWarningCheckbox:SetEnabled(isEnabled)
+        SoundWarningCheckbox:SetEnabled(isEnabled)
         if iWRSettings.GroupWarnings ~= true then
             iWRMemory.SoundWarnings = iWRSettings.SoundWarnings
             iWRSettings.SoundWarnings = false
         else
             iWRSettings.SoundWarnings = iWRMemory.SoundWarnings
-            soundWarningCheckbox:SetChecked(iWRSettings.SoundWarnings)
+            SoundWarningCheckbox:SetChecked(iWRSettings.SoundWarnings)
         end
         iWR:DebugMsg("GroupWarnings: " .. tostring(iWRSettings.GroupWarnings),3)
         iWR:DebugMsg("SoundWarnings: " .. tostring(iWRSettings.SoundWarnings),3)
     end)
 
     -- Sound Warning Checkbox
-    soundWarningCheckbox = CreateFrame("CheckButton", "iWRSoundWarningCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
-    soundWarningCheckbox:SetPoint("TOPLEFT", groupWarningCheckbox, "BOTTOMLEFT", 30, -3)
-    soundWarningCheckbox.Text:SetText(L["EnableSoundWarning"])
-    soundWarningCheckbox:SetChecked(iWRSettings.SoundWarnings)
-    soundWarningCheckbox:SetScript("OnClick", function(self)
+    SoundWarningCheckbox = CreateFrame("CheckButton", "iWRSoundWarningCheckbox", optionsPanel.General, "InterfaceOptionsCheckButtonTemplate")
+    SoundWarningCheckbox:SetPoint("TOPLEFT", groupWarningCheckbox, "BOTTOMLEFT", 30, -3)
+    SoundWarningCheckbox.Text:SetText(L["EnableSoundWarning"])
+    SoundWarningCheckbox:SetChecked(iWRSettings.SoundWarnings)
+    SoundWarningCheckbox:SetScript("OnClick", function(self)
         iWRSettings.SoundWarnings = self:GetChecked()
         iWR:DebugMsg("SoundWarnings: " .. tostring(iWRSettings.SoundWarnings),3)
     end)
 
     -- Tooltip Category Title
     local tooltipCategoryTitle = optionsPanel.General:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    tooltipCategoryTitle:SetPoint("TOPLEFT", soundWarningCheckbox, "BOTTOMLEFT", -30, -15)
+    tooltipCategoryTitle:SetPoint("TOPLEFT", SoundWarningCheckbox, "BOTTOMLEFT", -30, -15)
     tooltipCategoryTitle:SetText(L["ToolTipSettings"])
 
     -- Tooltip Author Checkbox
@@ -342,7 +342,7 @@ function iWR:CreateOptionsPanel()
     -- ╰──────────────────────╯
     local backupCategoryTitle = optionsPanel.Backup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     backupCategoryTitle:SetPoint("TOPLEFT", optionsPanel.Backup, "TOPLEFT", 20, -20)
-    backupCategoryTitle:SetText(iWRBase.Colors.iWR .. "Backup Settings|r")
+    backupCategoryTitle:SetText(iWR.Colors.iWR .. "Backup Settings|r")
 
     -- Backup Checkbox
     local backupCheckbox = CreateFrame("CheckButton", nil, optionsPanel.Backup, "InterfaceOptionsCheckButtonTemplate")
@@ -418,7 +418,7 @@ function iWR:CreateOptionsPanel()
     -- Debug Mode Category Title
     local debugCategoryTitle = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     debugCategoryTitle:SetPoint("TOPLEFT", optionsPanel.About, "TOPLEFT", 20, -20)
-    debugCategoryTitle:SetText(iWRBase.Colors.iWR .. "Developer Settings")
+    debugCategoryTitle:SetText(iWR.Colors.iWR .. "Developer Settings")
 
     -- Debug Mode Checkbox
     local debugCheckbox = CreateFrame("CheckButton", "iWRDebugCheckbox", optionsPanel.About, "InterfaceOptionsCheckButtonTemplate")
@@ -428,23 +428,23 @@ function iWR:CreateOptionsPanel()
     debugCheckbox:SetScript("OnClick", function(self)
         local isDebugEnabled = self:GetChecked()
         iWRSettings.DebugMode = isDebugEnabled
-        iWR:DebugMsg("Debug Mode is activated." .. iWRBase.Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
+        iWR:DebugMsg("Debug Mode is activated." .. iWR.Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
     end)
 
     -- About Category Title
     local aboutCategoryTitle = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     aboutCategoryTitle:SetPoint("TOP", optionsPanel.About, "TOP", 0, -30)
-    aboutCategoryTitle:SetText(iWRBase.Colors.iWR .. "About|r")
+    aboutCategoryTitle:SetText(iWR.Colors.iWR .. "About|r")
 
     -- Addon Name and Version
     local aboutAddonName = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     aboutAddonName:SetPoint("TOP", aboutCategoryTitle, "BOTTOM", 0, -10)
-    aboutAddonName:SetText(iWRBase.Colors.iWR .. Title)
+    aboutAddonName:SetText(iWR.Colors.iWR .. iWR.Title)
 
     -- Author Information
     local aboutAuthor = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     aboutAuthor:SetPoint("TOP", aboutAddonName, "BOTTOM", 0, -10)
-    aboutAuthor:SetText(L["CreatedBy"] .. iWRBase.Colors.Cyan .. Author .. iWRBase.Colors.Reset)
+    aboutAuthor:SetText(L["CreatedBy"] .. iWR.Colors.Cyan .. iWR.Author .. iWR.Colors.Reset)
 
     -- Description
     local aboutDescription = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -493,7 +493,7 @@ function iWR:CreateOptionsPanel()
     -- Title for the credits section
     local creditsTitle = creditsContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
     creditsTitle:SetPoint("TOP", creditsContainer, "TOP", 0, 20)
-    creditsTitle:SetText(iWRBase.Colors.iWR .. L["Translations"])
+    creditsTitle:SetText(iWR.Colors.iWR .. L["Translations"])
 
     -- List of translators 
     local translatorList = {
@@ -517,7 +517,7 @@ function iWR:CreateOptionsPanel()
         -- Display the name and language
         local nameText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         nameText:SetPoint("LEFT", flagIcon, "RIGHT", 5, 0)
-        nameText:SetText(iWRBase.Colors.Yellow .. translator.name .. iWRBase.Colors.Reset .. " - " .. translator.language)
+        nameText:SetText(iWR.Colors.Yellow .. translator.name .. iWR.Colors.Reset .. " - " .. translator.language)
 
         yOffset = yOffset - 20
     end
@@ -526,22 +526,22 @@ function iWR:CreateOptionsPanel()
         -- Game Version Label
         local aboutGameVersion = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         aboutGameVersion:SetPoint("TOP", aboutDiscord, "BOTTOM", 0, -20)
-        aboutGameVersion:SetText(iWRBase.Colors.iWR .. "Game Version: " .. iWRBase.Colors.Reset .. iWR.GameVersion)
+        aboutGameVersion:SetText(iWR.Colors.iWR .. "Game Version: " .. iWR.Colors.Reset .. iWR.GameVersion)
 
         -- TOC Version Label
         local aboutTocVersion = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         aboutTocVersion:SetPoint("TOP", aboutGameVersion, "BOTTOM", 0, -10)
-        aboutTocVersion:SetText(iWRBase.Colors.iWR .. "TOC Version: " .. iWRBase.Colors.Reset .. iWR.GameTocVersion)
+        aboutTocVersion:SetText(iWR.Colors.iWR .. "TOC Version: " .. iWR.Colors.Reset .. iWR.GameTocVersion)
 
         -- TOC Version Label
         local aboutBuildVersion = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         aboutBuildVersion:SetPoint("TOP", aboutTocVersion, "BOTTOM", 0, -10)
-        aboutBuildVersion:SetText(iWRBase.Colors.iWR .. "Build Version: " .. iWRBase.Colors.Reset .. iWR.GameBuild)
+        aboutBuildVersion:SetText(iWR.Colors.iWR .. "Build Version: " .. iWR.Colors.Reset .. iWR.GameBuild)
 
         -- TOC Version Label
         local aboutBuildDate = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         aboutBuildDate:SetPoint("TOP", aboutBuildVersion, "BOTTOM", 0, -10)
-        aboutBuildDate:SetText(iWRBase.Colors.iWR .. "Build Date: " .. iWRBase.Colors.Reset .. iWR.GameBuildDate)
+        aboutBuildDate:SetText(iWR.Colors.iWR .. "Build Date: " .. iWR.Colors.Reset .. iWR.GameBuildDate)
     end
 
     -- Tabs
@@ -574,8 +574,8 @@ function iWR:CreateOptionsPanel()
     PanelTemplates_SetTab(panel, 1)
 
     -- Register the options panel
-    optionsCategory = Settings.RegisterCanvasLayoutCategory(panel, "iWillRemember")
-    Settings.RegisterAddOnCategory(optionsCategory)
+    OptionsCategory = Settings.RegisterCanvasLayoutCategory(panel, "iWillRemember")
+    Settings.RegisterAddOnCategory(OptionsCategory)
 
     -- Return Panel
     return panel

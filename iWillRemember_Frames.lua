@@ -51,7 +51,7 @@ titleBar:SetBackdropColor(0.07, 0.07, 0.12, 1)
 -- Add title text
 local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
-titleText:SetText(iWRBase.Colors.iWR .. "iWillRemember Menu" .. iWRBase.Colors.Green .. " v" .. Version)
+titleText:SetText(iWR.Colors.iWR .. "iWillRemember Menu" .. iWR.Colors.Green .. " v" .. iWR.Version)
 titleText:SetTextColor(0.9, 0.9, 1, 1)
 
 
@@ -223,10 +223,10 @@ local button1, button1Label = iWR:CreateRelationButton(
     iWRPanel,
     {53, 53},
     {"TOP", iWRNoteInput, "BOTTOM", 120, -15},
-    iWRBase.Icons[iWRBase.Types["Hated"]],
+    iWR.Icons[iWR.Types["Hated"]],
     "Hated",
     function()
-        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWRBase.Types["Hated"])
+        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWR.Types["Hated"])
     end
 )
 
@@ -237,10 +237,10 @@ local button2, button2Label = iWR:CreateRelationButton(
     iWRPanel,
     {53, 53},
     {"TOP", iWRNoteInput, "BOTTOM", 60, -15},
-    iWRBase.Icons[iWRBase.Types["Disliked"]],
+    iWR.Icons[iWR.Types["Disliked"]],
     "Disliked",
     function()
-        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWRBase.Types["Disliked"])
+        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWR.Types["Disliked"])
     end
 )
 
@@ -251,10 +251,10 @@ local button3, button3Label = iWR:CreateRelationButton(
     iWRPanel,
     {53, 53},
     {"TOP", iWRNoteInput, "BOTTOM", 0, -15},
-    iWRBase.Icons[iWRBase.Types["Liked"]],
+    iWR.Icons[iWR.Types["Liked"]],
     "Liked",
     function()
-        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWRBase.Types["Liked"])
+        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWR.Types["Liked"])
     end
 )
 
@@ -265,10 +265,10 @@ local button4, button4Label = iWR:CreateRelationButton(
     iWRPanel,
     {53, 53},
     {"TOP", iWRNoteInput, "BOTTOM", -60, -15},
-    iWRBase.Icons[iWRBase.Types["Respected"]],
+    iWR.Icons[iWR.Types["Respected"]],
     "Respected",
     function()
-        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWRBase.Types["Respected"])
+        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWR.Types["Respected"])
     end
 )
 
@@ -279,7 +279,7 @@ local button5, button5Label = iWR:CreateRelationButton(
     iWRPanel,
     {53, 53},
     {"TOP", iWRNoteInput, "BOTTOM", -120, -15},
-    iWRBase.Icons[iWRBase.Types["Clear"]],
+    iWR.Icons[iWR.Types["Clear"]],
     "Clear",
     function()
         iWR:ClearNote(iWRNameInput:GetText())
@@ -302,7 +302,7 @@ end)
 local iconTextureDB = openDatabaseButton:CreateTexture(nil, "ARTWORK")
 iconTextureDB:SetSize(25, 25)
 iconTextureDB:SetPoint("CENTER", openDatabaseButton, "CENTER", 0, 0)
-iconTextureDB:SetTexture(iWRBase.Icons.Database)
+iconTextureDB:SetTexture(iWR.Icons.Database)
 
 -- Add a label below the button
 local openDatabaseButtonLabel = iWRPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -385,7 +385,7 @@ dbTitleBar:SetBackdropColor(0.07, 0.07, 0.12, 1)
 -- Add title text
 local dbTitleText = dbTitleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 dbTitleText:SetPoint("CENTER", dbTitleBar, "CENTER", 0, 0)
-dbTitleText:SetText(iWRBase.Colors.iWR .. "iWillRemember Personal Database")
+dbTitleText:SetText(iWR.Colors.iWR .. "iWillRemember Personal Database")
 dbTitleText:SetTextColor(0.9, 0.9, 1, 1)
 
 -- Create a scrollable frame to list database entries
@@ -415,12 +415,12 @@ clearDatabaseButton:SetText("Clear All")
 clearDatabaseButton:SetScript("OnClick", function()
     -- Confirm before clearing the database
     StaticPopupDialogs["CLEAR_DATABASE_CONFIRM"] = {
-        text = iWRBase.Colors.Red .. "Are you sure you want to clear the current iWR Database?|nThis is non-reversible.",
+        text = iWR.Colors.Red .. "Are you sure you want to clear the current iWR Database?|nThis is non-reversible.",
         button1 = "Yes",
         button2 = "No",
         OnAccept = function()
             iWRDatabase = {}
-            print(iWRBase.Colors.iWR .. "[iWR]: Database cleared.")
+            print(iWR.Colors.iWR .. "[iWR]: Database cleared.")
             iWR:PopulateDatabase()
         end,
         timeout = 0,
@@ -441,7 +441,7 @@ shareDatabaseButton:SetText("Share Full DB")
 shareDatabaseButton:SetScript("OnClick", function()
     -- Check if the database is empty
     if not next(iWRDatabase) then
-        print(iWRBase.Colors.iWR .. "[iWR]: The database is empty. Nothing to share.")
+        print(iWR.Colors.iWR .. "[iWR]: The database is empty. Nothing to share.")
         return
     end
 
@@ -453,7 +453,7 @@ shareDatabaseButton:SetScript("OnClick", function()
         OnAccept = function()
             -- Function to share the full database
             iWR:SendFullDBUpdateToFriends()
-            print(iWRBase.Colors.iWR .. "[iWR]: Full database sync process initiated. This can take up to a few minutes.")
+            print(iWR.Colors.iWR .. "[iWR]: Full database sync process initiated. This can take up to a few minutes.")
         end,
         timeout = 0,
         whileDead = true,
@@ -476,30 +476,30 @@ searchTexture:SetTexture("Interface\\Icons\\INV_Misc_Spyglass_03") -- Magnifying
 searchDatabaseButton:SetNormalTexture(searchTexture)
 
 searchDatabaseButton:SetScript("OnClick", function()
-    -- Check if the searchResultsFrame already exists and is visible
-    if searchResultsFrame and searchResultsFrame:IsVisible() then
-        searchResultsFrame:Hide()
-        -- Clear all child frames from the searchResultsFrame
-        for _, child in ipairs({searchResultsFrame:GetChildren()}) do
+    -- Check if the SearchResultsFrame already exists and is visible
+    if SearchResultsFrame and SearchResultsFrame:IsVisible() then
+        SearchResultsFrame:Hide()
+        -- Clear all child frames from the SearchResultsFrame
+        for _, child in ipairs({SearchResultsFrame:GetChildren()}) do
             ---@diagnostic disable-next-line: undefined-field
             child:Hide()
             ---@diagnostic disable-next-line: undefined-field
             child:SetParent(nil)
         end
-        if noResultsText then
-            noResultsText:Hide()
-            noResultsText:SetParent(nil)
-            noResultsText = nil
+        if NoResultsText then
+            NoResultsText:Hide()
+            NoResultsText:SetParent(nil)
+            NoResultsText = nil
         end
-        if tooManyText then
-            tooManyText:Hide()
-            tooManyText:SetParent(nil)
-            tooManyText = nil
+        if TooManyText then
+            TooManyText:Hide()
+            TooManyText:SetParent(nil)
+            TooManyText = nil
         end
-        if searchTitle then
-            searchTitle:Hide()
-            searchTitle:SetParent(nil)
-            searchTitle = nil
+        if SearchTitle then
+            SearchTitle:Hide()
+            SearchTitle:SetParent(nil)
+            SearchTitle = nil
         end
     end
 
@@ -519,58 +519,58 @@ searchDatabaseButton:SetScript("OnClick", function()
                     end
                 end
 
-                -- Create the searchResultsFrame if it doesn't already exist
-                if not searchResultsFrame then
-                    searchResultsFrame = iWR:CreateiWRStyleFrame(iWRDatabaseFrame, 280, 400, {"RIGHT", iWRDatabaseFrame, "RIGHT", 280, 0})
-                    searchResultsFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.9)
-                    searchResultsFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1)
+                -- Create the SearchResultsFrame if it doesn't already exist
+                if not SearchResultsFrame then
+                    SearchResultsFrame = iWR:CreateiWRStyleFrame(iWRDatabaseFrame, 280, 400, {"RIGHT", iWRDatabaseFrame, "RIGHT", 280, 0})
+                    SearchResultsFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.9)
+                    SearchResultsFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1)
                 end
 
                 -- Clear previous content
-                for _, child in ipairs({searchResultsFrame:GetChildren()}) do
+                for _, child in ipairs({SearchResultsFrame:GetChildren()}) do
                     ---@diagnostic disable-next-line: undefined-field
                     child:Hide()
                     ---@diagnostic disable-next-line: undefined-field
                     child:SetParent(nil)
-                    if noResultsText then
-                        noResultsText:Hide()
-                        noResultsText:SetParent(nil)
-                        noResultsText = nil
+                    if NoResultsText then
+                        NoResultsText:Hide()
+                        NoResultsText:SetParent(nil)
+                        NoResultsText = nil
                     end
-                    if tooManyText then
-                        tooManyText:Hide()
-                        tooManyText:SetParent(nil)
-                        tooManyText = nil
+                    if TooManyText then
+                        TooManyText:Hide()
+                        TooManyText:SetParent(nil)
+                        TooManyText = nil
                     end
-                    if searchTitle then
-                        searchTitle:Hide()
-                        searchTitle:SetParent(nil)
-                        searchTitle = nil
+                    if SearchTitle then
+                        SearchTitle:Hide()
+                        SearchTitle:SetParent(nil)
+                        SearchTitle = nil
                     end
                 end
-                searchResultsFrame:Show()
+                SearchResultsFrame:Show()
 
                 -- Add title to the search results
-                searchTitle = searchResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-                searchTitle:SetPoint("TOP", searchResultsFrame, "TOP", 0, -10)
-                searchTitle:SetText("Search Results for: " .. searchQuery)
+                SearchTitle = SearchResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+                SearchTitle:SetPoint("TOP", SearchResultsFrame, "TOP", 0, -10)
+                SearchTitle:SetText("Search Results for: " .. searchQuery)
 
                 if #foundEntries > 0 then
                     local maxEntries = 7
                     for index, entry in ipairs(foundEntries) do
                         if index > maxEntries then
-                            tooManyText = searchResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-                            tooManyText:SetPoint("TOP", searchResultsFrame, "TOP", 0, -40 * (maxEntries + 1))
-                            tooManyText:SetText("Too many results, refine your search.")
+                            TooManyText = SearchResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                            TooManyText:SetPoint("TOP", SearchResultsFrame, "TOP", 0, -40 * (maxEntries + 1))
+                            TooManyText:SetText("Too many results, refine your search.")
                             break
                         end
 
                         local playerName, data = entry.name, entry.data
 
                         -- Create a frame for each entry
-                        local entryFrame = CreateFrame("Frame", nil, searchResultsFrame, "BackdropTemplate")
+                        local entryFrame = CreateFrame("Frame", nil, SearchResultsFrame, "BackdropTemplate")
                         entryFrame:SetSize(230, 30)
-                        entryFrame:SetPoint("TOP", searchResultsFrame, "TOP", 0, -40 * index)
+                        entryFrame:SetPoint("TOP", SearchResultsFrame, "TOP", 0, -40 * index)
 
                         -- Add the icon for the type
                         local iconTexture = entryFrame:CreateTexture(nil, "ARTWORK")
@@ -578,7 +578,7 @@ searchDatabaseButton:SetScript("OnClick", function()
                         iconTexture:SetPoint("LEFT", entryFrame, "LEFT", -5, 0)
 
                         -- Set the icon texture
-                        local typeIcon = iWRBase.Icons[data[2]]
+                        local typeIcon = iWR.Icons[data[2]]
                         if typeIcon then
                             iconTexture:SetTexture(typeIcon)
                         else
@@ -589,7 +589,7 @@ searchDatabaseButton:SetScript("OnClick", function()
                         local entryText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
                         entryText:SetPoint("LEFT", iconTexture, "RIGHT", 5, 0)
                         if data[7] ~= iWR.CurrentRealm then
-                            entryText:SetText(data[4]..iWRBase.Colors.Reset.."-"..data[7])
+                            entryText:SetText(data[4]..iWR.Colors.Reset.."-"..data[7])
                         else
                             entryText:SetText(data[4])
                         end
@@ -599,16 +599,16 @@ searchDatabaseButton:SetScript("OnClick", function()
                             ---@diagnostic disable-next-line: param-type-mismatch
                             GameTooltip:SetOwner(entryFrame, "ANCHOR_RIGHT")
                             if data[7] ~= iWR.CurrentRealm then
-                                GameTooltip:AddLine(data[4]..iWRBase.Colors.Reset.."-"..data[7], 1, 1, 1) -- Title (Player Name)
+                                GameTooltip:AddLine(data[4]..iWR.Colors.Reset.."-"..data[7], 1, 1, 1) -- Title (Player Name)
                             else
                                 GameTooltip:AddLine(data[4], 1, 1, 1) -- Title (Player Name)
                             end
                             if #data[1] <= 30 then
-                                GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
+                                GameTooltip:AddLine("Note: " .. iWR.Colors[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
                             else
                                 local firstLine, secondLine = iWR:splitOnSpace(data[1], 30) -- Split text on the nearest space
-                                GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
-                                GameTooltip:AddLine(iWRBase.Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
+                                GameTooltip:AddLine("Note: " .. iWR.Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
+                                GameTooltip:AddLine(iWR.Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
                             end
                             if data[6] ~= "" and data[6] ~= nil then
                                 GameTooltip:AddLine("Author: " .. data[6], 1, 0.82, 0) -- Add author in tooltip
@@ -643,9 +643,9 @@ searchDatabaseButton:SetScript("OnClick", function()
                         removeButton:SetScript("OnClick", function()
                             local removeText
                             if iWRDatabase[playerName][7] ~= iWR.CurrentRealm then
-                                removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. "-" .. iWRDatabase[playerName][7] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
+                                removeText = iWR.Colors.iWR .. "Are you sure you want to remove" .. iWR.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. "-" .. iWRDatabase[playerName][7] .. iWR.Colors.iWR .. "]|n|n from the iWR database?"
                             else
-                                removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
+                                removeText = iWR.Colors.iWR .. "Are you sure you want to remove" .. iWR.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. iWR.Colors.iWR .. "]|n|n from the iWR database?"
                             end
                             StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
                                 text = removeText,
@@ -654,8 +654,8 @@ searchDatabaseButton:SetScript("OnClick", function()
                                 OnAccept = function()
                                     print(L["CharNoteStart"] .. iWRDatabase[playerName][4]  .. L["CharNoteRemoved"])
                                     iWRDatabase[playerName] = nil
-                                    if searchResultsFrame then
-                                        searchResultsFrame:Hide()
+                                    if SearchResultsFrame then
+                                        SearchResultsFrame:Hide()
                                     end
                                     iWR:PopulateDatabase()
                                     iWR:SendRemoveRequestToFriends(playerName)
@@ -669,36 +669,36 @@ searchDatabaseButton:SetScript("OnClick", function()
                         end)
                     end
                 else
-                    noResultsText = searchResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-                    noResultsText:SetPoint("CENTER", searchResultsFrame, "CENTER", 0, 0)
-                    noResultsText:SetText("No players found for: " .. searchQuery)
+                    NoResultsText = SearchResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                    NoResultsText:SetPoint("CENTER", SearchResultsFrame, "CENTER", 0, 0)
+                    NoResultsText:SetText("No players found for: " .. searchQuery)
                 end
 
-                local closeResultsButton = CreateFrame("Button", nil, searchResultsFrame, "UIPanelButtonTemplate")
+                local closeResultsButton = CreateFrame("Button", nil, SearchResultsFrame, "UIPanelButtonTemplate")
                 closeResultsButton:SetSize(80, 24)
-                closeResultsButton:SetPoint("BOTTOM", searchResultsFrame, "BOTTOM", 0, 20)
+                closeResultsButton:SetPoint("BOTTOM", SearchResultsFrame, "BOTTOM", 0, 20)
                 closeResultsButton:SetText("Close")
                 closeResultsButton:SetScript("OnClick", function()
-                    searchResultsFrame:Hide()
-                    for _, child in ipairs({searchResultsFrame:GetChildren()}) do
+                    SearchResultsFrame:Hide()
+                    for _, child in ipairs({SearchResultsFrame:GetChildren()}) do
                         ---@diagnostic disable-next-line: undefined-field
                         child:Hide()
                         ---@diagnostic disable-next-line: undefined-field
                         child:SetParent(nil)
-                        if noResultsText then
-                            noResultsText:Hide()
-                            noResultsText:SetParent(nil)
-                            noResultsText = nil
+                        if NoResultsText then
+                            NoResultsText:Hide()
+                            NoResultsText:SetParent(nil)
+                            NoResultsText = nil
                         end
-                        if tooManyText then
-                            tooManyText:Hide()
-                            tooManyText:SetParent(nil)
-                            tooManyText = nil
+                        if TooManyText then
+                            TooManyText:Hide()
+                            TooManyText:SetParent(nil)
+                            TooManyText = nil
                         end
-                        if searchTitle then
-                            searchTitle:Hide()
-                            searchTitle:SetParent(nil)
-                            searchTitle = nil
+                        if SearchTitle then
+                            SearchTitle:Hide()
+                            SearchTitle:SetParent(nil)
+                            SearchTitle = nil
                         end
                     end
                 end)
@@ -789,7 +789,7 @@ function iWR:PopulateDatabase()
                 local iconTexture = col1Frame.iconTexture or col1Frame:CreateTexture(nil, "ARTWORK")
                 iconTexture:SetSize(20, 20)
                 iconTexture:SetPoint("LEFT", col1Frame, "LEFT", 10, 0)
-                iconTexture:SetTexture(iWRBase.Icons[data[2]] or "Interface\\Icons\\INV_Misc_QuestionMark")
+                iconTexture:SetTexture(iWR.Icons[data[2]] or "Interface\\Icons\\INV_Misc_QuestionMark")
                 col1Frame.iconTexture = iconTexture
 
                 local playerNameText = col1Frame.playerNameText or col1Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -801,7 +801,7 @@ function iWR:PopulateDatabase()
                     displayName = displayName .. "-" .. data[7]
                 end
                 local databasekey = StripColorCodes(data[4]) .. "-" .. data[7]
-                playerNameText:SetText(iWRBase.Colors.iWR .. string.format("%-16s", listdisplayName))
+                playerNameText:SetText(iWR.Colors.iWR .. string.format("%-16s", listdisplayName))
                 playerNameText:SetTextColor(1, 1, 1, 1)
                 col1Frame.playerNameText = playerNameText
 
@@ -810,10 +810,10 @@ function iWR:PopulateDatabase()
                     GameTooltip:SetOwner(col1Frame, "ANCHOR_RIGHT")
                     GameTooltip:AddLine(listdisplayName, 1, 1, 1)
                     if data[7] then
-                        GameTooltip:AddLine("Server: " .. iWRBase.Colors.Reset .. data[7], 1, 0.82, 0)
+                        GameTooltip:AddLine("Server: " .. iWR.Colors.Reset .. data[7], 1, 0.82, 0)
                     end
                     if data[1] then
-                        GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. data[1], 1, 0.82, 0)
+                        GameTooltip:AddLine("Note: " .. iWR.Colors[data[2]] .. data[1], 1, 0.82, 0)
                     end
                     if data[6] then
                         GameTooltip:AddLine("Author: " .. data[6], 1, 0.82, 0)
@@ -839,7 +839,7 @@ function iWR:PopulateDatabase()
 
                 local noteText = col2Frame.noteText or col2Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 noteText:SetPoint("LEFT", col2Frame, "LEFT", 10, 0)
-                local noteColor = iWRBase.Colors[data[2]] or iWRBase.Colors.Default
+                local noteColor = iWR.Colors[data[2]] or iWR.Colors.Default
                 local truncatedNote = data[1] and #data[1] > 30 and data[1]:sub(1, 27) .. "..." or data[1] or ""
                 noteText:SetText(noteColor .. truncatedNote)
                 col2Frame.noteText = noteText
@@ -849,10 +849,10 @@ function iWR:PopulateDatabase()
                     GameTooltip:SetOwner(col2Frame, "ANCHOR_RIGHT")
                     GameTooltip:AddLine(listdisplayName, 1, 1, 1)
                     if data[7] then
-                        GameTooltip:AddLine("Server: " .. iWRBase.Colors.Reset .. data[7], 1, 0.82, 0)
+                        GameTooltip:AddLine("Server: " .. iWR.Colors.Reset .. data[7], 1, 0.82, 0)
                     end
                     if data[1] then
-                        GameTooltip:AddLine("Note: " .. iWRBase.Colors[data[2]] .. data[1], 1, 0.82, 0)
+                        GameTooltip:AddLine("Note: " .. iWR.Colors[data[2]] .. data[1], 1, 0.82, 0)
                     end
                     if data[6] then
                         GameTooltip:AddLine("Author: " .. data[6], 1, 0.82, 0)
@@ -907,9 +907,9 @@ function iWR:PopulateDatabase()
                 removeButton:SetScript("OnClick", function()
                     local removeText
                     if iWRDatabase[databasekey][7] ~= iWR.CurrentRealm then
-                        removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[databasekey][4] .. "-" .. iWRDatabase[databasekey][7] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
+                        removeText = iWR.Colors.iWR .. "Are you sure you want to remove" .. iWR.Colors.iWR .. " |n|n[" .. iWRDatabase[databasekey][4] .. "-" .. iWRDatabase[databasekey][7] .. iWR.Colors.iWR .. "]|n|n from the iWR database?"
                     else
-                        removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[databasekey][4] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
+                        removeText = iWR.Colors.iWR .. "Are you sure you want to remove" .. iWR.Colors.iWR .. " |n|n[" .. iWRDatabase[databasekey][4] .. iWR.Colors.iWR .. "]|n|n from the iWR database?"
                     end
                     StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
                         text = removeText,
@@ -918,8 +918,8 @@ function iWR:PopulateDatabase()
                         OnAccept = function()
                             print(L["CharNoteStart"] .. iWRDatabase[databasekey][4]  .. L["CharNoteRemoved"])
                             iWRDatabase[databasekey] = nil
-                            if searchResultsFrame then
-                                searchResultsFrame:Hide()
+                            if SearchResultsFrame then
+                                SearchResultsFrame:Hide()
                             end
                             iWR:PopulateDatabase()
                             iWR:SendRemoveRequestToFriends(databasekey)

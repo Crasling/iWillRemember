@@ -190,11 +190,6 @@ iWR.Colors = {
     Reset = "|r"
 }
 
--- Backward compatibility - iWRBase is now an alias to iWR
-iWRBase = {
-    Colors = iWR.Colors,
-}
-
 -- ╭────────────────────────╮
 -- │      List of Types     │
 -- ╰────────────────────────╯
@@ -217,9 +212,6 @@ iWR.Types = {
     Disliked = -3,
     Hated = -5,
 }
-
--- Backward compatibility
-iWRBase.Types = iWR.Types
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                    Set Paths                                   │
@@ -247,9 +239,6 @@ iWR.TargetFrames = {
     [-5]    = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Hated.blp",
 }
 
--- Backward compatibility
-iWRBase.TargetFrames = iWR.TargetFrames
-
 -- ╭────────────────────────╮
 -- │      List of Icons     │
 -- ╰────────────────────────╯
@@ -265,18 +254,12 @@ iWR.Icons = {
     [-5]        = iWR.AddonPath .. "Images\\Icons\\Hated.blp",
 }
 
--- Backward compatibility
-iWRBase.Icons = iWR.Icons
-
 iWR.ChatIcons = {
     [5]     = iWR.AddonPath .. "Images\\ChatIcons\\Respected.blp",
     [3]     = iWR.AddonPath .. "Images\\ChatIcons\\Liked.blp",
     [-3]    = iWR.AddonPath .. "Images\\ChatIcons\\Disliked.blp",
     [-5]    = iWR.AddonPath .. "Images\\ChatIcons\\Hated.blp",
 }
-
--- Backward compatibility
-iWRBase.ChatIcons = iWR.ChatIcons
 
 -- ╭───────────────────────╮
 -- │      Game Version     │

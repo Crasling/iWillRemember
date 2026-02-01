@@ -61,8 +61,8 @@ end)
 -- ╰──────────────────────╯
 function iWR:OnEnable()
     -- Print a messages to the chat frame when the addon is loaded
-    iWR:DebugMsg("Debug Mode is activated." .. iWRBase.Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
-    print(L["iWRLoaded"] .. " " .. iWR.GameVersionName .. iWRBase.Colors.Green .. " v" .. Version .. iWRBase.Colors.iWR .. " Loaded.")
+    iWR:DebugMsg("Debug Mode is activated." .. iWR.Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
+    print(L["iWRLoaded"] .. " " .. iWR.GameVersionName .. iWR.Colors.Green .. " v" .. iWR.Version .. iWR.Colors.iWR .. " Loaded.")
     -- Secure hooks to add custom behavior
     self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
     self:SecureHook("TargetFrame_Update", "SetTargetingFrame")
@@ -112,11 +112,11 @@ function iWR:OnEnable()
 
     -- Done Messages
     iWR:DebugMsg("All initialization hooks added.",3)
-    if iWRSettings.WelcomeMessage ~= Version then
+    if iWRSettings.WelcomeMessage ~= iWR.Version then
         local playerName = UnitName("player")
         local _, class = UnitClass("player")
-        print(L["iWRWelcomeStart"] .. iWRBase.Colors.Classes[class] .. playerName .. L["iWRWelcomeEnd"])
-        iWRSettings.WelcomeMessage = Version
+        print(L["iWRWelcomeStart"] .. iWR.Colors.Classes[class] .. playerName .. L["iWRWelcomeEnd"])
+        iWRSettings.WelcomeMessage = iWR.Version
     end
 end
 
