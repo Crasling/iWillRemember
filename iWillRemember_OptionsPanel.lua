@@ -280,7 +280,7 @@ function iWR:CreateOptionsPanel()
     -- Whitelist Title
     local whitelistTitle = syncListContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     whitelistTitle:SetPoint("BOTTOM", syncListContainer, "TOP", 0, 5)
-    whitelistTitle:SetText(L["WhiteListTitle"] .. " (" .. iWRCurrentRealm .. ")")
+    whitelistTitle:SetText(L["WhiteListTitle"] .. " (" .. iWR.CurrentRealm .. ")")
 
     -- Update Sync List Display with Icons
     function iWR:UpdateSyncListDisplay()
@@ -526,22 +526,22 @@ function iWR:CreateOptionsPanel()
         -- Game Version Label
         local aboutGameVersion = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         aboutGameVersion:SetPoint("TOP", aboutDiscord, "BOTTOM", 0, -20)
-        aboutGameVersion:SetText(iWRBase.Colors.iWR .. "Game Version: " .. iWRBase.Colors.Reset .. iWRGameVersion)
+        aboutGameVersion:SetText(iWRBase.Colors.iWR .. "Game Version: " .. iWRBase.Colors.Reset .. iWR.GameVersion)
 
         -- TOC Version Label
         local aboutTocVersion = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         aboutTocVersion:SetPoint("TOP", aboutGameVersion, "BOTTOM", 0, -10)
-        aboutTocVersion:SetText(iWRBase.Colors.iWR .. "TOC Version: " .. iWRBase.Colors.Reset .. iWRGameTocVersion)
+        aboutTocVersion:SetText(iWRBase.Colors.iWR .. "TOC Version: " .. iWRBase.Colors.Reset .. iWR.GameTocVersion)
 
         -- TOC Version Label
         local aboutBuildVersion = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         aboutBuildVersion:SetPoint("TOP", aboutTocVersion, "BOTTOM", 0, -10)
-        aboutBuildVersion:SetText(iWRBase.Colors.iWR .. "Build Version: " .. iWRBase.Colors.Reset .. iWRGameBuild)
+        aboutBuildVersion:SetText(iWRBase.Colors.iWR .. "Build Version: " .. iWRBase.Colors.Reset .. iWR.GameBuild)
 
         -- TOC Version Label
         local aboutBuildDate = optionsPanel.About:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         aboutBuildDate:SetPoint("TOP", aboutBuildVersion, "BOTTOM", 0, -10)
-        aboutBuildDate:SetText(iWRBase.Colors.iWR .. "Build Date: " .. iWRBase.Colors.Reset .. iWRGameBuildDate)
+        aboutBuildDate:SetText(iWRBase.Colors.iWR .. "Build Date: " .. iWRBase.Colors.Reset .. iWR.GameBuildDate)
     end
 
     -- Tabs

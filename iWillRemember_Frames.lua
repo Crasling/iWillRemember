@@ -588,7 +588,7 @@ searchDatabaseButton:SetScript("OnClick", function()
                         -- Add player name and note
                         local entryText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
                         entryText:SetPoint("LEFT", iconTexture, "RIGHT", 5, 0)
-                        if data[7] ~= iWRCurrentRealm then
+                        if data[7] ~= iWR.CurrentRealm then
                             entryText:SetText(data[4]..iWRBase.Colors.Reset.."-"..data[7])
                         else
                             entryText:SetText(data[4])
@@ -598,7 +598,7 @@ searchDatabaseButton:SetScript("OnClick", function()
                         entryFrame:SetScript("OnEnter", function()
                             ---@diagnostic disable-next-line: param-type-mismatch
                             GameTooltip:SetOwner(entryFrame, "ANCHOR_RIGHT")
-                            if data[7] ~= iWRCurrentRealm then
+                            if data[7] ~= iWR.CurrentRealm then
                                 GameTooltip:AddLine(data[4]..iWRBase.Colors.Reset.."-"..data[7], 1, 1, 1) -- Title (Player Name)
                             else
                                 GameTooltip:AddLine(data[4], 1, 1, 1) -- Title (Player Name)
@@ -642,7 +642,7 @@ searchDatabaseButton:SetScript("OnClick", function()
                         removeButton:SetText("Remove")
                         removeButton:SetScript("OnClick", function()
                             local removeText
-                            if iWRDatabase[playerName][7] ~= iWRCurrentRealm then
+                            if iWRDatabase[playerName][7] ~= iWR.CurrentRealm then
                                 removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. "-" .. iWRDatabase[playerName][7] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
                             else
                                 removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
@@ -796,7 +796,7 @@ function iWR:PopulateDatabase()
                 playerNameText:SetPoint("LEFT", iconTexture, "RIGHT", 10, 0)
                 local displayName = data[4]
                 local listdisplayName = displayName
-                if data[7] and data[7] ~= iWRCurrentRealm then
+                if data[7] and data[7] ~= iWR.CurrentRealm then
                     listdisplayName = displayName .. " (*)"
                     displayName = displayName .. "-" .. data[7]
                 end
@@ -882,7 +882,7 @@ function iWR:PopulateDatabase()
                 editButton:SetText("Edit")
                 editButton:SetScript("OnClick", function()
                     -- Check if databaseKey[7] matches the current realm
-                    if data[7] == iWRCurrentRealm then
+                    if data[7] == iWR.CurrentRealm then
                         -- Open with data[4]
                         iWR:MenuOpen(data[4])
                         if data[1] ~= "" or data[1] ~= nil then
@@ -906,7 +906,7 @@ function iWR:PopulateDatabase()
                 removeButton:SetText("Remove")
                 removeButton:SetScript("OnClick", function()
                     local removeText
-                    if iWRDatabase[databasekey][7] ~= iWRCurrentRealm then
+                    if iWRDatabase[databasekey][7] ~= iWR.CurrentRealm then
                         removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[databasekey][4] .. "-" .. iWRDatabase[databasekey][7] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"
                     else
                         removeText = iWRBase.Colors.iWR .. "Are you sure you want to remove" .. iWRBase.Colors.iWR .. " |n|n[" .. iWRDatabase[databasekey][4] .. iWRBase.Colors.iWR .. "]|n|n from the iWR database?"

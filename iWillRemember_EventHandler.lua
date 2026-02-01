@@ -13,15 +13,15 @@
 -- │      Event Handler for Combat Events      │
 -- ╰───────────────────────────────────────────╯
 local combatEventFrame = CreateFrame("Frame")
-iWRInCombat = false
+iWR.State.InCombat = false
 combatEventFrame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_REGEN_DISABLED" then
-        iWRInCombat = true
+        iWR.State.InCombat = true
         iWRPanel:Hide()
         iWRDatabaseFrame:Hide()
         iWR:DebugMsg("Entered combat, UI interaction disabled.",3)
     elseif event == "PLAYER_REGEN_ENABLED" then
-        iWRInCombat = false
+        iWR.State.InCombat = false
         iWR:DebugMsg("Left combat, UI interaction enabled.",3)
     end
 end)
@@ -62,7 +62,7 @@ end)
 function iWR:OnEnable()
     -- Print a messages to the chat frame when the addon is loaded
     iWR:DebugMsg("Debug Mode is activated." .. iWRBase.Colors.Red .. " This is not recommended for common use and will cause a lot of message spam in chat",3)
-    print(L["iWRLoaded"] .. " " .. iWRGameVersionName .. iWRBase.Colors.Green .. " v" .. Version .. iWRBase.Colors.iWR .. " Loaded.")
+    print(L["iWRLoaded"] .. " " .. iWR.GameVersionName .. iWRBase.Colors.Green .. " v" .. Version .. iWRBase.Colors.iWR .. " Loaded.")
     -- Secure hooks to add custom behavior
     self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
     self:SecureHook("TargetFrame_Update", "SetTargetingFrame")
@@ -77,7 +77,7 @@ function iWR:OnEnable()
 
             -- Extract the player name and realm from linkData
             local authorName, authorRealm = string.match(linkData, "^([^-]+)-?(.*)$")
-            authorRealm = authorRealm ~= "" and authorRealm or iWRCurrentRealm -- Default to current realm
+            authorRealm = authorRealm ~= "" and authorRealm or iWR.CurrentRealm -- Default to current realm
 
             -- Show detail window or log a message if not found
             if iWRDatabase[linkData] then
@@ -126,7 +126,7 @@ end
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("UNIT_TARGET")
 frame:SetScript("OnEvent", function(_, event, unit)
-    if iWRimagePath == 'ShadowedUnitFrames' then
+    if iWR.ImagePath == 'ShadowedUnitFrames' then
         if unit == "player" or unit == "target" then
             iWR:SetTargetingFrame()
         end
