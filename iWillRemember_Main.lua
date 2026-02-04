@@ -11,8 +11,6 @@
 -- │                                     Namespace                                  │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 local addonName, AddOn = ...
-
--- Store addon info (these are safe as they're local)
 local Title = select(2, C_AddOns.GetAddOnInfo(addonName)):gsub("%s*v?[%d%.]+$", "")
 local Version = C_AddOns.GetAddOnMetadata(addonName, "Version")
 local Author = C_AddOns.GetAddOnMetadata(addonName, "Author")
@@ -20,7 +18,6 @@ local Author = C_AddOns.GetAddOnMetadata(addonName, "Author")
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                        Libs                                    │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
--- Create the main addon object (only global we need)
 iWR = LibStub("AceAddon-3.0"):NewAddon("iWR", "AceSerializer-3.0", "AceComm-3.0", "AceTimer-3.0", "AceHook-3.0")
 L = LibStub("AceLocale-3.0"):GetLocale("iWR")
 LDBroker = LibStub("LibDataBroker-1.1")
@@ -268,7 +265,7 @@ local major, minor, patch = string.match(iWR.GameTocVersion, "(%d)(%d%d)(%d%d)")
 if major and minor and patch then
     local gameTocNumber = tonumber(major) * 10000 + tonumber(minor) * 100 + tonumber(patch)
     if gameTocNumber > 50000 and gameTocNumber < 59999 then
-        iWR.GameVersionName = "Classic MOP"
+        iWR.GameVersionName = "Classic MoP"
     elseif gameTocNumber > 40000 and gameTocNumber < 49999 then
         iWR.GameVersionName = "Classic Cata"
     elseif gameTocNumber > 30000 and gameTocNumber < 39999 then
@@ -286,9 +283,3 @@ end
 -- │                            Backward Compatibility                              │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 -- These global variables are kept for backward compatibility with existing code
--- They will be phased out gradually
-
--- Global backward compatibility variables (DEPRECATED - use iWR.* instead)
-Title = iWR.Title
-Version = iWR.Version
-Author = iWR.Author
