@@ -58,6 +58,7 @@
     ],
     "Lua.workspace.ignoreDir": [
     ".vscode",
+    ".github",
     "libs"
   ]
 }
