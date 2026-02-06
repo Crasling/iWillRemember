@@ -34,7 +34,8 @@
         "iWRSettings",
         "iWRMemory",
         "StaticPopup_Visible",
-        "StaticPopup_Hide"
+        "StaticPopup_Hide",
+        "optionsCategory"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {

@@ -23,7 +23,7 @@ local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
             iWR:MenuToggle()
             iWR:DatabaseClose()
         elseif button == "RightButton" then
-            Settings.OpenToCategory(OptionsCategory:GetID())
+            LibStub("AceConfigDialog-3.0"):Open("iWillRemember")
         end
     end,
 

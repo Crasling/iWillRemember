@@ -560,6 +560,7 @@ function iWR:SetTargetFrameDefault()
     -- Validate target existence and ensure it's a player
     if not UnitExists("target") or not UnitIsPlayer("target") then
         iWR:DebugMsg("No valid target found or target is not a player.", 1)
+        if iWR.customFrame then iWR.customFrame:Hide() end
         return
     end
 
@@ -576,12 +577,7 @@ function iWR:SetTargetFrameDefault()
     -- Ensure the database entry exists
     if not iWRDatabase[databaseKey] then
         iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database. [SetTargetFrameDefault]", 1)
-        return
-    end
-
-    -- Ensure the target frame texture reference exists
-    if not TargetFrameTextureFrameTexture then
-        iWR:DebugMsg("Default TargetFrameTextureFrameTexture not found.", 1)
+        if iWR.customFrame then iWR.customFrame:Hide() end
         return
     end
 
@@ -589,12 +585,42 @@ function iWR:SetTargetFrameDefault()
     local targetType = iWRDatabase[databaseKey][2]
     if not targetType or not iWR.TargetFrames[targetType] then
         iWR:DebugMsg("Invalid target type or no texture defined for target type: " .. tostring(targetType), 1)
+        if iWR.customFrame then iWR.customFrame:Hide() end
         return
     end
 
-    -- Set the target frame texture
-    TargetFrameTextureFrameTexture:SetTexture(iWR.TargetFrames[targetType])
-    iWR:DebugMsg("Default frame updated for target [" .. databaseKey .. "] with type [" .. iWR.Colors[targetType] .. iWR.Types[targetType] .. "].", 3)
+    -- Classic Era has TargetFrameTextureFrameTexture — set it directly
+    if TargetFrameTextureFrameTexture then
+        TargetFrameTextureFrameTexture:SetTexture(iWR.TargetFrames[targetType])
+        iWR:DebugMsg("Default frame updated for target [" .. databaseKey .. "] with type [" .. iWR.Colors[targetType] .. iWR.Types[targetType] .. "].", 3)
+    else
+        -- TBC/WotLK/MoP fallback: use custom overlay frame on TargetFrame
+        local portraitParent = _G["TargetFrame"]
+        if not portraitParent then
+            iWR:DebugMsg("TargetFrame not found for overlay. [SetTargetFrameDefault]", 1)
+            return
+        end
+
+        -- Create or reuse the custom overlay frame
+        if not iWR.customFrame then
+            iWR.customFrame = CreateFrame("Frame", nil, portraitParent)
+            iWR.customFrame.texture = iWR.customFrame:CreateTexture(nil, "OVERLAY")
+        end
+
+        local overlayFrame = iWR.customFrame
+        overlayFrame:SetParent(portraitParent)
+        overlayFrame:SetFrameLevel(portraitParent:GetFrameLevel() + 2)
+        overlayFrame:Show()
+
+        local overlayTexture = overlayFrame.texture
+        overlayTexture:ClearAllPoints()
+        overlayTexture:SetTexture(iWR.TargetFrames[targetType])
+        overlayTexture:SetDrawLayer("ARTWORK", 3)
+        overlayTexture:SetAllPoints(portraitParent)
+        overlayTexture:Show()
+
+        iWR:DebugMsg("Overlay frame updated for target [" .. databaseKey .. "] with type [" .. iWR.Colors[targetType] .. iWR.Types[targetType] .. "]. [Fallback]", 3)
+    end
 end
 
 -- ╭────────────────────────────────────────────────────────╮
@@ -1121,14 +1147,17 @@ function iWR:SetTargetingFrame()
 
     -- Clear the custom texture if no target or target is not a player
     if not UnitExists("target") or not UnitIsPlayer("target") then
+        if TargetFrameTextureFrameTexture then
+            TargetFrameTextureFrameTexture:SetTexture("Interface\\TargetingFrame\\UI-TargetingFrame")
+        end
         if iWR.customFrame then
             iWR.customFrame:Hide()
         end
         return
     end
 
-    -- Reset note input if Discord link is set
-    if iWRNoteInput:GetText() == L["DiscordLink"] then
+    -- Reset note input if Discord link is set (guard for panel not yet created)
+    if iWRNoteInput and iWRNoteInput:GetText() == L["DiscordLink"] then
         iWRNoteInput:SetText(L["DefaultNoteInput"])
     end
 
@@ -1138,8 +1167,14 @@ function iWR:SetTargetingFrame()
     -- Check if the target is in the database
     if not iWRDatabase[databaseKey] then
         local _, class = UnitClass("target")
-        iWRNameInput:SetText(class and iWR:ColorizePlayerNameByClass(targetName, class) or targetName)
+        if iWRNameInput then
+            iWRNameInput:SetText(class and iWR:ColorizePlayerNameByClass(targetName, class) or targetName)
+        end
 
+        -- Reset target frame to default texture
+        if TargetFrameTextureFrameTexture then
+            TargetFrameTextureFrameTexture:SetTexture("Interface\\TargetingFrame\\UI-TargetingFrame")
+        end
         if iWR.customFrame then
             iWR.customFrame:Hide()
         end
@@ -1158,8 +1193,10 @@ function iWR:SetTargetingFrame()
         -- Verify and update the class in the database if necessary
         iWR:VerifyTargetClassinDB(databaseKey, class)
 
-        -- Set the input box to the colored player name
-        iWRNameInput:SetText(class and iWR:ColorizePlayerNameByClass(targetName, class) or targetName)
+        -- Set the input box to the colored player name (guard for panel not yet created)
+        if iWRNameInput then
+            iWRNameInput:SetText(class and iWR:ColorizePlayerNameByClass(targetName, class) or targetName)
+        end
 
         -- Update the target frame based on settings
         if iWRSettings.UpdateTargetFrame then
@@ -1571,7 +1608,12 @@ end
 
 function iWR:UpdateTargetFrame()
     if iWRSettings.UpdateTargetFrame then
-        TargetFrame_Update(TargetFrame)
+        if type(TargetFrame_Update) == "function" then
+            TargetFrame_Update(TargetFrame)
+        else
+            -- Fallback for TBC/WotLK/MoP where TargetFrame_Update doesn't exist
+            iWR:SetTargetingFrame()
+        end
     end
 end
 
