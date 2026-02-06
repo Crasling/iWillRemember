@@ -113,7 +113,14 @@ iWR.SettingsDefault = {
     iWRDatabaseBackupInfo = {
         backupDate = "",
         backupTime = "",
-    }
+    },
+    ButtonLabels = {
+        [5]  = "Respected",
+        [3]  = "Liked",
+        [-3] = "Disliked",
+        [-5] = "Hated",
+    },
+    CustomIcons = {},
 }
 
 -- Database entry template
@@ -263,6 +270,37 @@ iWR.ChatIcons = {
     [3]     = iWR.AddonPath .. "Images\\ChatIcons\\Liked.blp",
     [-3]    = iWR.AddonPath .. "Images\\ChatIcons\\Disliked.blp",
     [-5]    = iWR.AddonPath .. "Images\\ChatIcons\\Hated.blp",
+}
+
+-- ╭──────────────────────────────╮
+-- │      Icon Picker List        │
+-- ╰──────────────────────────────╯
+iWR.IconPickerList = {
+    -- Addon default icons
+    iWR.AddonPath .. "Images\\Icons\\Respected.blp",
+    iWR.AddonPath .. "Images\\Icons\\Liked.blp",
+    iWR.AddonPath .. "Images\\Icons\\Disliked.blp",
+    iWR.AddonPath .. "Images\\Icons\\Hated.blp",
+    -- Positive (love, heal, bless, gifts)
+    "Interface\\Icons\\INV_ValentinesCandy",
+    "Interface\\Icons\\INV_Valentinescard01",
+    "Interface\\Icons\\INV_Misc_Gift_01",
+    "Interface\\Icons\\Spell_Holy_PrayerOfHealing",
+    "Interface\\Icons\\Spell_ChargePositive",
+    "Interface\\Icons\\Spell_Holy_LayOnHands",
+    "Interface\\Icons\\Spell_Holy_BlessingOfProtection",
+    "Interface\\Icons\\INV_Crown_01",
+    "Interface\\Icons\\Spell_Holy_DivinePurpose",
+    -- Negative (skulls, anger, shadow, fire)
+    "Interface\\Icons\\Ability_Creature_Cursed_02",
+    "Interface\\Icons\\Spell_Shadow_DeathScream",
+    "Interface\\Icons\\INV_Misc_Bone_HumanSkull_01",
+    "Interface\\Icons\\Spell_Shadow_ShadowWordPain",
+    "Interface\\Icons\\Spell_Fire_Fire",
+    "Interface\\Icons\\Spell_Shadow_UnholyFrenzy",
+    "Interface\\Icons\\Ability_Rogue_MasterOfSubtlety",
+    "Interface\\Icons\\Spell_Shadow_AuraOfDarkness",
+    "Interface\\Icons\\Spell_Shadow_DeathPact",
 }
 
 -- ╭───────────────────────╮

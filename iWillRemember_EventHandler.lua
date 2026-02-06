@@ -17,6 +17,7 @@ combatEventFrame:SetScript("OnEvent", function(_, event)
 
         if iWRPanel then iWRPanel:Hide() end
         if iWRDatabaseFrame then iWRDatabaseFrame:Hide() end
+        if iWR.SettingsFrame then iWR.SettingsFrame:Hide() end
 
         if StaticPopup_Visible("REMOVE_PLAYER_CONFIRM") then
             StaticPopup_Hide("REMOVE_PLAYER_CONFIRM")
@@ -107,11 +108,7 @@ function iWR:OnEnable()
     ----------------------------------------------------------------
     iWR:InitializeSettings()
     iWR:InitializeDatabase()
-    -- iWR:CreateOptionsPanel()
-    local AceConfig = LibStub("AceConfig-3.0")
-    local AceConfigDialog = LibStub("AceConfigDialog-3.0")
-    AceConfig:RegisterOptionsTable("iWillRemember", iWR.Options)
-    AceConfigDialog:AddToBlizOptions("iWillRemember", "iWillRemember")
+    iWR:CreateOptionsPanel()
 
     if iWRSettings.HourlyBackup then
         iWR:StartHourlyBackup()
@@ -150,6 +147,22 @@ function iWR:OnEnable()
         )
 
         iWRSettings.WelcomeMessage = iWR.Version
+    end
+
+    ----------------------------------------------------------------
+    -- SLASH COMMANDS
+    ----------------------------------------------------------------
+    SLASH_IWR1 = "/iwr"
+    SlashCmdList["IWR"] = function(msg)
+        msg = strtrim(msg):lower()
+        if msg == "settings" or msg == "options" or msg == "config" then
+            iWR:SettingsToggle()
+        elseif msg == "db" or msg == "database" then
+            iWR:DatabaseToggle()
+            iWR:PopulateDatabase()
+        else
+            iWR:MenuToggle()
+        end
     end
 end
 

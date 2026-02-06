@@ -1,8 +1,10 @@
 ## Interface: 11506, 11508, 20505, 30405, 40401, 40402, 50503
-## Title: |cffff9716iWillRemember |cFF00FF00v0.16.1|r
-## Version: 0.16.1
+## Title: |cffff9716iWillRemember |cFF00FF00v0.16.2|r
+## Version: 0.16.2
 ## Notes: |cffff9716Personalized Player Notes Addon|n|cFFFF0000Never forget again.|r
 ## Author: Crasling
+## IconTexture: Interface\AddOns\iWillRemember\Images\Icons\iWRIcon.blp
+## Category: Social
 ## X-Curse-Project-ID: 1160664
 ## DefaultState: Enabled
 ## LoadOnDemand: 0

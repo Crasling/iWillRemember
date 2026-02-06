@@ -65,6 +65,31 @@ function iWR:CreateiWRStyleFrame(parent, width, height, point, backdrop)
     return frame
 end
 
+function iWR:GetTypeName(typeIndex)
+    typeIndex = tonumber(typeIndex)
+    if typeIndex and iWRSettings.ButtonLabels and iWRSettings.ButtonLabels[typeIndex]
+       and iWRSettings.ButtonLabels[typeIndex] ~= "" then
+        return iWRSettings.ButtonLabels[typeIndex]
+    end
+    return iWR.Types[typeIndex] or ""
+end
+
+function iWR:GetIcon(typeIndex)
+    typeIndex = tonumber(typeIndex)
+    if typeIndex and iWRSettings.CustomIcons and iWRSettings.CustomIcons[typeIndex] then
+        return iWRSettings.CustomIcons[typeIndex]
+    end
+    return iWR.Icons[typeIndex]
+end
+
+function iWR:GetChatIcon(typeIndex)
+    typeIndex = tonumber(typeIndex)
+    if typeIndex and iWRSettings.CustomIcons and iWRSettings.CustomIcons[typeIndex] then
+        return iWRSettings.CustomIcons[typeIndex]
+    end
+    return iWR.ChatIcons[typeIndex] or "Interface\\Icons\\INV_Misc_QuestionMark"
+end
+
 function iWR:VerifyInputName(Name)
     local verifyName = StripColorCodes(Name)
     if verifyName ~= L["DefaultNameInput"]
@@ -127,8 +152,8 @@ function iWR:AddNoteToGameTooltip(self, ...)
     local note = data[1]
     local author = data[6]
     local date = data[5]
-    local typeText = iWR.Types[typeIndex]
-    local iconPath = iWR.ChatIcons[typeIndex] or "Interface\\Icons\\INV_Misc_QuestionMark"
+    local typeText = iWR:GetTypeName(typeIndex)
+    local iconPath = iWR:GetChatIcon(typeIndex)
 
     -- Add the note details to the tooltip
     if typeText then
@@ -209,7 +234,7 @@ function iWR:ShowNotificationPopup(matches)
         for _, match in ipairs(matches) do
             local playerInfo = notificationFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             playerInfo:SetPoint("TOP", lastElement, "BOTTOM", 0, -10)
-            playerInfo:SetText(iWR.Colors.iWR .. match.name .. "|r" .. iWR.Colors.iWR .. " (" .. iWR.Colors[match.relation] .. iWR.Types[match.relation] .. iWR.Colors.iWR .. ")")
+            playerInfo:SetText(iWR.Colors.iWR .. match.name .. "|r" .. iWR.Colors.iWR .. " (" .. iWR.Colors[match.relation] .. iWR:GetTypeName(match.relation) .. iWR.Colors.iWR .. ")")
             playerInfo:SetFont("Fonts\\FRIZQT__.TTF", 16, "OUTLINE")
 
             -- Add note text
@@ -260,43 +285,34 @@ function iWR:CheckGroupMembersAgainstDatabase()
     local matches = {}
     local playerName = UnitName("player") -- Current player's name for comparison
 
-    for i = 1, numGroupMembers do
+    local maxPartyIndex = isInRaid and numGroupMembers or (numGroupMembers - 1)
+
+    for i = 1, maxPartyIndex do
         local unitID = isInRaid and "raid" .. i or "party" .. i
         local targetName, targetRealm = UnitName(unitID)
 
-        if targetName and not iWR.WarnedPlayers[targetName] then
-            -- Use current player's realm if `targetRealm` is nil
+        if not targetName then
+            iWR:DebugMsg("Could not retrieve name for unitID: " .. unitID, 2)
+        elseif not iWR.WarnedPlayers[targetName] then
+            iWR.WarnedPlayers[targetName] = true
+
             if targetRealm == "" or targetRealm == nil then
                 targetRealm = iWR.CurrentRealm
             end
-            
-            -- Format name and realm for the database key
+
             local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
             local databaseKey = capitalizedName .. "-" .. capitalizedRealm
 
-            -- Skip the current player
-            if playerName == targetName then
-                iWR.WarnedPlayers[targetName] = true
-            elseif databaseKey and not iWR.WarnedPlayers[targetName] then
-                -- Check the database for this key
-                if iWRDatabase[databaseKey] then
-                    local data = iWR:GetDatabaseEntry(databaseKey)
-                    if data and next(data) ~= nil then
-                        local relationValue = data[2]
-                        if relationValue and relationValue < 0 then
-                            local note = data[1] or ""
-                            table.insert(matches, { name = data[4], relation = relationValue, note = note })
-                            iWR.WarnedPlayers[targetName] = true
-                        end
-                    else
-                        iWR:DebugMsg("No data found for player in group: [" .. targetName .. "]", 3)
+            if playerName ~= targetName and iWRDatabase[databaseKey] then
+                local data = iWR:GetDatabaseEntry(databaseKey)
+                if data and next(data) ~= nil then
+                    local relationValue = data[2]
+                    if relationValue and relationValue < 0 then
+                        local note = data[1] or ""
+                        table.insert(matches, { name = data[4], relation = relationValue, note = note })
                     end
-                else
-                    iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database. [CheckGroupMembersAgainstDatabase]", 3)
                 end
             end
-        else
-            iWR:DebugMsg("Could not retrieve name for unitID: " .. unitID, 2)
         end
     end
 
@@ -307,7 +323,7 @@ function iWR:CheckGroupMembersAgainstDatabase()
         -- Construct chat message
         local chatMessage = L["GroupWarning"]
         for _, match in ipairs(matches) do
-            chatMessage = chatMessage .. " " .. match.name .. " (" .. iWR.Colors[match.relation] .. iWR.Types[match.relation] .. iWR.Colors.Reset .. "), "
+            chatMessage = chatMessage .. " " .. match.name .. " (" .. iWR.Colors[match.relation] .. iWR:GetTypeName(match.relation) .. iWR.Colors.Reset .. "), "
         end
 
         -- Print message to chat
@@ -592,7 +608,7 @@ function iWR:SetTargetFrameDefault()
     -- Classic Era has TargetFrameTextureFrameTexture — set it directly
     if TargetFrameTextureFrameTexture then
         TargetFrameTextureFrameTexture:SetTexture(iWR.TargetFrames[targetType])
-        iWR:DebugMsg("Default frame updated for target [" .. databaseKey .. "] with type [" .. iWR.Colors[targetType] .. iWR.Types[targetType] .. "].", 3)
+        iWR:DebugMsg("Default frame updated for target [" .. databaseKey .. "] with type [" .. iWR.Colors[targetType] .. iWR:GetTypeName(targetType) .. "].", 3)
     else
         -- TBC/WotLK/MoP fallback: use custom overlay frame on TargetFrame
         local portraitParent = _G["TargetFrame"]
@@ -619,7 +635,7 @@ function iWR:SetTargetFrameDefault()
         overlayTexture:SetAllPoints(portraitParent)
         overlayTexture:Show()
 
-        iWR:DebugMsg("Overlay frame updated for target [" .. databaseKey .. "] with type [" .. iWR.Colors[targetType] .. iWR.Types[targetType] .. "]. [Fallback]", 3)
+        iWR:DebugMsg("Overlay frame updated for target [" .. databaseKey .. "] with type [" .. iWR.Colors[targetType] .. iWR:GetTypeName(targetType) .. "]. [Fallback]", 3)
     end
 end
 
@@ -1243,16 +1259,14 @@ end
 -- Function to add relationship icons to chat messages
 local function AddRelationshipIconToChat(self, event, message, author, flags, ...)
     if iWRSettings.ShowChatIcons then
-        -- Extract author name and realm
+        if not author or author == "" then
+            return false, message, author, flags, ...
+        end
+
         local authorName, authorRealm = string.match(author, "^([^-]+)-?(.*)$")
         authorRealm = NormalizeRealmName(authorRealm)
 
-        if not authorName then
-            iWR:DebugMsg("AddRelationshipIconToChat tried to add icon to message with missing authorName")
-            return false, message, author, flags, ...
-        end
-        if not authorRealm then
-            iWR:DebugMsg("AddRelationshipIconToChat tried to add icon to message with missing authorRealm")
+        if not authorName or authorName == "" then
             return false, message, author, flags, ...
         end
 
@@ -1264,7 +1278,7 @@ local function AddRelationshipIconToChat(self, event, message, author, flags, ..
             -- Get the font size from the current chat frame
             local font, fontSize = self:GetFont()
             local iconSize = math.floor(fontSize * 1.2)
-            local iconPath = iWR.ChatIcons[iWRDatabase[databaseKey][2]] or "Interface\\Icons\\INV_Misc_QuestionMark"
+            local iconPath = iWR:GetChatIcon(iWRDatabase[databaseKey][2])
 
             -- Create the clickable addon link
             local iconString = string.format("|T%s:%d|t", iconPath, iconSize)
@@ -1369,7 +1383,7 @@ function iWR:ShowDetailWindow(playerName)
     if data[7] and data[7] ~= iWR.CurrentRealm then
         detailsContent = {
             {label = iWR.Colors.Default .. "Name:" .. iWR.Colors.Reset, value = data[4]..iWR.Colors.Reset.."-"..data[7]},
-            {label = iWR.Colors.Default .. "Type:" .. iWR.Colors[data[2]], value = iWR.Types[tonumber(data[2])]},
+            {label = iWR.Colors.Default .. "Type:" .. iWR.Colors[data[2]], value = iWR:GetTypeName(data[2])},
             {label = iWR.Colors.Default .. "Note:" .. iWR.Colors[data[2]], value = data[1], isNote = true},
             {label = iWR.Colors.Default .. "Author:" .. iWR.Colors.Reset, value = data[6]},
             {label = iWR.Colors.Default .. "Date:", value = data[5]},
@@ -1377,7 +1391,7 @@ function iWR:ShowDetailWindow(playerName)
     else
         detailsContent = {
             {label = iWR.Colors.Default .. "Name:" .. iWR.Colors.Reset, value = data[4]},
-            {label = iWR.Colors.Default .. "Type:" .. iWR.Colors[data[2]], value = iWR.Types[tonumber(data[2])]},
+            {label = iWR.Colors.Default .. "Type:" .. iWR.Colors[data[2]], value = iWR:GetTypeName(data[2])},
             {label = iWR.Colors.Default .. "Note:" .. iWR.Colors[data[2]], value = data[1], isNote = true},
             {label = iWR.Colors.Default .. "Author:" .. iWR.Colors.Reset, value = data[6]},
             {label = iWR.Colors.Default .. "Date:", value = data[5]},
@@ -1809,7 +1823,7 @@ function iWR:CreateNote(Name, Note, Type)
     -- Debug logging
     iWR:DebugMsg("New note Name: [|r" .. Name .. iWR.Colors.iWR .. "].", 3)
     iWR:DebugMsg("New note Note: [" .. (Note ~= "" and ("|r" .. Note .. iWR.Colors.iWR) or iWR.Colors.Reset .. "Nothing" .. iWR.Colors.iWR) .. "].", 3)
-    iWR:DebugMsg("New note Type: [|r" .. iWR.Colors[Type] .. iWR.Types[Type] .. iWR.Colors.iWR .. "].", 3)
+    iWR:DebugMsg("New note Type: [|r" .. iWR.Colors[Type] .. iWR:GetTypeName(Type) .. iWR.Colors.iWR .. "].", 3)
 
     local playerName = UnitName("player")
     local currentTime, currentDate = iWR:GetCurrentTimeByHours()

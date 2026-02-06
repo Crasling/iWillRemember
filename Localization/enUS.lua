@@ -115,6 +115,36 @@ L["HelpDiscord"] = Colors.Yellow .."Help Discord: " .. Colors.iWR .. "Click the 
 
 L["Russian"] = "Russian"
 
+-- ╭────────────────────────────────────────────────────────────────────────────────╮
+-- │                           Options Panel Descriptions                           │
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
+L["OptionsPanelSubtitle"] = "|cFF808080Track and share player notes with friends.|r"
+L["DescEnhancedFrame"] = "|cFF808080Displays a colored border overlay on target frames for tracked players.|r"
+L["DescShowChatIcons"] = "|cFF808080Shows reputation icons next to tracked player names in chat messages.|r"
+L["DescEnableGroupWarning"] = "|cFF808080Alerts you when a group or raid contains players with negative ratings.|r"
+L["DescEnableSoundWarning"] = "|cFF808080Plays an audible notification alongside group warning popups.|r"
+L["DescShowAuthor"] = "|cFF808080Displays who created the note when hovering over a tracked player.|r"
+L["MinimapSettings"] = Colors.iWR .. "Minimap Settings"
+L["ShowMinimapButton"] = "Show Minimap Button"
+L["DescShowMinimapButton"] = "|cFF808080Toggles visibility of the iWillRemember minimap button.|r"
+L["DescEnableSync"] = "|cFF808080Shares your database with friends who also have iWillRemember installed. Both players must be on each other's friend list.|r"
+L["DescEnableBackup"] = "|cFF808080Automatically creates a backup of your database every hour.|r"
+L["DatabaseStats"] = Colors.iWR .. "Database Statistics"
+L["ResetSettingsHeader"] = Colors.iWR .. "Reset"
+L["ResetToDefaults"] = "Reset Settings to Defaults"
+L["ResetConfirm"] = "Are you sure you want to reset all settings to their default values?\n\nYour player database will NOT be affected."
+L["SettingsResetSuccess"] = Msg("Settings reset to defaults. Type /reload to apply.")
+L["ButtonLabelsSettings"] = Colors.iWR .. "Button Labels"
+L["DescButtonLabels"] = "|cFF808080Customize the text displayed for each rating. Changes apply to buttons, tooltips, warnings and all displays.|r"
+L["ResetLabels"] = "Reset Labels to Defaults"
+L["Tab5Customize"] = "Customize"
+L["CustomIconsSettings"] = Colors.iWR .. "Custom Icons"
+L["DescCustomIcons"] = "|cFF808080Choose custom icons for each rating. Changes apply to buttons, tooltips, and database displays.|r"
+L["ChangeIcon"] = "Change"
+L["ResetIcon"] = "Reset"
+L["SelectIcon"] = "Select Icon"
+L["IconPathHelpInline"] = "Enter icon path, e.g. Interface\\Icons\\Spell_Fire_Fire - find names at wowhead.com"
+
 L["iWRLoaded"] = Msg("iWillRemember")
 L["iWRWelcomeStart"] = Msg("Thank you ")
 L["iWRWelcomeEnd"] = Colors.iWR .. (" for being part of the development of iWillRemember, if you get into any issues please reach out on CurseForge in the comment section or Discord.")

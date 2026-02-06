@@ -223,8 +223,8 @@ local button1, button1Label = iWR:CreateRelationButton(
     iWRPanel,
     {53, 53},
     {"TOP", iWRNoteInput, "BOTTOM", 120, -15},
-    iWR.Icons[iWR.Types["Hated"]],
-    "Hated",
+    iWR:GetIcon(-5),
+    iWR:GetTypeName(-5),
     function()
         iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWR.Types["Hated"])
     end
@@ -237,8 +237,8 @@ local button2, button2Label = iWR:CreateRelationButton(
     iWRPanel,
     {53, 53},
     {"TOP", iWRNoteInput, "BOTTOM", 60, -15},
-    iWR.Icons[iWR.Types["Disliked"]],
-    "Disliked",
+    iWR:GetIcon(-3),
+    iWR:GetTypeName(-3),
     function()
         iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWR.Types["Disliked"])
     end
@@ -251,8 +251,8 @@ local button3, button3Label = iWR:CreateRelationButton(
     iWRPanel,
     {53, 53},
     {"TOP", iWRNoteInput, "BOTTOM", 0, -15},
-    iWR.Icons[iWR.Types["Liked"]],
-    "Liked",
+    iWR:GetIcon(3),
+    iWR:GetTypeName(3),
     function()
         iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWR.Types["Liked"])
     end
@@ -265,8 +265,8 @@ local button4, button4Label = iWR:CreateRelationButton(
     iWRPanel,
     {53, 53},
     {"TOP", iWRNoteInput, "BOTTOM", -60, -15},
-    iWR.Icons[iWR.Types["Respected"]],
-    "Respected",
+    iWR:GetIcon(5),
+    iWR:GetTypeName(5),
     function()
         iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWR.Types["Respected"])
     end
@@ -578,7 +578,7 @@ searchDatabaseButton:SetScript("OnClick", function()
                         iconTexture:SetPoint("LEFT", entryFrame, "LEFT", -5, 0)
 
                         -- Set the icon texture
-                        local typeIcon = iWR.Icons[data[2]]
+                        local typeIcon = iWR:GetIcon(data[2])
                         if typeIcon then
                             iconTexture:SetTexture(typeIcon)
                         else
@@ -789,7 +789,7 @@ function iWR:PopulateDatabase()
                 local iconTexture = col1Frame.iconTexture or col1Frame:CreateTexture(nil, "ARTWORK")
                 iconTexture:SetSize(20, 20)
                 iconTexture:SetPoint("LEFT", col1Frame, "LEFT", 10, 0)
-                iconTexture:SetTexture(iWR.Icons[data[2]] or "Interface\\Icons\\INV_Misc_QuestionMark")
+                iconTexture:SetTexture(iWR:GetIcon(data[2]) or "Interface\\Icons\\INV_Misc_QuestionMark")
                 col1Frame.iconTexture = iconTexture
 
                 local playerNameText = col1Frame.playerNameText or col1Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
