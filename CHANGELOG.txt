@@ -2,6 +2,28 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.16.3 (Release)
+--------------------------------------------------------------------------------
+
+ Customize Page
+  - Rating type colors now show on icon and label settings for easy identification
+  - Added info text explaining that all customizations are local and visual only
+  - Custom label names now refresh correctly on the Customize page when reset
+
+ Button Labels
+  - Fixed long custom labels overflowing and overlapping on the main panel
+  - Labels now use a smaller font with max width and auto-truncation
+
+ Target Frame
+  - Fixed target frame not updating when creating a new note on Classic Era and MoP
+
+ Alpha Build History
+ ~~~~~~~~~~~~~~~~~~~
+  0.16.2.4  - Added info text explaining local-only changes on Customize page
+  0.16.2.3  - Added rating colors to icon and label settings on Customize page
+  0.16.2.2  - Fixed button label overflow and custom label refresh on Customize page
+  0.16.2.1  - Fixed target frame update on Classic Era (11508) and MoP (50501)
+
 v0.16.2 (Release)
 --------------------------------------------------------------------------------
 
@@ -25,8 +47,22 @@ v0.16.2 (Release)
   - Manual icon path input for any WoW icon with help text
   - Each rating has Change and Reset buttons with a live preview
 
+ Target Frame
+  - Fixed target frame not updating on Classic Era and Classic MoP
+
  Localization
   - Added Russian translations for all new settings and UI text
+
+ Alpha Build History
+ ~~~~~~~~~~~~~~~~~~~
+  0.16.2.4  - Added info text explaining local-only changes on Customize page
+  0.16.2.3  - Added rating colors to icon and label settings on Customize page
+  0.16.2.2  - Fixed button label overflow and custom label refresh on Customize page
+  0.16.2.1  - Fixed target frame update on Classic Era (11508) and MoP (50501)
+  0.16.1.9  - Custom icon selection with picker popup and Customize page
+  0.16.1.8  - Scroll areas for all settings tabs
+  0.16.1.7  - Customizable button labels
+  0.16.1.6  - Fixed sidebar anchor bug causing empty options menu
 
 v0.16.1 (Release)
 --------------------------------------------------------------------------------

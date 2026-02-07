@@ -169,11 +169,19 @@ end
 ----------------------------------------------------------------
 -- PLAYER_LOGIN (SAFE UI HOOKS)
 ----------------------------------------------------------------
+
+-- Check if TargetFrame_Update is reliable for this client
+-- Classic Era (11508+) and MoP (50500+) have the function but it never fires
+local tocNumber = tonumber(iWR.GameTocVersion) or 0
+local isClassicEra = (tocNumber >= 11500 and tocNumber < 20000)
+local isMoP = (tocNumber >= 50500 and tocNumber < 60000)
+iWR.UseTargetFrameHook = type(TargetFrame_Update) == "function" and not isClassicEra and not isMoP
+
 function iWR:OnPlayerLogin()
     ----------------------------------------------------------------
     -- TARGET FRAME HOOK (SAFE + GUARDED)
     ----------------------------------------------------------------
-    if type(TargetFrame_Update) == "function" then
+    if iWR.UseTargetFrameHook then
         self:SecureHook("TargetFrame_Update", "SetTargetingFrame")
     end
 end
@@ -200,8 +208,8 @@ targetFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 
 targetFrame:SetScript("OnEvent", function(_, event, unit)
     if event == "PLAYER_TARGET_CHANGED" then
-        -- Fires on every target change — fallback for clients without TargetFrame_Update
-        if type(TargetFrame_Update) ~= "function" then
+        -- Fires on every target change — used when SecureHook is not reliable
+        if not iWR.UseTargetFrameHook then
             if iWR.SetTargetingFrame then
                 iWR:SetTargetingFrame()
             end

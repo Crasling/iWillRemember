@@ -1,6 +1,6 @@
 ## Interface: 11506, 11508, 20505, 30405, 40401, 40402, 50503
-## Title: |cffff9716iWillRemember |cFF00FF00v0.16.2|r
-## Version: 0.16.2
+## Title: |cffff9716iWillRemember |cFF00FF00v0.16.3|r
+## Version: 0.16.3
 ## Notes: |cffff9716Personalized Player Notes Addon|n|cFFFF0000Never forget again.|r
 ## Author: Crasling
 ## IconTexture: Interface\AddOns\iWillRemember\Images\Icons\iWRIcon.blp

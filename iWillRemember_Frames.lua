@@ -287,6 +287,25 @@ local button5, button5Label = iWR:CreateRelationButton(
 )
 
 -- ╭────────────────────────────────────────╮
+-- │   Refresh buttons on panel show        │
+-- ╰────────────────────────────────────────╯
+local ratingButtons = {
+    {button = button1, label = button1Label, key = -5},
+    {button = button2, label = button2Label, key = -3},
+    {button = button3, label = button3Label, key = 3},
+    {button = button4, label = button4Label, key = 5},
+}
+
+iWRPanel:HookScript("OnShow", function()
+    for _, rb in ipairs(ratingButtons) do
+        rb.label:SetText(iWR:GetTypeName(rb.key))
+        if rb.button.iconTexture then
+            rb.button.iconTexture:SetTexture(iWR:GetIcon(rb.key))
+        end
+    end
+end)
+
+-- ╭────────────────────────────────────────╮
 -- │      Button to Open the Database       │
 -- ╰────────────────────────────────────────╯
 local openDatabaseButton = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")

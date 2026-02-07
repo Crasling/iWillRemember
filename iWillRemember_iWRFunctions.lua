@@ -354,10 +354,13 @@ function iWR:CreateRelationButton(parent, size, position, texture, label, onClic
     iconTexture:SetSize(size[1] - 8, size[2] - 8)
     iconTexture:SetPoint("CENTER", button, "CENTER", 0, 0)
     iconTexture:SetTexture(texture)
+    button.iconTexture = iconTexture
 
     -- Add a label below the button
-    local buttonLabel = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    buttonLabel:SetPoint("TOP", button, "BOTTOM", 0, -5)
+    local buttonLabel = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    buttonLabel:SetPoint("TOP", button, "BOTTOM", 0, -3)
+    buttonLabel:SetWidth(size[1] + 4)
+    buttonLabel:SetWordWrap(false)
     buttonLabel:SetText(label)
 
     return button, buttonLabel
@@ -1622,10 +1625,9 @@ end
 
 function iWR:UpdateTargetFrame()
     if iWRSettings.UpdateTargetFrame then
-        if type(TargetFrame_Update) == "function" then
+        if iWR.UseTargetFrameHook and type(TargetFrame_Update) == "function" then
             TargetFrame_Update(TargetFrame)
         else
-            -- Fallback for TBC/WotLK/MoP where TargetFrame_Update doesn't exist
             iWR:SetTargetingFrame()
         end
     end

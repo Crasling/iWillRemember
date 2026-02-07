@@ -923,6 +923,10 @@ function iWR:CreateOptionsPanel()
     -- ╰───────────────────────────────────────────────────────────────╯
     y = -10
 
+    -- Customize info text (local/visual only)
+    local customizeInfo
+    customizeInfo, y = CreateInfoText(customizeContent, L["DescCustomizeInfo"], y, "GameFontDisableSmall")
+
     -- Custom Icons Section
     _, y = CreateSectionHeader(customizeContent, L["CustomIconsSettings"] or (iWR.Colors.iWR .. "Custom Icons"), y)
 
@@ -932,6 +936,7 @@ function iWR:CreateOptionsPanel()
         y, "GameFontDisableSmall")
 
     local iconPreviewTextures = {}
+    local iconRowLabels = {}
 
     local iconTypes = {
         {key = 5,  label = iWR:GetTypeName(5)},
@@ -958,12 +963,14 @@ function iWR:CreateOptionsPanel()
         end
         iconPreviewTextures[it.key] = preview
 
-        -- Label
+        -- Label (colored by rating type)
+        local typeColor = iWR.Colors[it.key] or "|cFFFFFFFF"
         local label = rowFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         label:SetPoint("LEFT", preview, "RIGHT", 10, 0)
         label:SetWidth(100)
         label:SetJustifyH("LEFT")
-        label:SetText(it.label)
+        label:SetText(typeColor .. it.label .. "|r")
+        iconRowLabels[it.key] = label
 
         -- Change button
         local changeBtn = CreateFrame("Button", nil, rowFrame, "UIPanelButtonTemplate")
@@ -1002,10 +1009,10 @@ function iWR:CreateOptionsPanel()
     local labelEditBoxes = {}
 
     local labelTypes = {
-        {key = 5,  label = "Respected:"},
-        {key = 3,  label = "Liked:"},
-        {key = -3, label = "Disliked:"},
-        {key = -5, label = "Hated:"},
+        {key = 5,  label = iWR.Colors[5] .. "Respected:|r"},
+        {key = 3,  label = iWR.Colors[3] .. "Liked:|r"},
+        {key = -3, label = iWR.Colors[-3] .. "Disliked:|r"},
+        {key = -5, label = iWR.Colors[-5] .. "Hated:|r"},
     }
 
     for _, lt in ipairs(labelTypes) do
@@ -1180,10 +1187,14 @@ function iWR:CreateOptionsPanel()
             end
         end
 
-        -- Update icon previews on Customize tab
+        -- Update icon previews and row labels on Customize tab
         for typeKey, tex in pairs(iconPreviewTextures) do
             local icon = iWR:GetIcon(typeKey) or iWR.Icons[typeKey]
             if icon then tex:SetTexture(icon) end
+        end
+        for typeKey, lbl in pairs(iconRowLabels) do
+            local typeColor = iWR.Colors[typeKey] or "|cFFFFFFFF"
+            lbl:SetText(typeColor .. iWR:GetTypeName(typeKey) .. "|r")
         end
 
         -- Update label edit boxes on Customize tab
