@@ -254,7 +254,7 @@ iWR.TargetFrames = {
 -- │      List of Icons     │
 -- ╰────────────────────────╯
 iWR.Icons = {
-    iWRIcon     = iWR.AddonPath .. "Images\\Icons\\iWRIcon.blp",
+    iWRIcon     = iWR.AddonPath .. "Images\\Logo_iWR.blp",
     Database    = iWR.AddonPath .. "Images\\Icons\\Database.blp",
     [10]        = iWR.AddonPath .. "Images\\Icons\\Respected.blp",
     [5]         = iWR.AddonPath .. "Images\\Icons\\Respected.blp",

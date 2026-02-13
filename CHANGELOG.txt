@@ -2,6 +2,39 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.16.5 (Release)
+--------------------------------------------------------------------------------
+
+ Other Addons Integration
+  - Added "Other Addons" section in the settings sidebar
+  - iNIF and iSP: shows settings tab with button to open their settings panel
+  - Settings windows open at the same position as the iWR settings window
+  - When not installed: shows a promo with description and CurseForge link
+  - Addon detection deferred to OnShow so all addons have time to load
+
+ Code Structure
+  - Split iWRFunctions.lua into Sync.lua and Backup.lua for better organization
+  - Fixed sync timing warning ("No recipients found" false positive)
+
+ Options Panel
+  - Added section headers in the sidebar ("iWillRemember" and "Other Addons")
+  - Centered title bar text
+
+ Alpha Build History
+ ~~~~~~~~~~~~~~~~~~~
+  0.16.5.2  - Reworked target frame reset: only restore when iWR modified it, use TargetFrame_Update for correct elite/rare redraw
+  0.16.5.1  - Fixed elite/rare target frames being hidden on Classic (save/restore original texture)
+  0.16.4.4  - Added iSP integration, deferred addon detection to OnShow for iNIF/iSP
+  0.16.4.3  - Fixed "No recipients found" false warning in SendFullDBUpdateToFriends
+  0.16.4.2  - Fixed Sync.lua locale error (removed duplicate GetLocale call)
+  0.16.4.1  - Split iWRFunctions into Sync.lua and Backup.lua, updated TOC load order
+  0.16.3.6  - Other Addons section always visible, iNIF promo when not installed
+  0.16.3.5  - Updated iNIF Settings tab text to match iNIF's iWR tab style
+  0.16.3.4  - Centered title bar text in options panel
+  0.16.3.3  - Sidebar section headers, iNIF opens at same position as iWR
+  0.16.3.2  - Integrated iNIF settings with section headers, General and About tabs
+  0.16.3.1  - Added iNIF tab in sidebar when iNeedIfYouNeed is installed
+
 v0.16.3 (Release)
 --------------------------------------------------------------------------------
 
