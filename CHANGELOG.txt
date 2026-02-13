@@ -2,26 +2,26 @@
  iWillRemember - Changelog
 ================================================================================
 
-v0.16.5 (Release)
+v0.16.7 (Release)
 --------------------------------------------------------------------------------
 
+ Target Frame
+  - Fixed target frame overlay sticking on all targets (Anniversary/TBC)
+  - Anniversary (20505) added to TargetFrame_Update exclusion list
+  - Target frame now uses overlay on all clients, preserving elite/rare frames
+
  Other Addons Integration
-  - Added "Other Addons" section in the settings sidebar
-  - iNIF and iSP: shows settings tab with button to open their settings panel
-  - Settings windows open at the same position as the iWR settings window
-  - When not installed: shows a promo with description and CurseForge link
+  - Added iSoundPlayer (iSP) settings tab alongside iNIF
   - Addon detection deferred to OnShow so all addons have time to load
 
  Code Structure
-  - Split iWRFunctions.lua into Sync.lua and Backup.lua for better organization
+  - Split iWRFunctions.lua into Sync.lua and Backup.lua
   - Fixed sync timing warning ("No recipients found" false positive)
-
- Options Panel
-  - Added section headers in the sidebar ("iWillRemember" and "Other Addons")
-  - Centered title bar text
 
  Alpha Build History
  ~~~~~~~~~~~~~~~~~~~
+  0.16.7    - Anniversary TargetFrame_Update exclusion, overlay-only target frames
+  0.16.6    - Target frame now uses overlay on all clients, never overwrites original texture (fixes elite/rare)
   0.16.5.2  - Reworked target frame reset: only restore when iWR modified it, use TargetFrame_Update for correct elite/rare redraw
   0.16.5.1  - Fixed elite/rare target frames being hidden on Classic (save/restore original texture)
   0.16.4.4  - Added iSP integration, deferred addon detection to OnShow for iNIF/iSP

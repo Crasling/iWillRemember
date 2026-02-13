@@ -554,44 +554,32 @@ function iWR:SetTargetFrameDefault()
         return
     end
 
-    -- Classic Era has TargetFrameTextureFrameTexture — set it directly
-    if TargetFrameTextureFrameTexture then
-        -- Save original texture before overwriting (for restore on next target change)
-        if not iWR._originalTargetTexture then
-            iWR._originalTargetTexture = TargetFrameTextureFrameTexture:GetTexture()
-        end
-        iWR._modifiedTargetFrame = true
-        TargetFrameTextureFrameTexture:SetTexture(iWR.TargetFrames[targetType])
-        iWR:DebugMsg("Default frame updated for target [" .. databaseKey .. "] with type [" .. iWR.Colors[targetType] .. iWR:GetTypeName(targetType) .. "].", 3)
-    else
-        -- TBC/WotLK/MoP fallback: use custom overlay frame on TargetFrame
-        local portraitParent = _G["TargetFrame"]
-        if not portraitParent then
-            iWR:DebugMsg("TargetFrame not found for overlay. [SetTargetFrameDefault]", 1)
-            return
-        end
-
-        -- Create or reuse the custom overlay frame
-        if not iWR.customFrame then
-            iWR.customFrame = CreateFrame("Frame", nil, portraitParent)
-            iWR.customFrame.texture = iWR.customFrame:CreateTexture(nil, "OVERLAY")
-        end
-
-        local overlayFrame = iWR.customFrame
-        overlayFrame:SetParent(portraitParent)
-        overlayFrame:SetFrameLevel(portraitParent:GetFrameLevel() + 2)
-        iWR._modifiedTargetFrame = true
-        overlayFrame:Show()
-
-        local overlayTexture = overlayFrame.texture
-        overlayTexture:ClearAllPoints()
-        overlayTexture:SetTexture(iWR.TargetFrames[targetType])
-        overlayTexture:SetDrawLayer("ARTWORK", 3)
-        overlayTexture:SetAllPoints(portraitParent)
-        overlayTexture:Show()
-
-        iWR:DebugMsg("Overlay frame updated for target [" .. databaseKey .. "] with type [" .. iWR.Colors[targetType] .. iWR:GetTypeName(targetType) .. "]. [Fallback]", 3)
+    -- Use overlay on all clients (never modify TargetFrameTextureFrameTexture directly)
+    local portraitParent = _G["TargetFrame"]
+    if not portraitParent then
+        iWR:DebugMsg("TargetFrame not found for overlay. [SetTargetFrameDefault]", 1)
+        return
     end
+
+    -- Create or reuse the custom overlay frame
+    if not iWR.customFrame then
+        iWR.customFrame = CreateFrame("Frame", nil, portraitParent)
+        iWR.customFrame.texture = iWR.customFrame:CreateTexture(nil, "OVERLAY")
+    end
+
+    local overlayFrame = iWR.customFrame
+    overlayFrame:SetParent(portraitParent)
+    overlayFrame:SetFrameLevel(portraitParent:GetFrameLevel() + 2)
+    overlayFrame:Show()
+
+    local overlayTexture = overlayFrame.texture
+    overlayTexture:ClearAllPoints()
+    overlayTexture:SetTexture(iWR.TargetFrames[targetType])
+    overlayTexture:SetDrawLayer("ARTWORK", 3)
+    overlayTexture:SetAllPoints(portraitParent)
+    overlayTexture:Show()
+
+    iWR:DebugMsg("Overlay frame updated for target [" .. databaseKey .. "] with type [" .. iWR.Colors[targetType] .. iWR:GetTypeName(targetType) .. "].", 3)
 end
 
 -- ╭────────────────────────────────────────╮
@@ -639,17 +627,9 @@ function iWR:SetTargetingFrame()
         targetRealm = iWR.CurrentRealm
     end
 
-    -- Restore default frame if we previously modified it
-    if iWR._modifiedTargetFrame then
-        iWR._modifiedTargetFrame = false
-        iWR._originalTargetTexture = nil
-        if iWR.customFrame then
-            iWR.customFrame:Hide()
-        end
-        -- Let WoW redraw the target frame (restores elite/rare/boss correctly)
-        if type(TargetFrame_Update) == "function" and TargetFrame then
-            TargetFrame_Update(TargetFrame)
-        end
+    -- Hide custom overlay if previously shown
+    if iWR.customFrame then
+        iWR.customFrame:Hide()
     end
 
     -- Only proceed for players

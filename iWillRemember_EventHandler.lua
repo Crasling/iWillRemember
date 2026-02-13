@@ -171,11 +171,12 @@ end
 ----------------------------------------------------------------
 
 -- Check if TargetFrame_Update is reliable for this client
--- Classic Era (11508+) and MoP (50500+) have the function but it never fires
+-- Classic Era, Anniversary (TBC) and MoP have the function but it never fires
 local tocNumber = tonumber(iWR.GameTocVersion) or 0
 local isClassicEra = (tocNumber >= 11500 and tocNumber < 20000)
+local isAnniversary = (tocNumber >= 20500 and tocNumber < 30000)
 local isMoP = (tocNumber >= 50500 and tocNumber < 60000)
-iWR.UseTargetFrameHook = type(TargetFrame_Update) == "function" and not isClassicEra and not isMoP
+iWR.UseTargetFrameHook = type(TargetFrame_Update) == "function" and not isClassicEra and not isAnniversary and not isMoP
 
 function iWR:OnPlayerLogin()
     ----------------------------------------------------------------
