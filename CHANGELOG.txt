@@ -2,6 +2,24 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.17.1
+--------------------------------------------------------------------------------
+
+ Version bump
+
+v0.16.9
+--------------------------------------------------------------------------------
+
+ Localization
+  - Moved all hardcoded UI strings in options panel to locale tags (L["key"])
+  - Added ~20 new locale keys for settings headers, button labels, and descriptions
+
+v0.16.8
+--------------------------------------------------------------------------------
+
+ Settings Panel
+  - Opening iWR settings now auto-closes iNIF/iSP settings panels if open
+
 v0.16.7 (Release)
 --------------------------------------------------------------------------------
 

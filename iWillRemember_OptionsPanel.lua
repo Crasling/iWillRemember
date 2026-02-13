@@ -256,7 +256,7 @@ local function ShowIconPicker(typeIndex, previewTexture)
     local manualBtn = CreateFrame("Button", nil, popup, "UIPanelButtonTemplate")
     manualBtn:SetSize(44, 22)
     manualBtn:SetPoint("LEFT", manualBox, "RIGHT", 4, 0)
-    manualBtn:SetText("Set")
+    manualBtn:SetText(L["SetButton"])
     manualBtn:SetScript("OnClick", function()
         local path = manualBox:GetText()
         if path and path ~= "" then
@@ -499,7 +499,7 @@ function iWR:CreateOptionsPanel()
 
     -- Build sidebar with section headers and tab buttons
     local sidebarItems = {
-        {type = "header", label = iWR.Colors.iWR .. "iWillRemember|r"},
+        {type = "header", label = L["SidebarHeaderiWR"]},
         {type = "tab", label = L["Tab1General"], index = 1},
         {type = "tab", label = L["Tab2Sync"], index = 2},
         {type = "tab", label = L["Tab3Backup"], index = 3},
@@ -507,9 +507,9 @@ function iWR:CreateOptionsPanel()
         {type = "tab", label = L["Tab4About"], index = 5},
     }
 
-    table.insert(sidebarItems, {type = "header", label = iWR.Colors.iWR .. "Other Addons|r"})
-    table.insert(sidebarItems, {type = "tab", label = "iNeedIfYouNeed", index = 6})
-    table.insert(sidebarItems, {type = "tab", label = "iSoundPlayer", index = 7})
+    table.insert(sidebarItems, {type = "header", label = L["SidebarHeaderOtherAddons"]})
+    table.insert(sidebarItems, {type = "tab", label = L["TabINIFPromo"], index = 6})
+    table.insert(sidebarItems, {type = "tab", label = L["TabISPPromo"], index = 7})
 
     local sidebarY = -6
     for _, item in ipairs(sidebarItems) do
@@ -673,7 +673,7 @@ function iWR:CreateOptionsPanel()
 
     -- Sync Mode Dropdown
     local syncDropdown, _, syncDropdownY
-    syncDropdown, _, y = CreateSettingsDropdown(syncContent, "Sync Mode", y, 160,
+    syncDropdown, _, y = CreateSettingsDropdown(syncContent, L["SyncModeLabel"], y, 160,
         function(frame, level)
             local info = UIDropDownMenu_CreateInfo()
             info.func = function(self)
@@ -716,7 +716,7 @@ function iWR:CreateOptionsPanel()
 
     local removeFriendLabel = syncContent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     removeFriendLabel:SetPoint("TOPLEFT", addFriendDropdown, "BOTTOMLEFT", 20, -8)
-    removeFriendLabel:SetText("Remove from Whitelist")
+    removeFriendLabel:SetText(L["RemoveFromWhitelist"])
 
     local removeFriendDropdown = CreateFrame("Frame", "iWRDropdown_RemoveFriend", syncContent, "UIDropDownMenuTemplate")
     removeFriendDropdown:SetPoint("TOPLEFT", removeFriendLabel, "BOTTOMLEFT", -20, -2)
@@ -774,7 +774,7 @@ function iWR:CreateOptionsPanel()
             end
         end
         if #t == 0 then
-            whitelistText:SetText("|cFF808080No friends on the whitelist.|r")
+            whitelistText:SetText(L["NoFriendsWhitelist"])
         else
             whitelistText:SetText(table.concat(t, "\n"))
         end
@@ -849,7 +849,7 @@ function iWR:CreateOptionsPanel()
     y = -10
 
     -- Backup Settings
-    _, y = CreateSectionHeader(backupContent, "|cffff9716Backup Settings|r", y)
+    _, y = CreateSectionHeader(backupContent, L["BackupSettingsHeader"], y)
 
     local cbBackup
     cbBackup, y = CreateSettingsCheckbox(backupContent, L["EnableBackup"],
@@ -922,7 +922,7 @@ function iWR:CreateOptionsPanel()
 
     local resetDesc
     resetDesc, y = CreateInfoText(backupContent,
-        "|cFF808080Resets all addon settings to their default values. Your player database and whitelist will not be affected.|r",
+        L["ResetSettingsDesc"],
         y, "GameFontDisableSmall")
 
     local resetBtn
@@ -1098,7 +1098,7 @@ function iWR:CreateOptionsPanel()
     iNIFPromoFrame:Hide()
     do
         y = -10
-        _, y = CreateSectionHeader(iNIFPromoFrame, iWR.Colors.iWR .. "iNeedIfYouNeed", y)
+        _, y = CreateSectionHeader(iNIFPromoFrame, L["INIFPromoHeader"], y)
 
         local iNIFPromo
         iNIFPromo, y = CreateInfoText(iNIFPromoFrame,
@@ -1157,7 +1157,7 @@ function iWR:CreateOptionsPanel()
     iSPPromoFrame:Hide()
     do
         y = -10
-        _, y = CreateSectionHeader(iSPPromoFrame, iWR.Colors.iWR .. "iSoundPlayer", y)
+        _, y = CreateSectionHeader(iSPPromoFrame, L["ISPPromoHeader"], y)
 
         local iSPPromo
         iSPPromo, y = CreateInfoText(iSPPromoFrame,
@@ -1180,7 +1180,7 @@ function iWR:CreateOptionsPanel()
     y = -10
 
     -- About Section
-    _, y = CreateSectionHeader(aboutContent, "|cffff9716About|r", y)
+    _, y = CreateSectionHeader(aboutContent, L["AboutHeader"], y)
 
     y = y - 20
 
@@ -1217,7 +1217,7 @@ function iWR:CreateOptionsPanel()
     y = y - aih - 8
 
     -- Discord Section
-    _, y = CreateSectionHeader(aboutContent, "Discord", y)
+    _, y = CreateSectionHeader(aboutContent, L["DiscordHeader"], y)
     y = y - 2
 
     local discordDesc = aboutContent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -1250,11 +1250,11 @@ function iWR:CreateOptionsPanel()
 
     -- Developer Section
     y = y - 4
-    _, y = CreateSectionHeader(aboutContent, "|cffff9716Developer|r", y)
+    _, y = CreateSectionHeader(aboutContent, L["DeveloperHeader"], y)
 
     local cbDebug
-    cbDebug, y = CreateSettingsCheckbox(aboutContent, "Enable Debug Mode",
-        "|cFF808080Enables verbose debug messages in chat. Not recommended for normal use.|r",
+    cbDebug, y = CreateSettingsCheckbox(aboutContent, L["EnableDebugMode"],
+        L["DescEnableDebugMode"],
         y, "DebugMode", nil,
         function(checked)
             iWRSettings.DebugMode = checked
@@ -1269,10 +1269,10 @@ function iWR:CreateOptionsPanel()
     iWR._debugInfoFrames = {}
 
     local versionLabels = {
-        {"|cffff9716Game Version:|r ", iWR.GameVersion or "N/A"},
-        {"|cffff9716TOC Version:|r ", iWR.GameTocVersion or "N/A"},
-        {"|cffff9716Build Version:|r ", iWR.GameBuild or "N/A"},
-        {"|cffff9716Build Date:|r ", iWR.GameBuildDate or "N/A"},
+        {L["GameVersionLabel"], iWR.GameVersion or "N/A"},
+        {L["TOCVersionLabel"], iWR.GameTocVersion or "N/A"},
+        {L["BuildVersionLabel"], iWR.GameBuild or "N/A"},
+        {L["BuildDateLabel"], iWR.GameBuildDate or "N/A"},
     }
 
     for _, vl in ipairs(versionLabels) do
@@ -1359,14 +1359,14 @@ function iWR:CreateOptionsPanel()
         iNIFInstalledFrame:SetShown(iNIFLoaded)
         iNIFPromoFrame:SetShown(not iNIFLoaded)
         if sidebarButtons[6] then
-            sidebarButtons[6].text:SetText(iNIFLoaded and L["TabINIF"] or "iNeedIfYouNeed")
+            sidebarButtons[6].text:SetText(iNIFLoaded and L["TabINIF"] or L["TabINIFPromo"])
         end
 
         local iSPLoaded = C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("iSoundPlayer")
         iSPInstalledFrame:SetShown(iSPLoaded)
         iSPPromoFrame:SetShown(not iSPLoaded)
         if sidebarButtons[7] then
-            sidebarButtons[7].text:SetText(iSPLoaded and L["TabISP"] or "iSoundPlayer")
+            sidebarButtons[7].text:SetText(iSPLoaded and L["TabISP"] or L["TabISPPromo"])
         end
 
     end)
@@ -1406,7 +1406,7 @@ function iWR:CreateOptionsPanel()
 
     local stubDesc = stubPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     stubDesc:SetPoint("TOPLEFT", stubTitle, "BOTTOMLEFT", 0, -10)
-    stubDesc:SetText("Right-click the minimap button or type |cFFFFFF00/iwr settings|r to open the options panel.")
+    stubDesc:SetText(L["SettingsPanelStubDesc"])
 
     local stubButton = CreateFrame("Button", nil, stubPanel, "UIPanelButtonTemplate")
     stubButton:SetSize(180, 28)
@@ -1426,6 +1426,15 @@ end
 -- │                          Toggle / Open / Close                                │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
+-- Close other addon settings panels when opening ours
+local function CloseOtherAddonSettings()
+    local iNIFFrame = _G["iNIFSettingsFrame"]
+    if iNIFFrame and iNIFFrame:IsShown() then iNIFFrame:Hide() end
+
+    local iSPFrame = _G["iSPSettingsFrame"]
+    if iSPFrame and iSPFrame:IsShown() then iSPFrame:Hide() end
+end
+
 function iWR:SettingsToggle()
     if iWR.State.InCombat then
         print(L["InCombat"])
@@ -1434,6 +1443,7 @@ function iWR:SettingsToggle()
     if iWR.SettingsFrame and iWR.SettingsFrame:IsVisible() then
         iWR.SettingsFrame:Hide()
     elseif iWR.SettingsFrame then
+        CloseOtherAddonSettings()
         iWR.SettingsFrame:Show()
     end
 end
@@ -1444,6 +1454,7 @@ function iWR:SettingsOpen()
         return
     end
     if iWR.SettingsFrame then
+        CloseOtherAddonSettings()
         iWR.SettingsFrame:Show()
     end
 end
