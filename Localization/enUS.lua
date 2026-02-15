@@ -200,3 +200,17 @@ L["FullDBSendSuccess"] = Msg("Database successfully sent to: ")
 L["FullDBRetrieve"] = Msg("Estimated time for full database retrieval: ")
 L["FullDBRetrieveSuccess"] = Msg("Successfully synced data from: ")
 L["WhitelistFriendsAdded"] = Msg("Missing whitelisted friends on this realm were automatically added to friendslist.")
+
+-- ╭────────────────────────────────────────────────────────────────────────────────╮
+-- │                                  Group Log                                     │
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
+L["NotesTab"] = "Notes"
+L["GroupLogTab"] = "Group Log"
+L["GroupLogEmpty"] = "No players logged yet. Group up and they'll appear here!"
+L["GroupLogDismiss"] = "Dismiss"
+L["GroupLogAddNote"] = "Add Note"
+L["GroupLogClearAll"] = "Clear Log"
+L["GroupLogClearConfirm"] = Colors.iWR .. "Are you sure you want to clear the entire group log?"
+L["GroupLogCleared"] = Msg("Group log cleared.")
+L["EnableGroupLog"] = "Enable Group Log"
+L["DescEnableGroupLog"] = "|cFF808080Automatically log players you group with. View them in the Database under the Group Log tab.|r"

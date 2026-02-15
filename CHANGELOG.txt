@@ -2,6 +2,27 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.18.0
+--------------------------------------------------------------------------------
+
+ [NEW] Group Log
+  - Automatically logs every player you group with (party and raid)
+  - Logs player name, class, realm, zone, date, and instance type
+  - Instance tagging: entries are marked as Dungeon, Raid, BG, or Arena
+  - View the log in the Database frame under the new "Group Log" tab
+  - Edit button opens the iWR Menu with the player name pre-filled
+  - Dismiss button removes individual entries from the log
+  - Clear Log button removes all entries (with confirmation)
+  - Players who already have notes are marked with a note indicator icon
+  - Hover tooltip shows full details + existing note if available
+  - Auto-prune: max 200 entries, oldest removed on login
+  - Enable/disable in Settings > General > "Enable Group Log"
+
+ [REWORK] Database Frame
+  - Added tab system: "Notes" (existing database) and "Group Log" (new)
+  - Increased frame height from 400 to 450 to accommodate tabs
+  - Notes-specific buttons (Clear All, Share, Search) now scoped to Notes tab
+
 v0.17.1
 --------------------------------------------------------------------------------
 

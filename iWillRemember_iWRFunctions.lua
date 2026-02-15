@@ -270,11 +270,13 @@ end
 function iWR:HandleGroupRosterUpdate(wasInGroup)
     local isInGroup = IsInGroup() -- Check if the player is currently in a group
     if not isInGroup and wasInGroup then
-        -- Player has left the group, wipe warned players
+        -- Player has left the group, wipe warned players and session log tracker
         wipe(iWR.WarnedPlayers)
+        wipe(iWR.LoggedThisSession)
         iWR:DebugMsg("Player has left the group. Warned players list wiped.", 3)
     else
         iWR:CheckGroupMembersAgainstDatabase()
+        iWR:LogGroupMembers()
     end
 end
 
@@ -329,6 +331,112 @@ function iWR:CheckGroupMembersAgainstDatabase()
         -- Print message to chat
         print(chatMessage:sub(1, -3)) -- Remove the trailing comma
     end
+end
+
+-- ╭────────────────────────────────────────────────╮
+-- │      Group Log: Automatic Member Logging      │
+-- ╰────────────────────────────────────────────────╯
+function iWR:LogGroupMembers()
+    if not iWRSettings.GroupLogEnabled then return end
+    if not iWRMemory.GroupLog then iWRMemory.GroupLog = {} end
+
+    local numGroupMembers = GetNumGroupMembers()
+    if numGroupMembers <= 1 then return end
+
+    local isInRaid = IsInRaid()
+    local playerName = UnitName("player")
+    local maxPartyIndex = isInRaid and numGroupMembers or (numGroupMembers - 1)
+
+    -- Get current zone and instance info
+    local zoneName = GetRealZoneText() or ""
+    local inInstance, instanceType = IsInInstance()
+
+    for i = 1, maxPartyIndex do
+        local unitID = isInRaid and "raid" .. i or "party" .. i
+        local targetName, targetRealm = UnitName(unitID)
+
+        -- Skip self, unknown/nil names, and units that don't exist
+        if targetName and targetName ~= UNKNOWNOBJECT and targetName ~= "Unknown"
+            and UnitExists(unitID) and not UnitIsUnit(unitID, "player") then
+            if targetRealm == "" or targetRealm == nil then
+                targetRealm = iWR.CurrentRealm
+            end
+
+            local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
+            local sessionKey = capitalizedName .. "-" .. capitalizedRealm
+
+            -- Skip if already logged this session
+            if not iWR.LoggedThisSession[sessionKey] then
+                iWR.LoggedThisSession[sessionKey] = true
+
+                -- Get class info
+                local _, classToken = UnitClass(unitID)
+
+                -- Check if player already has a note in database
+                local databaseKey = capitalizedName .. "-" .. capitalizedRealm
+                local hasNote = iWRDatabase[databaseKey] ~= nil
+
+                -- Create log entry
+                local entry = {
+                    name = capitalizedName,
+                    realm = capitalizedRealm,
+                    class = classToken or "UNKNOWN",
+                    timestamp = time(),
+                    date = date("%Y-%m-%d"),
+                    zone = zoneName,
+                    isInstance = inInstance or false,
+                    instanceType = instanceType or "none",
+                    hasNote = hasNote,
+                }
+
+                table.insert(iWRMemory.GroupLog, entry)
+                iWR:DebugMsg("Group Log: Logged " .. capitalizedName .. "-" .. capitalizedRealm .. " in " .. zoneName, 3)
+            end
+        end
+    end
+end
+
+function iWR:UpdateGroupLogZone()
+    if not iWRSettings.GroupLogEnabled then return end
+    if not iWRMemory.GroupLog then return end
+    if not IsInGroup() then return end
+
+    local now = time()
+    local window = iWR.CONSTANTS.GROUP_LOG_ZONE_UPDATE_WINDOW
+    local zoneName = GetRealZoneText() or ""
+    local inInstance, instanceType = IsInInstance()
+
+    -- Update recent entries (within 10 min) that belong to current session
+    for i = #iWRMemory.GroupLog, 1, -1 do
+        local entry = iWRMemory.GroupLog[i]
+        if not entry then break end
+
+        -- Only update entries from this session that are within the time window
+        local age = now - (entry.timestamp or 0)
+        if age > window then break end -- Entries are chronological, older ones are earlier
+
+        local sessionKey = entry.name .. "-" .. entry.realm
+        if iWR.LoggedThisSession[sessionKey] then
+            entry.zone = zoneName
+            entry.isInstance = inInstance or false
+            entry.instanceType = instanceType or "none"
+        end
+    end
+end
+
+function iWR:PruneGroupLog()
+    if not iWRMemory.GroupLog then return end
+    local maxEntries = iWR.CONSTANTS.MAX_GROUP_LOG_ENTRIES
+    while #iWRMemory.GroupLog > maxEntries do
+        table.remove(iWRMemory.GroupLog, 1) -- Remove oldest (first) entry
+    end
+end
+
+function iWR:ClearGroupLog()
+    if iWRMemory.GroupLog then
+        wipe(iWRMemory.GroupLog)
+    end
+    iWR:DebugMsg("Group log cleared.", 3)
 end
 
 -- ╭────────────────────────────────────────╮
@@ -892,6 +1000,14 @@ function iWR:InitializeSettings()
             iWRSettings[key] = value
         end
     end
+
+    -- Initialize Group Log in iWRMemory
+    if not iWRMemory.GroupLog then
+        iWRMemory.GroupLog = {}
+    end
+
+    -- Prune old entries if over limit
+    iWR:PruneGroupLog()
 end
 
 function iWR:InitializeDatabase()
@@ -1058,11 +1174,15 @@ end
 -- ╭────────────────────────────╮
 -- │      Open Menu Window      │
 -- ╰────────────────────────────╯
-function iWR:MenuOpen(menuName)
+function iWR:MenuOpen(menuName, classToken)
     if not iWR.State.InCombat then
         iWRPanel:Show()
         if menuName ~= "" and menuName and menuName ~= UnitName("target") then
-            iWRNameInput:SetText(menuName)
+            if classToken then
+                iWRNameInput:SetText(iWR:ColorizePlayerNameByClass(menuName, classToken))
+            else
+                iWRNameInput:SetText(menuName)
+            end
             iWRNoteInput:SetText(L["DefaultNoteInput"])
         else
             iWRNameInput:SetText(L["DefaultNameInput"])
@@ -1113,6 +1233,7 @@ end
 function iWR:DatabaseOpen()
     if not iWR.State.InCombat then
         iWRDatabaseFrame:Show()
+        iWR:ResetDatabaseTab()
         iWRNameInput:SetText(L["DefaultNameInput"])
         iWRNoteInput:SetText(L["DefaultNoteInput"])
         if UnitExists("target") and UnitIsPlayer("target") then

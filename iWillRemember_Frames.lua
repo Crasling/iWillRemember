@@ -364,7 +364,7 @@ function iWR:CreateTab(panel, index, name, onClick)
 end
 
 -- Create a new frame to display the database
-iWRDatabaseFrame = iWR:CreateiWRStyleFrame(UIParent, 700, 400, {"CENTER", UIParent, "CENTER"})
+iWRDatabaseFrame = iWR:CreateiWRStyleFrame(UIParent, 700, 450, {"CENTER", UIParent, "CENTER"})
 iWRDatabaseFrame:Hide()
 iWRDatabaseFrame:EnableMouse(true)
 iWRDatabaseFrame:SetMovable(true)
@@ -407,16 +407,6 @@ dbTitleText:SetPoint("CENTER", dbTitleBar, "CENTER", 0, 0)
 dbTitleText:SetText(iWR.Colors.iWR .. "iWillRemember Personal Database")
 dbTitleText:SetTextColor(0.9, 0.9, 1, 1)
 
--- Create a scrollable frame to list database entries
-local dbScrollFrame = CreateFrame("ScrollFrame", nil, iWRDatabaseFrame, "UIPanelScrollFrameTemplate")
-dbScrollFrame:SetPoint("TOP", dbTitleBar, "BOTTOM", -10, -10)
-dbScrollFrame:SetSize(iWRDatabaseFrame:GetWidth()-40, iWRDatabaseFrame:GetHeight()-80)
-
--- Create a container for the database entries (this will be scrollable)
-local dbContainer = CreateFrame("Frame", nil, dbScrollFrame)
-dbContainer:SetSize(dbScrollFrame:GetWidth()+10, dbScrollFrame:GetHeight()+10) -- Make sure it's larger than the scroll area
-dbScrollFrame:SetScrollChild(dbContainer)
-
 -- Create a close button for the database frame
 local dbCloseButton = CreateFrame("Button", nil, iWRDatabaseFrame, "UIPanelCloseButton")
 dbCloseButton:SetPoint("TOPRIGHT", iWRDatabaseFrame, "TOPRIGHT", 0, 0)
@@ -424,12 +414,89 @@ dbCloseButton:SetScript("OnClick", function()
     iWR:DatabaseClose()
 end)
 
+-- ╭──────────────────────────────────────────╮
+-- │      Database Frame Tab System           │
+-- ╰──────────────────────────────────────────╯
+local dbActiveTab = 1
+
+-- Notes container (holds the existing database view)
+local notesContainer = CreateFrame("Frame", nil, iWRDatabaseFrame)
+notesContainer:SetPoint("TOPLEFT", dbTitleBar, "BOTTOMLEFT", 0, -35)
+notesContainer:SetPoint("BOTTOMRIGHT", iWRDatabaseFrame, "BOTTOMRIGHT", 0, 0)
+notesContainer:Show()
+
+-- Group Log container
+local groupLogContainer = CreateFrame("Frame", nil, iWRDatabaseFrame)
+groupLogContainer:SetPoint("TOPLEFT", dbTitleBar, "BOTTOMLEFT", 0, -35)
+groupLogContainer:SetPoint("BOTTOMRIGHT", iWRDatabaseFrame, "BOTTOMRIGHT", 0, 0)
+groupLogContainer:Hide()
+
+local function ShowDatabaseTab(tabIndex)
+    dbActiveTab = tabIndex
+    if tabIndex == 1 then
+        notesContainer:Show()
+        groupLogContainer:Hide()
+    else
+        notesContainer:Hide()
+        groupLogContainer:Show()
+        iWR:PopulateGroupLog()
+    end
+end
+
+-- Tab names must match frame:GetName() .. "Tab" .. index for PanelTemplates to work
+local dbFrameName = iWRDatabaseFrame:GetName()
+
+-- Tab 1: Notes
+local dbTab1 = CreateFrame("Button", dbFrameName .. "Tab1", iWRDatabaseFrame, "OptionsFrameTabButtonTemplate")
+dbTab1:SetText(L["NotesTab"] or "Notes")
+dbTab1:SetID(1)
+dbTab1:SetPoint("TOPLEFT", dbTitleBar, "BOTTOMLEFT", 10, 5)
+dbTab1:SetScale(1.0)
+dbTab1:SetHeight(25)
+PanelTemplates_TabResize(dbTab1, 0)
+dbTab1:SetScript("OnClick", function()
+    PanelTemplates_SetTab(iWRDatabaseFrame, 1)
+    ShowDatabaseTab(1)
+end)
+
+-- Tab 2: Group Log
+local dbTab2 = CreateFrame("Button", dbFrameName .. "Tab2", iWRDatabaseFrame, "OptionsFrameTabButtonTemplate")
+dbTab2:SetText(L["GroupLogTab"] or "Group Log")
+dbTab2:SetID(2)
+dbTab2:SetPoint("LEFT", dbTab1, "RIGHT", -5, 0)
+dbTab2:SetScale(1.0)
+dbTab2:SetHeight(25)
+PanelTemplates_TabResize(dbTab2, 0)
+dbTab2:SetScript("OnClick", function()
+    PanelTemplates_SetTab(iWRDatabaseFrame, 2)
+    ShowDatabaseTab(2)
+end)
+
+PanelTemplates_SetNumTabs(iWRDatabaseFrame, 2)
+PanelTemplates_SetTab(iWRDatabaseFrame, 1)
+
+-- Reset to Notes tab (called from DatabaseOpen to always start on Notes)
+function iWR:ResetDatabaseTab()
+    PanelTemplates_SetTab(iWRDatabaseFrame, 1)
+    ShowDatabaseTab(1)
+end
+
+-- Notes tab: scrollable frame for database entries
+local dbScrollFrame = CreateFrame("ScrollFrame", nil, notesContainer, "UIPanelScrollFrameTemplate")
+dbScrollFrame:SetPoint("TOPLEFT", notesContainer, "TOPLEFT", 0, 0)
+dbScrollFrame:SetPoint("BOTTOMRIGHT", notesContainer, "BOTTOMRIGHT", -22, 45)
+
+-- Create a container for the database entries (this will be scrollable)
+local dbContainer = CreateFrame("Frame", nil, dbScrollFrame)
+dbContainer:SetSize(dbScrollFrame:GetWidth()+10, dbScrollFrame:GetHeight()+10)
+dbScrollFrame:SetScrollChild(dbContainer)
+
 -- ╭──────────────────────────────────────────────────╮
 -- │      Create the "Clear All" Database Button      │
 -- ╰──────────────────────────────────────────────────╯
-local clearDatabaseButton = CreateFrame("Button", nil, iWRDatabaseFrame, "UIPanelButtonTemplate")
+local clearDatabaseButton = CreateFrame("Button", nil, notesContainer, "UIPanelButtonTemplate")
 clearDatabaseButton:SetSize(100, 30)
-clearDatabaseButton:SetPoint("BOTTOM", iWRDatabaseFrame, "BOTTOM", -60, 10)
+clearDatabaseButton:SetPoint("BOTTOM", notesContainer, "BOTTOM", -60, 10)
 clearDatabaseButton:SetText("Clear All")
 clearDatabaseButton:SetScript("OnClick", function()
     -- Confirm before clearing the database
@@ -453,9 +520,9 @@ end)
 -- ╭─────────────────────────────────────────────╮
 -- │      Create the "Share Full DB" Button      │
 -- ╰─────────────────────────────────────────────╯
-local shareDatabaseButton = CreateFrame("Button", nil, iWRDatabaseFrame, "UIPanelButtonTemplate")
+local shareDatabaseButton = CreateFrame("Button", nil, notesContainer, "UIPanelButtonTemplate")
 shareDatabaseButton:SetSize(100, 30)
-shareDatabaseButton:SetPoint("BOTTOM", iWRDatabaseFrame, "BOTTOM", 60, 10)
+shareDatabaseButton:SetPoint("BOTTOM", notesContainer, "BOTTOM", 60, 10)
 shareDatabaseButton:SetText("Share Full DB")
 shareDatabaseButton:SetScript("OnClick", function()
     -- Check if the database is empty
@@ -485,9 +552,9 @@ end)
 -- ╭───────────────────────────────────────────────╮
 -- │      Create the "Search Database" Button      │
 -- ╰───────────────────────────────────────────────╯
-local searchDatabaseButton = CreateFrame("Button", nil, iWRDatabaseFrame, "UIPanelButtonTemplate")
+local searchDatabaseButton = CreateFrame("Button", nil, notesContainer, "UIPanelButtonTemplate")
 searchDatabaseButton:SetSize(30, 30)
-searchDatabaseButton:SetPoint("BOTTOMLEFT", iWRDatabaseFrame, "BOTTOMLEFT", 10, 10)
+searchDatabaseButton:SetPoint("BOTTOMLEFT", notesContainer, "BOTTOMLEFT", 10, 10)
 
 local searchTexture = searchDatabaseButton:CreateTexture(nil, "ARTWORK")
 searchTexture:SetAllPoints()
@@ -957,4 +1024,247 @@ function iWR:PopulateDatabase()
         end
     end
     dbContainer:SetHeight(math.abs(yOffset))
+end
+
+-- ╭─────────────────────────────────────────────────╮
+-- │      Group Log Tab: UI & PopulateGroupLog       │
+-- ╰─────────────────────────────────────────────────╯
+
+-- Scroll frame for group log entries
+local glScrollFrame = CreateFrame("ScrollFrame", nil, groupLogContainer, "UIPanelScrollFrameTemplate")
+glScrollFrame:SetPoint("TOPLEFT", groupLogContainer, "TOPLEFT", 0, 0)
+glScrollFrame:SetPoint("BOTTOMRIGHT", groupLogContainer, "BOTTOMRIGHT", -22, 45)
+
+local glContainer = CreateFrame("Frame", nil, glScrollFrame)
+glContainer:SetSize(glScrollFrame:GetWidth() + 10, glScrollFrame:GetHeight() + 10)
+glScrollFrame:SetScrollChild(glContainer)
+
+-- Empty state text
+local glEmptyText = groupLogContainer:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+glEmptyText:SetPoint("CENTER", groupLogContainer, "CENTER", 0, 20)
+glEmptyText:SetText(L["GroupLogEmpty"] or "No players logged yet. Group up and they'll appear here!")
+glEmptyText:SetWidth(400)
+glEmptyText:Hide()
+
+-- Clear Log button
+local clearLogButton = CreateFrame("Button", nil, groupLogContainer, "UIPanelButtonTemplate")
+clearLogButton:SetSize(100, 30)
+clearLogButton:SetPoint("BOTTOM", groupLogContainer, "BOTTOM", 0, 10)
+clearLogButton:SetText(L["GroupLogClearAll"] or "Clear Log")
+clearLogButton:SetScript("OnClick", function()
+    StaticPopupDialogs["IWR_CLEAR_GROUP_LOG"] = {
+        text = L["GroupLogClearConfirm"] or "Are you sure you want to clear the entire group log?",
+        button1 = "Yes",
+        button2 = "No",
+        OnAccept = function()
+            iWR:ClearGroupLog()
+            iWR:PopulateGroupLog()
+            print(iWR.Colors.iWR .. (L["GroupLogCleared"] or "[iWR]: Group log cleared."))
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+        preferredIndex = 3,
+    }
+    StaticPopup_Show("IWR_CLEAR_GROUP_LOG")
+end)
+
+-- Reusable row frames for group log
+local glRowCache = {}
+
+function iWR:PopulateGroupLog()
+    if not iWRMemory or not iWRMemory.GroupLog then return end
+
+    -- Hide all cached rows first
+    for _, row in ipairs(glRowCache) do
+        row:Hide()
+    end
+
+    local entries = iWRMemory.GroupLog
+    local totalEntries = #entries
+
+    -- Hide empty text initially (may show later if all entries are filtered)
+    glEmptyText:Hide()
+
+    local yOffset = -5
+    local ROW_HEIGHT = 30
+    local displayIndex = 0
+
+    -- Display in reverse order (newest first), skip players already in database
+    for i = totalEntries, 1, -1 do
+        local entry = entries[i]
+        if not entry then break end
+
+        -- Skip players that already have a note in the database
+        local databaseKey = entry.name .. "-" .. entry.realm
+        if iWRDatabase[databaseKey] then
+            -- Player already has a note, don't show in Group Log
+        else
+
+        displayIndex = displayIndex + 1
+
+        -- Reuse or create row frame
+        local row = glRowCache[displayIndex]
+        if not row then
+            row = CreateFrame("Frame", nil, glContainer)
+            row:SetHeight(ROW_HEIGHT)
+            row:SetPoint("TOPLEFT", glContainer, "TOPLEFT", 0, 0)
+            row:SetPoint("TOPRIGHT", glContainer, "TOPRIGHT", 0, 0)
+            row:EnableMouse(true)
+
+            -- Highlight on hover
+            local highlight = row:CreateTexture(nil, "HIGHLIGHT")
+            highlight:SetAllPoints()
+            highlight:SetColorTexture(1, 0.59, 0.09, 0.08)
+
+            -- Class icon
+            local classIcon = row:CreateTexture(nil, "ARTWORK")
+            classIcon:SetSize(20, 20)
+            classIcon:SetPoint("LEFT", row, "LEFT", 10, 0)
+            classIcon:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES")
+            row.classIcon = classIcon
+
+            -- Has-note indicator (small icon)
+            local noteIndicator = row:CreateTexture(nil, "ARTWORK")
+            noteIndicator:SetSize(14, 14)
+            noteIndicator:SetPoint("LEFT", classIcon, "RIGHT", 2, 0)
+            noteIndicator:SetTexture("Interface\\Icons\\INV_Misc_Note_01")
+            noteIndicator:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+            noteIndicator:Hide()
+            row.noteIndicator = noteIndicator
+
+            -- Player name
+            local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            nameText:SetPoint("LEFT", classIcon, "RIGHT", 20, 0)
+            nameText:SetWidth(140)
+            nameText:SetJustifyH("LEFT")
+            row.nameText = nameText
+
+            -- Zone name
+            local zoneText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            zoneText:SetPoint("LEFT", nameText, "RIGHT", 5, 0)
+            zoneText:SetWidth(160)
+            zoneText:SetJustifyH("LEFT")
+            row.zoneText = zoneText
+
+            -- Date
+            local dateText = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+            dateText:SetPoint("LEFT", zoneText, "RIGHT", 5, 0)
+            dateText:SetWidth(80)
+            dateText:SetJustifyH("LEFT")
+            row.dateText = dateText
+
+            -- Add Note button
+            local editBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+            editBtn:SetSize(75, 22)
+            editBtn:SetPoint("RIGHT", row, "RIGHT", -70, 0)
+            editBtn:SetText(L["GroupLogAddNote"] or "Add Note")
+            row.editBtn = editBtn
+
+            -- Dismiss button
+            local dismissBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+            dismissBtn:SetSize(55, 22)
+            dismissBtn:SetPoint("RIGHT", row, "RIGHT", -10, 0)
+            dismissBtn:SetText(L["GroupLogDismiss"] or "Dismiss")
+            row.dismissBtn = dismissBtn
+
+            glRowCache[displayIndex] = row
+        end
+
+        -- Position the row
+        row:ClearAllPoints()
+        row:SetPoint("TOPLEFT", glContainer, "TOPLEFT", 0, yOffset)
+        row:SetPoint("TOPRIGHT", glContainer, "TOPRIGHT", 0, yOffset)
+        row:Show()
+
+        -- Set class icon using CLASS_ICON_TCOORDS
+        local classToken = entry.class or "UNKNOWN"
+        local tcoords = CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classToken]
+        if tcoords then
+            row.classIcon:SetTexCoord(unpack(tcoords))
+            row.classIcon:Show()
+        else
+            row.classIcon:Hide()
+        end
+
+        -- Player name with class color
+        local classColor = RAID_CLASS_COLORS and RAID_CLASS_COLORS[classToken]
+        local nameColor = classColor and ("|c" .. classColor.colorStr) or iWR.Colors.Default
+        row.nameText:SetText(nameColor .. entry.name)
+
+        -- Zone with instance indicator
+        local zoneStr = entry.zone or ""
+        if entry.isInstance then
+            local instanceLabel = ""
+            if entry.instanceType == "party" then
+                instanceLabel = " |cFF00CCFF(Dungeon)|r"
+            elseif entry.instanceType == "raid" then
+                instanceLabel = " |cFFFF8800(Raid)|r"
+            elseif entry.instanceType == "pvp" then
+                instanceLabel = " |cFFFF0000(BG)|r"
+            elseif entry.instanceType == "arena" then
+                instanceLabel = " |cFFFF0000(Arena)|r"
+            else
+                instanceLabel = " |cFF808080(Instance)|r"
+            end
+            zoneStr = zoneStr .. instanceLabel
+        end
+        row.zoneText:SetText(zoneStr)
+
+        -- Date
+        row.dateText:SetText(entry.date or "")
+
+        -- Note indicator no longer needed (players with notes are filtered out)
+        row.noteIndicator:Hide()
+
+        -- Tooltip on hover
+        local capturedEntry = entry
+        row:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:AddLine(nameColor .. capturedEntry.name .. "-" .. capturedEntry.realm, 1, 1, 1)
+            GameTooltip:AddLine("Zone: " .. (capturedEntry.zone or "Unknown"), 1, 0.82, 0)
+            if capturedEntry.isInstance then
+                GameTooltip:AddLine("Instance Type: " .. (capturedEntry.instanceType or "none"), 1, 0.82, 0)
+            end
+            GameTooltip:AddLine("Date: " .. (capturedEntry.date or ""), 1, 0.82, 0)
+            GameTooltip:Show()
+        end)
+        row:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+
+        -- Add Note button: open iWR Menu with player name and class pre-filled
+        local capturedName = entry.name
+        local capturedRealm = entry.realm
+        local capturedClass = entry.class
+        row.editBtn:SetScript("OnClick", function()
+            local menuName
+            if capturedRealm == iWR.CurrentRealm then
+                menuName = capturedName
+            else
+                menuName = capturedName .. "-" .. capturedRealm
+            end
+            iWR:MenuOpen(menuName, capturedClass)
+            iWR:DatabaseClose()
+        end)
+
+        -- Dismiss button: remove this entry from the log
+        local capturedEntryIndex = i
+        row.dismissBtn:SetScript("OnClick", function()
+            table.remove(iWRMemory.GroupLog, capturedEntryIndex)
+            iWR:PopulateGroupLog()
+        end)
+
+        yOffset = yOffset - ROW_HEIGHT
+        end -- end of else (skip players already in DB)
+    end
+
+    -- Show empty text if all entries were filtered out (or no entries exist)
+    if displayIndex == 0 then
+        glEmptyText:Show()
+        glContainer:SetHeight(1)
+        return
+    end
+
+    glContainer:SetHeight(math.max(math.abs(yOffset), 1))
 end

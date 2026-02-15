@@ -65,6 +65,18 @@ groupFrame:SetScript("OnEvent", function()
 end)
 
 ----------------------------------------------------------------
+-- ZONE CHANGE HANDLING (UPDATE GROUP LOG ZONE)
+----------------------------------------------------------------
+local zoneFrame = CreateFrame("Frame")
+zoneFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+
+zoneFrame:SetScript("OnEvent", function()
+    if iWR.UpdateGroupLogZone then
+        iWR:UpdateGroupLogZone()
+    end
+end)
+
+----------------------------------------------------------------
 -- ADDON ENABLE (SAFE PHASE ONLY)
 ----------------------------------------------------------------
 function iWR:OnEnable()
