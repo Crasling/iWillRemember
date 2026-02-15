@@ -2,6 +2,51 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.19.0
+--------------------------------------------------------------------------------
+
+ [NEW] Slider System (-10 to +10)
+  - Relation level is now a slider from -10 to +10 (previously -5 to +5)
+  - Expanded type groups: Hated (-10 to -6), Disliked (-5 to -1), Liked (+1 to +5),
+    Respected (+6 to +9), Superior (+10)
+  - Tick marks at group boundaries: -10, -6, -1, +1, +6, +10
+  - Fill bar color changes per group (red → orange → green → blue)
+  - Superior (+10) has unique blue color throughout the UI
+  - One-time automatic migration of old database values to new range
+
+ [NEW] Level Column in Database
+  - New narrow column showing the numeric slider value (e.g. "+7", "-3")
+  - Displayed in the type's color between the name and note columns
+  - Detail window and tooltips now show "Type: +7 — Respected" format
+
+ [NEW] Clear Button
+  - Added dedicated "Clear" button next to "Save Note" in the menu
+  - Removes a player's note without having to set slider to 0
+
+ [REWORK] Database Frame
+  - Replaced tab system with sidebar navigation (matching Options Panel style)
+  - Sidebar with Notes and Group Log buttons, active tab highlighted in orange
+  - Content area with styled backdrop and border
+  - Online status indicator: green dot for online players (group/guild/friends)
+  - Right-click any player name to whisper them
+  - Row hover highlight across all columns when hovering any part of a row
+  - Entry count displayed under Notes button in sidebar
+  - Increased frame width from 700 to 800 for better note readability
+
+ [REWORK] Menu Panel
+  - Moved Open Database button to top-left corner of menu
+  - Reduced menu height (removed excess empty space)
+
+ [FIX] Button Labels
+  - Fixed label names showing wrong type due to old boundary keys
+  - One-time migration resets labels to match new group boundaries
+
+ Alpha Build History
+ ~~~~~~~~~~~~~~~~~~~
+  0.18.0.1  - Slider system, Superior blue color, DB level column, sidebar DB frame,
+              online status, whisper, row highlights, button labels migration,
+              clear button, menu layout adjustments
+
 v0.18.0
 --------------------------------------------------------------------------------
 

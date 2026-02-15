@@ -100,6 +100,7 @@ L["EnableSoundWarning"] = "Enable Sound Warnings"
 L["EnableGroupWarning"] = "Enable Group Warnings"
 L["WarningSettings"] = Colors.iWR .. "Warning Settings"
 L["ShowChatIcons"] = "Show Chat Icons"
+L["SimpleMenu"] = "Simple Menu"
 L["EnhancedFrame"] = "Show Enhanced TargetFrame"
 L["DisplaySettings"] = Colors.iWR .. "Display Settings"
 L["SettingsTitle"] = Colors.iWR .." Options"
@@ -121,6 +122,7 @@ L["Russian"] = "Russian"
 L["OptionsPanelSubtitle"] = "|cFF808080Track and share player notes with friends.|r"
 L["DescEnhancedFrame"] = "|cFF808080Displays a colored border overlay on target frames for tracked players.|r"
 L["DescShowChatIcons"] = "|cFF808080Shows reputation icons next to tracked player names in chat messages.|r"
+L["DescSimpleMenu"] = "|cFF808080Replaces the slider with simple type buttons (Hated, Disliked, Liked, Respected, Superior).|r"
 L["DescEnableGroupWarning"] = "|cFF808080Alerts you when a group or raid contains players with negative ratings.|r"
 L["DescEnableSoundWarning"] = "|cFF808080Plays an audible notification alongside group warning popups.|r"
 L["DescShowAuthor"] = "|cFF808080Displays who created the note when hovering over a tracked player.|r"
@@ -214,3 +216,8 @@ L["GroupLogClearConfirm"] = Colors.iWR .. "Are you sure you want to clear the en
 L["GroupLogCleared"] = Msg("Group log cleared.")
 L["EnableGroupLog"] = "Enable Group Log"
 L["DescEnableGroupLog"] = "|cFF808080Automatically log players you group with. View them in the Database under the Group Log tab.|r"
+
+-- ╭────────────────────────────────────────────────────────────────────────────────╮
+-- │                                  Menu Slider                                   │
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
+L["SaveNote"] = "Save Note"

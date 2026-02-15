@@ -11,14 +11,16 @@
 -- │                                      Frames                                    │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 -- Main Panel
-iWRPanel = iWR:CreateiWRStyleFrame(UIParent, 350, 250, {"CENTER", UIParent, "CENTER"})
+iWRPanel = iWR:CreateiWRStyleFrame(UIParent, 350, 260, {"CENTER", UIParent, "CENTER"})
 iWRPanel:Hide()
 iWRPanel:EnableMouse(true)
 iWRPanel:SetMovable(true)
 iWRPanel:SetFrameStrata("MEDIUM")
 iWRPanel:SetClampedToScreen(true)
+iWRPanel:SetBackdropColor(0.05, 0.05, 0.1, 0.95)
+iWRPanel:SetBackdropBorderColor(0.8, 0.8, 0.9, 1)
 
--- Add a shadow effect
+-- Shadow
 local shadow = CreateFrame("Frame", nil, iWRPanel, "BackdropTemplate")
 shadow:SetPoint("TOPLEFT", iWRPanel, -1, 1)
 shadow:SetPoint("BOTTOMRIGHT", iWRPanel, 1, -1)
@@ -28,18 +30,19 @@ shadow:SetBackdrop({
 })
 shadow:SetBackdropBorderColor(0, 0, 0, 0.8)
 
--- Drag and Drop functionality
+-- Drag
 iWRPanel:SetScript("OnDragStart", function(self) self:StartMoving() end)
 iWRPanel:SetScript("OnMouseDown", function(self) self:StartMoving() end)
 iWRPanel:SetScript("OnMouseUp", function(self) self:StopMovingOrSizing(); self:SetUserPlaced(true) end)
 iWRPanel:RegisterForDrag("LeftButton", "RightButton")
 
 -- ╭──────────────────────────────────╮
--- │      Create Main Panel title     │
+-- │             Title Bar            │
 -- ╰──────────────────────────────────╯
 local titleBar = CreateFrame("Frame", nil, iWRPanel, "BackdropTemplate")
-titleBar:SetSize(iWRPanel:GetWidth(), 31)
-titleBar:SetPoint("TOP", iWRPanel, "TOP", 0, 0)
+titleBar:SetHeight(31)
+titleBar:SetPoint("TOPLEFT", iWRPanel, "TOPLEFT", 0, 0)
+titleBar:SetPoint("TOPRIGHT", iWRPanel, "TOPRIGHT", 0, 0)
 titleBar:SetBackdrop({
     bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
     edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
@@ -48,33 +51,39 @@ titleBar:SetBackdrop({
 })
 titleBar:SetBackdropColor(0.07, 0.07, 0.12, 1)
 
--- Add title text
 local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
-titleText:SetText(iWR.Colors.iWR .. "iWillRemember Menu" .. iWR.Colors.Green .. " v" .. iWR.Version)
-titleText:SetTextColor(0.9, 0.9, 1, 1)
+titleText:SetText(iWR.Colors.iWR .. "iWillRemember" .. iWR.Colors.Green .. " v" .. iWR.Version)
 
-
--- ╭───────────────────────────────────╮
--- │      Main Panel close button      │
--- ╰───────────────────────────────────╯
 local closeButton = CreateFrame("Button", nil, iWRPanel, "UIPanelCloseButton")
 closeButton:SetPoint("TOPRIGHT", iWRPanel, "TOPRIGHT", 0, 0)
-closeButton:SetScript("OnClick", function()
-    iWR:MenuClose()
-end)
+closeButton:SetScript("OnClick", function() iWR:MenuClose() end)
+
+-- ╭──────────────────────────────────╮
+-- │          Content Area            │
+-- ╰──────────────────────────────────╯
+local menuContent = CreateFrame("Frame", nil, iWRPanel, "BackdropTemplate")
+menuContent:SetPoint("TOPLEFT", iWRPanel, "TOPLEFT", 10, -35)
+menuContent:SetPoint("BOTTOMRIGHT", iWRPanel, "BOTTOMRIGHT", -10, 10)
+menuContent:SetBackdrop({
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    edgeSize = 16,
+    insets = {left = 4, right = 4, top = 4, bottom = 4},
+})
+menuContent:SetBackdropBorderColor(0.6, 0.6, 0.7, 1)
+menuContent:SetBackdropColor(0.08, 0.08, 0.1, 0.95)
 
 -- ╭───────────────────────────────────────────╮
--- │      Main Panel Name And Note Inputs      │
+-- │          Player Name Input                │
 -- ╰───────────────────────────────────────────╯
-local playerNameTitle = iWRPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-playerNameTitle:SetPoint("TOP", titleBar, "BOTTOM", 0, -10)
-playerNameTitle:SetText("Player Name")
-playerNameTitle:SetTextColor(0.9, 0.9, 1, 1)
+local playerNameTitle = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+playerNameTitle:SetPoint("TOP", menuContent, "TOP", 0, -10)
+playerNameTitle:SetText("|cFFCCCCCCPlayer Name|r")
 
-iWRNameInput = CreateFrame("EditBox", nil, iWRPanel, "InputBoxTemplate")
-iWRNameInput:SetSize(155, 30)
-iWRNameInput:SetPoint("TOP", playerNameTitle, "BOTTOM", 0, -1)
+iWRNameInput = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
+iWRNameInput:SetSize(200, 25)
+iWRNameInput:SetPoint("TOP", playerNameTitle, "BOTTOM", 0, -3)
 iWRNameInput:SetMaxLetters(40)
 iWRNameInput:SetAutoFocus(false)
 iWRNameInput:SetTextColor(1, 1, 1, 1)
@@ -82,21 +91,6 @@ iWRNameInput:SetText(L["DefaultNameInput"])
 iWRNameInput:SetFontObject(GameFontHighlight)
 iWRNameInput:SetJustifyH("CENTER")
 
--- Clear the text when focused and it matches the default text
-iWRNameInput:SetScript("OnEditFocusGained", function(self)
-    if self:GetText() == L["DefaultNameInput"] then
-        self:SetText("")
-    end
-end)
-
--- Reset to default text if left empty
-iWRNameInput:SetScript("OnEditFocusLost", function(self)
-    if self:GetText() == "" then
-        self:SetText(L["DefaultNameInput"]) -- Reset to default text
-    end
-end)
-
--- Remove color codes when the text changes
 iWRNameInput:SetScript("OnTextChanged", function(self, userInput)
     if userInput then
         local text = self:GetText()
@@ -107,14 +101,16 @@ iWRNameInput:SetScript("OnTextChanged", function(self, userInput)
     end
 end)
 
-local noteTitle = iWRPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-noteTitle:SetPoint("TOP", iWRNameInput, "BOTTOM", 0, -5)
-noteTitle:SetText("Personalized note about chosen player")
-noteTitle:SetTextColor(0.9, 0.9, 1, 1)
+-- ╭───────────────────────────────────────────╮
+-- │          Note Input                        │
+-- ╰───────────────────────────────────────────╯
+local noteTitle = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+noteTitle:SetPoint("TOP", iWRNameInput, "BOTTOM", 0, -8)
+noteTitle:SetText("|cFFCCCCCCNote|r")
 
-iWRNoteInput = CreateFrame("EditBox", nil, iWRPanel, "InputBoxTemplate")
-iWRNoteInput:SetSize(250, 30)
-iWRNoteInput:SetPoint("TOP", noteTitle, "BOTTOM", 0, -1)
+iWRNoteInput = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
+iWRNoteInput:SetSize(280, 25)
+iWRNoteInput:SetPoint("TOP", noteTitle, "BOTTOM", 0, -3)
 iWRNoteInput:SetMultiLine(false)
 iWRNoteInput:SetMaxLetters(99)
 iWRNoteInput:SetAutoFocus(false)
@@ -122,29 +118,14 @@ iWRNoteInput:SetTextColor(1, 1, 1, 1)
 iWRNoteInput:SetText(L["DefaultNoteInput"])
 iWRNoteInput:SetFontObject(GameFontHighlight)
 
--- Clear the text when focused and it matches the default text
-iWRNoteInput:SetScript("OnEditFocusGained", function(self)
-    if self:GetText() == L["DefaultNoteInput"] then
-        self:SetText("") -- Clear the default text
-    end
-end)
-
--- Reset to default text if left empty
-iWRNoteInput:SetScript("OnEditFocusLost", function(self)
-    if self:GetText() == "" then
-        self:SetText(L["DefaultNoteInput"]) -- Reset to default text
-    end
-end)
-
 -- ╭────────────────────╮
--- │      Help Icon     │
+-- │     Help Icon      │
 -- ╰────────────────────╯
-local helpIcon = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
-helpIcon:SetSize(24, 24)
-helpIcon:SetPoint("TOPRIGHT", titleBar, "BOTTOMRIGHT", -10, -5)
+local helpIcon = CreateFrame("Button", nil, menuContent)
+helpIcon:SetSize(20, 20)
+helpIcon:SetPoint("TOPRIGHT", menuContent, "TOPRIGHT", -8, -8)
 helpIcon:SetNormalTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 
--- Create a tooltip for the help icon
 helpIcon:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:SetText("How do I use iWillRemember", 1, 0.85, 0.1)
@@ -155,178 +136,407 @@ helpIcon:SetScript("OnEnter", function(self)
     GameTooltip:AddLine(L["HelpDiscord"], 1, 0.82, 0, true)
     GameTooltip:Show()
 end)
-
-helpIcon:SetScript("OnLeave", function(self)
-    GameTooltip:Hide()
-end)
-
+helpIcon:SetScript("OnLeave", function() GameTooltip:Hide() end)
 helpIcon:SetScript("OnClick", function()
     if not iWR:VerifyInputName(iWRNameInput:GetText()) then
-    iWRNoteInput:SetText("https://discord.gg/8nnt25aw8B")
-    print(L["DiscordCopiedToNote"])
+        iWRNoteInput:SetText("https://discord.gg/8nnt25aw8B")
+        print(L["DiscordCopiedToNote"])
     end
 end)
 
 -- ╭─────────────────────────╮
--- │      Focus Handling     │
+-- │     Focus Handling      │
 -- ╰─────────────────────────╯
--- Create a transparent frame to detect clicks outside the edit boxes
 local clickAwayFrame = CreateFrame("Frame", nil, UIParent)
-clickAwayFrame:SetAllPoints(UIParent) -- Cover the entire screen
-clickAwayFrame:EnableMouse(true) -- Enable mouse detection
-clickAwayFrame:Hide() -- Initially hidden
+clickAwayFrame:SetAllPoints(UIParent)
+clickAwayFrame:EnableMouse(true)
+clickAwayFrame:SetFrameStrata("BACKGROUND")
+clickAwayFrame:Hide()
 
--- On click, unfocus both edit boxes
 clickAwayFrame:SetScript("OnMouseDown", function()
     iWRNameInput:ClearFocus()
     iWRNoteInput:ClearFocus()
-    clickAwayFrame:Hide() -- Hide the frame after the click
+    clickAwayFrame:Hide()
 end)
 
--- Show the frame when the edit boxes gain focus
 function iWR:OnFocusGained()
     clickAwayFrame:Show()
 end
 
--- Hook focus gained for both edit boxes
 iWRNameInput:SetScript("OnEditFocusGained", function(self)
-    if self:GetText() == L["DefaultNameInput"] then
-        self:SetText("") -- Clear default text
-    end
+    if self:GetText() == L["DefaultNameInput"] then self:SetText("") end
     iWR:OnFocusGained()
 end)
-
 iWRNoteInput:SetScript("OnEditFocusGained", function(self)
-    if self:GetText() == L["DefaultNoteInput"] then
-        self:SetText("") -- Clear default text
-    end
+    if self:GetText() == L["DefaultNoteInput"] then self:SetText("") end
     iWR:OnFocusGained()
 end)
-
--- Reset to default text if left empty
 iWRNameInput:SetScript("OnEditFocusLost", function(self)
-    if self:GetText() == "" then
-        self:SetText(L["DefaultNameInput"])
-    end
+    if self:GetText() == "" then self:SetText(L["DefaultNameInput"]) end
 end)
-
 iWRNoteInput:SetScript("OnEditFocusLost", function(self)
-    if self:GetText() == "" then
-        self:SetText(L["DefaultNoteInput"])
-    end
+    if self:GetText() == "" then self:SetText(L["DefaultNoteInput"]) end
 end)
 
--- ╭─────────────────────────────────────╮
--- │      Main Panel Set Type Hated      │
--- ╰─────────────────────────────────────╯
-local button1, button1Label = iWR:CreateRelationButton(
-    iWRPanel,
-    {53, 53},
-    {"TOP", iWRNoteInput, "BOTTOM", 120, -15},
-    iWR:GetIcon(-5),
-    iWR:GetTypeName(-5),
-    function()
-        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWR.Types["Hated"])
+-- ╭──────────────────────────────────────────╮
+-- │      Relation Level Slider               │
+-- ╰──────────────────────────────────────────╯
+
+-- Separator line below note input
+local sliderSeparator = menuContent:CreateTexture(nil, "ARTWORK")
+sliderSeparator:SetSize(280, 1)
+sliderSeparator:SetPoint("TOP", iWRNoteInput, "BOTTOM", 0, -10)
+sliderSeparator:SetColorTexture(0.4, 0.4, 0.5, 0.4)
+
+-- "Relation Level" section header
+local sliderHeader = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+sliderHeader:SetPoint("TOP", sliderSeparator, "BOTTOM", 0, -4)
+sliderHeader:SetText("|cFFCCCCCCRelation Level|r")
+
+-- Type icon (left side, shows current relation level icon)
+local sliderIcon = menuContent:CreateTexture(nil, "ARTWORK")
+sliderIcon:SetSize(30, 30)
+sliderIcon:SetPoint("LEFT", menuContent, "LEFT", 10, -52)
+sliderIcon:SetTexture(iWR:GetIcon(0))
+
+-- Custom slider track
+local SLIDER_WIDTH = 230
+local SLIDER_HEIGHT = 12
+local SLIDER_Y_OFFSET = -6
+
+local sliderTrack = CreateFrame("Frame", nil, menuContent, "BackdropTemplate")
+sliderTrack:SetSize(SLIDER_WIDTH, SLIDER_HEIGHT)
+sliderTrack:SetPoint("TOP", sliderHeader, "BOTTOM", 8, SLIDER_Y_OFFSET)
+sliderTrack:SetBackdrop({
+    bgFile = "Interface\\Buttons\\WHITE8x8",
+    edgeFile = "Interface\\Buttons\\WHITE8x8",
+    edgeSize = 1,
+    insets = {left = 1, right = 1, top = 1, bottom = 1},
+})
+sliderTrack:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
+sliderTrack:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+
+-- Colored fill bar (fills from center outward based on value)
+local sliderFill = sliderTrack:CreateTexture(nil, "ARTWORK")
+sliderFill:SetHeight(SLIDER_HEIGHT - 2)
+sliderFill:SetPoint("TOP", sliderTrack, "TOP", 0, -1)
+sliderFill:SetTexture("Interface\\Buttons\\WHITE8x8")
+
+-- Tick marks at group boundaries
+local function CreateTick(parent, xOffset)
+    local tick = parent:CreateTexture(nil, "OVERLAY")
+    tick:SetSize(1, SLIDER_HEIGHT)
+    tick:SetPoint("CENTER", parent, "LEFT", xOffset, 0)
+    tick:SetColorTexture(0.5, 0.5, 0.5, 0.6)
+    return tick
+end
+
+local centerX = SLIDER_WIDTH / 2
+local stepWidth = SLIDER_WIDTH / 20 -- 20 steps from -10 to +10
+CreateTick(sliderTrack, centerX - (10 * stepWidth)) -- -10 (Hated start)
+CreateTick(sliderTrack, centerX - (6 * stepWidth))  -- -6 (Hated end)
+CreateTick(sliderTrack, centerX - (1 * stepWidth))  -- -1 (Disliked end)
+CreateTick(sliderTrack, centerX + (1 * stepWidth))  -- +1 (Liked start)
+CreateTick(sliderTrack, centerX + (6 * stepWidth))  -- +6 (Respected start)
+CreateTick(sliderTrack, centerX + (10 * stepWidth)) -- +10 (Superior)
+
+-- Thumb (draggable knob)
+local sliderThumb = CreateFrame("Frame", nil, sliderTrack)
+sliderThumb:SetSize(14, 18)
+sliderThumb:SetPoint("CENTER", sliderTrack, "LEFT", centerX, 0)
+
+local thumbTex = sliderThumb:CreateTexture(nil, "OVERLAY")
+thumbTex:SetAllPoints()
+thumbTex:SetTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+
+-- Min/Max labels
+local sliderLowLabel = menuContent:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+sliderLowLabel:SetPoint("TOPLEFT", sliderTrack, "BOTTOMLEFT", 0, -2)
+sliderLowLabel:SetText("|cFF999999-10|r")
+
+local sliderHighLabel = menuContent:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+sliderHighLabel:SetPoint("TOPRIGHT", sliderTrack, "BOTTOMRIGHT", 0, -2)
+sliderHighLabel:SetText("|cFF999999+10|r")
+
+-- Value label (centered under slider, shows "±N — TypeName")
+local sliderValueText = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+sliderValueText:SetPoint("TOP", sliderTrack, "BOTTOM", 0, -12)
+sliderValueText:SetText(iWR.Colors.Default .. "0 — Clear")
+
+-- Current slider value storage
+local currentSliderValue = 0
+local UpdateSimpleHighlight -- forward declaration
+
+-- Update display: icon, fill bar, thumb position, label
+local function UpdateSliderDisplay(value)
+    value = math.floor(value + 0.5)
+    if value < -10 then value = -10 end
+    if value > 10 then value = 10 end
+    currentSliderValue = value
+
+    local typeName = iWR:GetTypeName(value)
+    local typeColor = iWR.Colors[value] or iWR.Colors.Default
+
+    -- Update icon
+    sliderIcon:SetTexture(iWR:GetIcon(value))
+
+    -- Update value label
+    if value == 0 then
+        sliderValueText:SetText(iWR.Colors.Default .. "0 — " .. typeName)
+    else
+        local sign = value > 0 and "+" or ""
+        sliderValueText:SetText(typeColor .. sign .. value .. " — " .. typeName)
     end
-)
 
--- ╭────────────────────────────────────────╮
--- │      Main Panel Set Type Disliked      │
--- ╰────────────────────────────────────────╯
-local button2, button2Label = iWR:CreateRelationButton(
-    iWRPanel,
-    {53, 53},
-    {"TOP", iWRNoteInput, "BOTTOM", 60, -15},
-    iWR:GetIcon(-3),
-    iWR:GetTypeName(-3),
-    function()
-        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWR.Types["Disliked"])
+    -- Update thumb position
+    local thumbX = centerX + (value * stepWidth)
+    sliderThumb:ClearAllPoints()
+    sliderThumb:SetPoint("CENTER", sliderTrack, "LEFT", thumbX, 0)
+
+    -- Update fill bar (from center to thumb)
+    local r, g, b = 0.5, 0.8, 0.3 -- default green
+    if value < 0 then
+        if value <= -6 then
+            r, g, b = 1.0, 0.13, 0.13  -- Hated red
+        else
+            r, g, b = 0.99, 0.44, 0.19 -- Disliked orange
+        end
+    elseif value == 10 then
+        r, g, b = 0.30, 0.65, 1.0      -- Superior blue
+    elseif value > 0 then
+        r, g, b = 0.50, 0.96, 0.32     -- Liked/Respected green
     end
-)
 
--- ╭─────────────────────────────────────╮
--- │      Main Panel Set Type Liked      │
--- ╰─────────────────────────────────────╯
-local button3, button3Label = iWR:CreateRelationButton(
-    iWRPanel,
-    {53, 53},
-    {"TOP", iWRNoteInput, "BOTTOM", 0, -15},
-    iWR:GetIcon(3),
-    iWR:GetTypeName(3),
-    function()
-        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWR.Types["Liked"])
-    end
-)
-
--- ╭─────────────────────────────────────────╮
--- │      Main Panel Set Type Respected      │
--- ╰─────────────────────────────────────────╯
-local button4, button4Label = iWR:CreateRelationButton(
-    iWRPanel,
-    {53, 53},
-    {"TOP", iWRNoteInput, "BOTTOM", -60, -15},
-    iWR:GetIcon(5),
-    iWR:GetTypeName(5),
-    function()
-        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), iWR.Types["Respected"])
-    end
-)
-
--- ╭─────────────────────────────────────╮
--- │      Main Panel Set Type Clear      │
--- ╰─────────────────────────────────────╯
-local button5, button5Label = iWR:CreateRelationButton(
-    iWRPanel,
-    {53, 53},
-    {"TOP", iWRNoteInput, "BOTTOM", -120, -15},
-    iWR.Icons[iWR.Types["Clear"]],
-    "Clear",
-    function()
-        iWR:ClearNote(iWRNameInput:GetText())
-    end
-)
-
--- ╭────────────────────────────────────────╮
--- │   Refresh buttons on panel show        │
--- ╰────────────────────────────────────────╯
-local ratingButtons = {
-    {button = button1, label = button1Label, key = -5},
-    {button = button2, label = button2Label, key = -3},
-    {button = button3, label = button3Label, key = 3},
-    {button = button4, label = button4Label, key = 5},
-}
-
-iWRPanel:HookScript("OnShow", function()
-    for _, rb in ipairs(ratingButtons) do
-        rb.label:SetText(iWR:GetTypeName(rb.key))
-        if rb.button.iconTexture then
-            rb.button.iconTexture:SetTexture(iWR:GetIcon(rb.key))
+    if value == 0 then
+        sliderFill:Hide()
+    else
+        sliderFill:Show()
+        sliderFill:SetVertexColor(r, g, b, 0.7)
+        sliderFill:ClearAllPoints()
+        sliderFill:SetHeight(SLIDER_HEIGHT - 2)
+        if value > 0 then
+            sliderFill:SetPoint("LEFT", sliderTrack, "LEFT", centerX + 1, 0)
+            sliderFill:SetWidth(value * stepWidth)
+        else
+            local fillWidth = math.abs(value) * stepWidth
+            sliderFill:SetPoint("RIGHT", sliderTrack, "LEFT", centerX - 1, 0)
+            sliderFill:SetWidth(fillWidth)
         end
     end
+end
+
+-- Expose so MenuOpen can set slider value from outside
+function iWR:SetSliderValue(value)
+    UpdateSliderDisplay(value)
+    UpdateSimpleHighlight(value)
+end
+
+-- Click on track to set value
+sliderTrack:EnableMouse(true)
+sliderTrack:SetScript("OnMouseDown", function(self, button)
+    if button == "LeftButton" then
+        local x = select(1, GetCursorPosition()) / self:GetEffectiveScale()
+        local left = self:GetLeft()
+        local fraction = (x - left) / SLIDER_WIDTH
+        local value = math.floor((-10 + fraction * 20) + 0.5)
+        UpdateSliderDisplay(value)
+    end
 end)
 
--- ╭────────────────────────────────────────╮
--- │      Button to Open the Database       │
--- ╰────────────────────────────────────────╯
-local openDatabaseButton = CreateFrame("Button", nil, iWRPanel, "UIPanelButtonTemplate")
-openDatabaseButton:SetSize(34, 34)
-openDatabaseButton:SetPoint("TOP", iWRNameInput, "BOTTOM", -140, 45)
+-- Drag on thumb
+sliderThumb:EnableMouse(true)
+sliderThumb:SetScript("OnMouseDown", function(self, button)
+    if button == "LeftButton" then
+        self.dragging = true
+    end
+end)
+
+sliderThumb:SetScript("OnMouseUp", function(self, button)
+    if button == "LeftButton" then
+        self.dragging = false
+    end
+end)
+
+-- Global OnUpdate for drag handling
+sliderTrack:SetScript("OnUpdate", function(self)
+    if sliderThumb.dragging then
+        local x = select(1, GetCursorPosition()) / self:GetEffectiveScale()
+        local left = self:GetLeft()
+        local fraction = (x - left) / SLIDER_WIDTH
+        local value = math.floor((-10 + fraction * 20) + 0.5)
+        if value < -10 then value = -10 end
+        if value > 10 then value = 10 end
+        UpdateSliderDisplay(value)
+    end
+end)
+
+-- Scroll wheel on slider
+sliderTrack:SetScript("OnMouseWheel", function(self, delta)
+    local newValue = currentSliderValue + delta
+    if newValue < -10 then newValue = -10 end
+    if newValue > 10 then newValue = 10 end
+    UpdateSliderDisplay(newValue)
+end)
+sliderTrack:EnableMouseWheel(true)
+
+-- ╭──────────────────────────────────────────╮
+-- │      Save Note Button                     │
+-- ╰──────────────────────────────────────────╯
+local saveNoteButton = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
+saveNoteButton:SetSize(100, 24)
+saveNoteButton:SetPoint("TOP", sliderValueText, "BOTTOM", -52, -6)
+saveNoteButton:SetText(L["SaveNote"] or "Save Note")
+saveNoteButton:SetScript("OnClick", function()
+    if currentSliderValue == 0 then
+        iWR:ClearNote(iWRNameInput:GetText())
+    else
+        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), currentSliderValue)
+    end
+end)
+
+local clearNoteButton = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
+clearNoteButton:SetSize(100, 24)
+clearNoteButton:SetPoint("TOP", sliderValueText, "BOTTOM", 52, -6)
+clearNoteButton:SetText("Clear")
+clearNoteButton:SetScript("OnClick", function()
+    iWR:ClearNote(iWRNameInput:GetText())
+end)
+
+-- ╭──────────────────────────────────────────╮
+-- │      Simple Menu (button mode)           │
+-- ╰──────────────────────────────────────────╯
+local simpleContainer = CreateFrame("Frame", nil, menuContent)
+simpleContainer:SetPoint("TOP", iWRNoteInput, "BOTTOM", 0, -10)
+simpleContainer:SetSize(300, 75)
+simpleContainer:Hide()
+
+-- Simple menu buttons config: {value, label fallback, position}
+local simpleButtons = {}
+local simpleBtnConfig = {
+    {  0, "Clear",     1 },
+    {  6, "Respected", 2 },
+    {  1, "Liked",     3 },
+    { -1, "Disliked",  4 },
+    { -6, "Hated",     5 },
+}
+
+for _, cfg in ipairs(simpleBtnConfig) do
+    local value, fallback, pos = cfg[1], cfg[2], cfg[3]
+    local btn = CreateFrame("Button", nil, simpleContainer, "UIPanelButtonTemplate")
+    btn:SetSize(53, 53)
+
+    -- Center buttons in a row: pos 3 = center (0), offsets = (pos - 3) * 60
+    local xOffset = (pos - 3) * 60
+    btn:SetPoint("TOP", simpleContainer, "TOP", xOffset, -2)
+    btn:SetText("")
+
+    btn:SetScript("OnClick", function()
+        if value == 0 then
+            iWR:ClearNote(iWRNameInput:GetText())
+        else
+            iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), value)
+        end
+    end)
+
+    -- Icon texture (45x45 centered)
+    local iconTex = btn:CreateTexture(nil, "ARTWORK")
+    iconTex:SetSize(45, 45)
+    iconTex:SetPoint("CENTER", btn, "CENTER", 0, 0)
+    iconTex:SetTexture(iWR:GetIcon(value))
+    btn.iconTexture = iconTex
+
+    -- Label under button
+    local btnLabel = simpleContainer:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    btnLabel:SetPoint("TOP", btn, "BOTTOM", 0, -3)
+    btnLabel:SetWidth(57)
+    btnLabel:SetWordWrap(false)
+    btnLabel:SetText(iWR:GetTypeName(value) ~= "" and iWR:GetTypeName(value) or fallback)
+    btn.label = btnLabel
+
+    -- Highlight texture for active state
+    local activeBg = btn:CreateTexture(nil, "BACKGROUND")
+    activeBg:SetAllPoints()
+    activeBg:SetColorTexture(1, 0.59, 0.09, 0.3)
+    activeBg:Hide()
+    btn.activeBg = activeBg
+    btn.typeValue = value
+
+    simpleButtons[#simpleButtons + 1] = btn
+end
+
+-- Highlight the matching simple button for current value
+UpdateSimpleHighlight = function(value)
+    local typeName = iWR:GetTypeName(value)
+    for _, btn in ipairs(simpleButtons) do
+        local btnTypeName = iWR:GetTypeName(btn.typeValue)
+        if typeName == btnTypeName and value ~= 0 then
+            btn.activeBg:Show()
+        else
+            btn.activeBg:Hide()
+        end
+    end
+end
+
+-- Open Database button (top-left of content area)
+local openDatabaseButton = CreateFrame("Button", nil, menuContent)
+openDatabaseButton:SetSize(26, 26)
+openDatabaseButton:SetPoint("TOPLEFT", menuContent, "TOPLEFT", 6, -6)
 openDatabaseButton:SetScript("OnClick", function()
     iWR:DatabaseToggle()
     iWR:PopulateDatabase()
     iWR:MenuClose()
 end)
 
--- Add an icon to the openDatabaseButton
 local iconTextureDB = openDatabaseButton:CreateTexture(nil, "ARTWORK")
-iconTextureDB:SetSize(25, 25)
+iconTextureDB:SetSize(22, 22)
 iconTextureDB:SetPoint("CENTER", openDatabaseButton, "CENTER", 0, 0)
 iconTextureDB:SetTexture(iWR.Icons.Database)
 
--- Add a label below the button
-local openDatabaseButtonLabel = iWRPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-openDatabaseButtonLabel:SetPoint("TOP", openDatabaseButton, "BOTTOM", 0, -5)
-openDatabaseButtonLabel:SetText("Open DB")
+openDatabaseButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText("Open Database", 1, 0.82, 0)
+    GameTooltip:Show()
+end)
+openDatabaseButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+-- Highlight on hover for DB button
+local dbHighlight = openDatabaseButton:CreateTexture(nil, "HIGHLIGHT")
+dbHighlight:SetAllPoints()
+dbHighlight:SetColorTexture(1, 1, 1, 0.15)
+
+-- Toggle simple/slider mode and reset on panel show
+local function UpdateMenuMode()
+    if iWRSettings and iWRSettings.SimpleMenu then
+        sliderSeparator:Hide()
+        sliderHeader:Hide()
+        sliderIcon:Hide()
+        sliderTrack:Hide()
+        sliderThumb:Hide()
+        sliderLowLabel:Hide()
+        sliderHighLabel:Hide()
+        sliderValueText:Hide()
+        saveNoteButton:Hide()
+        clearNoteButton:Hide()
+        simpleContainer:Show()
+    else
+        sliderSeparator:Show()
+        sliderHeader:Show()
+        sliderIcon:Show()
+        sliderTrack:Show()
+        sliderThumb:Show()
+        sliderLowLabel:Show()
+        sliderHighLabel:Show()
+        sliderValueText:Show()
+        saveNoteButton:Show()
+        clearNoteButton:Show()
+        simpleContainer:Hide()
+    end
+end
+
+iWRPanel:HookScript("OnShow", function()
+    UpdateSliderDisplay(0)
+    UpdateMenuMode()
+end)
 
 -- Create Tab
 function iWR:CreateTab(panel, index, name, onClick)
@@ -364,11 +574,11 @@ function iWR:CreateTab(panel, index, name, onClick)
 end
 
 -- Create a new frame to display the database
-iWRDatabaseFrame = iWR:CreateiWRStyleFrame(UIParent, 700, 450, {"CENTER", UIParent, "CENTER"})
+iWRDatabaseFrame = iWR:CreateiWRStyleFrame(UIParent, 800, 450, {"CENTER", UIParent, "CENTER"})
 iWRDatabaseFrame:Hide()
 iWRDatabaseFrame:EnableMouse(true)
 iWRDatabaseFrame:SetMovable(true)
-iWRDatabaseFrame:SetFrameStrata("MEDIUM")
+iWRDatabaseFrame:SetFrameStrata("HIGH")
 iWRDatabaseFrame:SetClampedToScreen(true)
 iWRDatabaseFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.95)
 iWRDatabaseFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1)
@@ -415,69 +625,117 @@ dbCloseButton:SetScript("OnClick", function()
 end)
 
 -- ╭──────────────────────────────────────────╮
--- │      Database Frame Tab System           │
+-- │      Database Frame Sidebar + Content    │
 -- ╰──────────────────────────────────────────╯
 local dbActiveTab = 1
+local dbSidebarWidth = 130
+local dbSidebarButtons = {}
 
--- Notes container (holds the existing database view)
-local notesContainer = CreateFrame("Frame", nil, iWRDatabaseFrame)
-notesContainer:SetPoint("TOPLEFT", dbTitleBar, "BOTTOMLEFT", 0, -35)
-notesContainer:SetPoint("BOTTOMRIGHT", iWRDatabaseFrame, "BOTTOMRIGHT", 0, 0)
+-- Sidebar (OptionsPanel style)
+local dbSidebar = CreateFrame("Frame", nil, iWRDatabaseFrame, "BackdropTemplate")
+dbSidebar:SetWidth(dbSidebarWidth)
+dbSidebar:SetPoint("TOPLEFT", iWRDatabaseFrame, "TOPLEFT", 10, -35)
+dbSidebar:SetPoint("BOTTOMLEFT", iWRDatabaseFrame, "BOTTOMLEFT", 10, 10)
+dbSidebar:SetBackdrop({
+    bgFile = "Interface\\BUTTONS\\WHITE8X8",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    edgeSize = 12,
+    insets = {left = 3, right = 3, top = 3, bottom = 3},
+})
+dbSidebar:SetBackdropColor(0.05, 0.05, 0.08, 0.95)
+dbSidebar:SetBackdropBorderColor(0.4, 0.4, 0.5, 0.6)
+
+-- Content area (OptionsPanel style)
+local dbContentArea = CreateFrame("Frame", nil, iWRDatabaseFrame, "BackdropTemplate")
+dbContentArea:SetPoint("TOPLEFT", dbSidebar, "TOPRIGHT", 6, 0)
+dbContentArea:SetPoint("BOTTOMRIGHT", iWRDatabaseFrame, "BOTTOMRIGHT", -10, 10)
+dbContentArea:SetBackdrop({
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    edgeSize = 16,
+    insets = {left = 4, right = 4, top = 4, bottom = 4},
+})
+dbContentArea:SetBackdropBorderColor(0.6, 0.6, 0.7, 1)
+dbContentArea:SetBackdropColor(0.08, 0.08, 0.1, 0.95)
+
+-- Forward declaration (used in OnClick before definition)
+local ShowDatabaseTab
+
+-- Sidebar button creation helper
+local function CreateSidebarButton(parent, label, index, yOffset)
+    local btn = CreateFrame("Button", nil, parent)
+    btn:SetSize(dbSidebarWidth - 12, 26)
+    btn:SetPoint("TOPLEFT", parent, "TOPLEFT", 6, yOffset)
+
+    local bg = btn:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(btn)
+    bg:SetColorTexture(0, 0, 0, 0)
+    btn.bg = bg
+
+    local text = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    text:SetPoint("LEFT", btn, "LEFT", 14, 0)
+    text:SetText(label)
+    btn.text = text
+
+    local highlight = btn:CreateTexture(nil, "HIGHLIGHT")
+    highlight:SetAllPoints(btn)
+    highlight:SetColorTexture(1, 1, 1, 0.08)
+
+    btn:SetScript("OnClick", function()
+        ShowDatabaseTab(index)
+    end)
+
+    return btn
+end
+
+-- Sidebar buttons
+local dbNotesBtn = CreateSidebarButton(dbSidebar, L["NotesTab"] or "Notes", 1, -8)
+dbSidebarButtons[1] = dbNotesBtn
+
+-- Entry count text (under Notes button)
+local dbEntryCount = dbSidebar:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+dbEntryCount:SetPoint("TOPLEFT", dbNotesBtn, "BOTTOMLEFT", 14, -2)
+dbEntryCount:SetText("|cFF8080800 entries|r")
+
+local dbGroupLogBtn = CreateSidebarButton(dbSidebar, L["GroupLogTab"] or "Group Log", 2, -52)
+dbSidebarButtons[2] = dbGroupLogBtn
+
+-- Notes container (inside content area)
+local notesContainer = CreateFrame("Frame", nil, dbContentArea)
+notesContainer:SetPoint("TOPLEFT", dbContentArea, "TOPLEFT", 5, -5)
+notesContainer:SetPoint("BOTTOMRIGHT", dbContentArea, "BOTTOMRIGHT", -5, 5)
 notesContainer:Show()
 
--- Group Log container
-local groupLogContainer = CreateFrame("Frame", nil, iWRDatabaseFrame)
-groupLogContainer:SetPoint("TOPLEFT", dbTitleBar, "BOTTOMLEFT", 0, -35)
-groupLogContainer:SetPoint("BOTTOMRIGHT", iWRDatabaseFrame, "BOTTOMRIGHT", 0, 0)
+-- Group Log container (inside content area)
+local groupLogContainer = CreateFrame("Frame", nil, dbContentArea)
+groupLogContainer:SetPoint("TOPLEFT", dbContentArea, "TOPLEFT", 5, -5)
+groupLogContainer:SetPoint("BOTTOMRIGHT", dbContentArea, "BOTTOMRIGHT", -5, 5)
 groupLogContainer:Hide()
 
-local function ShowDatabaseTab(tabIndex)
+-- ShowDatabaseTab: sidebar-based tab switching
+ShowDatabaseTab = function(tabIndex)
     dbActiveTab = tabIndex
-    if tabIndex == 1 then
-        notesContainer:Show()
-        groupLogContainer:Hide()
-    else
-        notesContainer:Hide()
-        groupLogContainer:Show()
+    notesContainer:SetShown(tabIndex == 1)
+    groupLogContainer:SetShown(tabIndex == 2)
+    if tabIndex == 2 then
         iWR:PopulateGroupLog()
+    end
+    for i, btn in ipairs(dbSidebarButtons) do
+        if i == tabIndex then
+            btn.bg:SetColorTexture(1, 0.59, 0.09, 0.25)
+            btn.text:SetFontObject(GameFontHighlight)
+        else
+            btn.bg:SetColorTexture(0, 0, 0, 0)
+            btn.text:SetFontObject(GameFontNormal)
+        end
     end
 end
 
--- Tab names must match frame:GetName() .. "Tab" .. index for PanelTemplates to work
-local dbFrameName = iWRDatabaseFrame:GetName()
-
--- Tab 1: Notes
-local dbTab1 = CreateFrame("Button", dbFrameName .. "Tab1", iWRDatabaseFrame, "OptionsFrameTabButtonTemplate")
-dbTab1:SetText(L["NotesTab"] or "Notes")
-dbTab1:SetID(1)
-dbTab1:SetPoint("TOPLEFT", dbTitleBar, "BOTTOMLEFT", 10, 5)
-dbTab1:SetScale(1.0)
-dbTab1:SetHeight(25)
-PanelTemplates_TabResize(dbTab1, 0)
-dbTab1:SetScript("OnClick", function()
-    PanelTemplates_SetTab(iWRDatabaseFrame, 1)
-    ShowDatabaseTab(1)
-end)
-
--- Tab 2: Group Log
-local dbTab2 = CreateFrame("Button", dbFrameName .. "Tab2", iWRDatabaseFrame, "OptionsFrameTabButtonTemplate")
-dbTab2:SetText(L["GroupLogTab"] or "Group Log")
-dbTab2:SetID(2)
-dbTab2:SetPoint("LEFT", dbTab1, "RIGHT", -5, 0)
-dbTab2:SetScale(1.0)
-dbTab2:SetHeight(25)
-PanelTemplates_TabResize(dbTab2, 0)
-dbTab2:SetScript("OnClick", function()
-    PanelTemplates_SetTab(iWRDatabaseFrame, 2)
-    ShowDatabaseTab(2)
-end)
-
-PanelTemplates_SetNumTabs(iWRDatabaseFrame, 2)
-PanelTemplates_SetTab(iWRDatabaseFrame, 1)
+-- Initialize first tab as active
+ShowDatabaseTab(1)
 
 -- Reset to Notes tab (called from DatabaseOpen to always start on Notes)
 function iWR:ResetDatabaseTab()
-    PanelTemplates_SetTab(iWRDatabaseFrame, 1)
     ShowDatabaseTab(1)
 end
 
@@ -596,7 +854,8 @@ searchDatabaseButton:SetScript("OnClick", function()
         button2 = "Cancel",
         hasEditBox = true,
         OnAccept = function(self)
-            local searchQuery = self.editBox:GetText()
+            local eb = self.editBox or self.EditBox
+            local searchQuery = eb and eb:GetText()
             if searchQuery and searchQuery ~= "" then
                 local foundEntries = {}
                 for playerName, data in pairs(iWRDatabase) do
@@ -791,7 +1050,10 @@ searchDatabaseButton:SetScript("OnClick", function()
             end
         end,
         OnShow = function(self)
-            self.editBox:SetMaxLetters(15) -- Set maximum character limit
+            local eb = self.editBox or self.EditBox
+            if eb then
+                eb:SetMaxLetters(15)
+            end
         end,
         timeout = 0,
         whileDead = true,
@@ -808,14 +1070,20 @@ function iWR:PopulateDatabase()
     -- Create sub-containers for columns if they don't already exist
     if not dbContainer.col1 then
         dbContainer.col1 = CreateFrame("Frame", nil, dbContainer)
-        dbContainer.col1:SetSize(dbContainer:GetWidth() * 0.3, dbContainer:GetHeight())
+        dbContainer.col1:SetSize(dbContainer:GetWidth() * 0.28, dbContainer:GetHeight())
         dbContainer.col1:SetPoint("TOPLEFT", dbContainer, "TOPLEFT", 0, 0)
+    end
+
+    if not dbContainer.col1b then
+        dbContainer.col1b = CreateFrame("Frame", nil, dbContainer)
+        dbContainer.col1b:SetSize(dbContainer:GetWidth() * 0.07, dbContainer:GetHeight())
+        dbContainer.col1b:SetPoint("TOPLEFT", dbContainer.col1, "TOPRIGHT", 0, 0)
     end
 
     if not dbContainer.col2 then
         dbContainer.col2 = CreateFrame("Frame", nil, dbContainer)
-        dbContainer.col2:SetSize(dbContainer:GetWidth() * 0.45, dbContainer:GetHeight())
-        dbContainer.col2:SetPoint("TOPLEFT", dbContainer.col1, "TOPRIGHT", 0, 0)
+        dbContainer.col2:SetSize(dbContainer:GetWidth() * 0.40, dbContainer:GetHeight())
+        dbContainer.col2:SetPoint("TOPLEFT", dbContainer.col1b, "TOPRIGHT", 0, 0)
     end
 
     if not dbContainer.col3 then
@@ -832,6 +1100,7 @@ function iWR:PopulateDatabase()
     end
 
     resetColumn(dbContainer.col1)
+    resetColumn(dbContainer.col1b)
     resetColumn(dbContainer.col2)
     resetColumn(dbContainer.col3)
 
@@ -858,7 +1127,7 @@ function iWR:PopulateDatabase()
 
     -- Iterate over categorized data and create or reuse frames
     local yOffset = -5
-    local reusedFrames = { col1 = {}, col2 = {}, col3 = {} }
+    local reusedFrames = { col1 = {}, col1b = {}, col2 = {}, col3 = {} }
 
     for _, category in ipairs(sortedCategories) do
         if #categorizedData[category] > 0 then
@@ -872,9 +1141,72 @@ function iWR:PopulateDatabase()
                 col1Frame:Show()
                 table.insert(reusedFrames.col1, col1Frame)
 
+                -- Row hover highlight (manual, synced across all columns)
+                local col1Highlight = col1Frame.highlight or col1Frame:CreateTexture(nil, "ARTWORK")
+                col1Highlight:SetAllPoints()
+                col1Highlight:SetColorTexture(1, 0.59, 0.09, 0.08)
+                col1Highlight:Hide()
+                col1Frame.highlight = col1Highlight
+
+                -- Online status dot
+                local statusDot = col1Frame.statusDot or col1Frame:CreateTexture(nil, "OVERLAY")
+                statusDot:SetSize(6, 6)
+                statusDot:SetPoint("LEFT", col1Frame, "LEFT", 3, 0)
+                statusDot:SetTexture("Interface\\BUTTONS\\WHITE8x8")
+
+                local strippedName = StripColorCodes(data[4])
+                local isOnline = false
+
+                -- Check group/raid
+                if IsInGroup() or IsInRaid() then
+                    local numMembers = GetNumGroupMembers()
+                    for gi = 1, numMembers do
+                        local unit = IsInRaid() and ("raid" .. gi) or ("party" .. gi)
+                        if UnitExists(unit) and UnitName(unit) == strippedName then
+                            isOnline = UnitIsConnected(unit)
+                            break
+                        end
+                    end
+                end
+
+                -- Check guild
+                if not isOnline and IsInGuild() then
+                    local numGuild = GetNumGuildMembers()
+                    for gi = 1, numGuild do
+                        local gName, _, _, _, _, _, _, _, online = GetGuildRosterInfo(gi)
+                        if gName then
+                            local shortName = Ambiguate(gName, "short")
+                            if shortName == strippedName then
+                                isOnline = online
+                                break
+                            end
+                        end
+                    end
+                end
+
+                -- Check friends list
+                if not isOnline then
+                    local numFriends = C_FriendList.GetNumFriends()
+                    for fi = 1, numFriends do
+                        local info = C_FriendList.GetFriendInfoByIndex(fi)
+                        if info and info.name == strippedName then
+                            isOnline = info.connected
+                            break
+                        end
+                    end
+                end
+
+                if isOnline then
+                    statusDot:SetVertexColor(0, 1, 0, 1)
+                else
+                    statusDot:SetVertexColor(0.4, 0.4, 0.4, 0.5)
+                end
+                statusDot:Show()
+                col1Frame.statusDot = statusDot
+
                 local iconTexture = col1Frame.iconTexture or col1Frame:CreateTexture(nil, "ARTWORK")
                 iconTexture:SetSize(20, 20)
-                iconTexture:SetPoint("LEFT", col1Frame, "LEFT", 10, 0)
+                iconTexture:SetPoint("LEFT", statusDot, "RIGHT", 3, 0)
                 iconTexture:SetTexture(iWR:GetIcon(data[2]) or "Interface\\Icons\\INV_Misc_QuestionMark")
                 col1Frame.iconTexture = iconTexture
 
@@ -887,6 +1219,16 @@ function iWR:PopulateDatabase()
                     displayName = displayName .. "-" .. data[7]
                 end
                 local databasekey = StripColorCodes(data[4]) .. "-" .. data[7]
+
+                -- Whisper helper for this row
+                local function WhisperPlayer()
+                    local whisperName = StripColorCodes(data[4])
+                    if data[7] and data[7] ~= iWR.CurrentRealm then
+                        whisperName = whisperName .. "-" .. data[7]
+                    end
+                    ChatFrame_OpenChat("/w " .. whisperName .. " ")
+                end
+
                 playerNameText:SetText(iWR.Colors.iWR .. string.format("%-16s", listdisplayName))
                 playerNameText:SetTextColor(1, 1, 1, 1)
                 col1Frame.playerNameText = playerNameText
@@ -898,6 +1240,9 @@ function iWR:PopulateDatabase()
                     if data[7] then
                         GameTooltip:AddLine("Server: " .. iWR.Colors.Reset .. data[7], 1, 0.82, 0)
                     end
+                    local ttSign = data[2] > 0 and "+" or ""
+                    local ttColor = iWR.Colors[data[2]] or iWR.Colors.Default
+                    GameTooltip:AddLine("Type: " .. ttColor .. ttSign .. data[2] .. " — " .. iWR:GetTypeName(data[2]), 1, 0.82, 0)
                     if data[1] then
                         GameTooltip:AddLine("Note: " .. iWR.Colors[data[2]] .. data[1], 1, 0.82, 0)
                     end
@@ -907,14 +1252,39 @@ function iWR:PopulateDatabase()
                     if data[5] then
                         GameTooltip:AddLine("Date: " .. data[5], 1, 0.82, 0)
                     end
+                    GameTooltip:AddLine("|cFF808080Right-click to whisper|r", 0.5, 0.5, 0.5)
                     GameTooltip:Show()
                 end)
                 col1Frame:SetScript("OnLeave", function()
                     GameTooltip:Hide()
                 end)
-                col1Frame:SetScript("OnMouseDown", function()
-                    iWR:ShowDetailWindow(databasekey)
+                col1Frame:SetScript("OnMouseDown", function(self, button)
+                    if button == "RightButton" then
+                        WhisperPlayer()
+                    else
+                        iWR:ShowDetailWindow(databasekey)
+                    end
                 end)
+
+                -- Reuse or create frame in Col1b (Level)
+                local col1bFrame = reusedFrames.col1b[#reusedFrames.col1b + 1] or CreateFrame("Frame", nil, dbContainer.col1b)
+                col1bFrame:SetSize(dbContainer.col1b:GetWidth(), 30)
+                col1bFrame:SetPoint("TOPLEFT", dbContainer.col1b, "TOPLEFT", 0, yOffset)
+                col1bFrame:Show()
+                table.insert(reusedFrames.col1b, col1bFrame)
+
+                local col1bHighlight = col1bFrame.highlight or col1bFrame:CreateTexture(nil, "ARTWORK")
+                col1bHighlight:SetAllPoints()
+                col1bHighlight:SetColorTexture(1, 0.59, 0.09, 0.08)
+                col1bHighlight:Hide()
+                col1bFrame.highlight = col1bHighlight
+
+                local levelText = col1bFrame.levelText or col1bFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                levelText:SetPoint("CENTER", col1bFrame, "CENTER", 0, 0)
+                local levelColor = iWR.Colors[data[2]] or iWR.Colors.Default
+                local levelSign = data[2] > 0 and "+" or ""
+                levelText:SetText(levelColor .. levelSign .. data[2])
+                col1bFrame.levelText = levelText
 
                 -- Reuse or create frame in Col2 (Notes)
                 local col2Frame = reusedFrames.col2[#reusedFrames.col2 + 1] or CreateFrame("Frame", nil, dbContainer.col2)
@@ -922,6 +1292,12 @@ function iWR:PopulateDatabase()
                 col2Frame:SetPoint("TOPLEFT", dbContainer.col2, "TOPLEFT", 0, yOffset)
                 col2Frame:Show()
                 table.insert(reusedFrames.col2, col2Frame)
+
+                local col2Highlight = col2Frame.highlight or col2Frame:CreateTexture(nil, "ARTWORK")
+                col2Highlight:SetAllPoints()
+                col2Highlight:SetColorTexture(1, 0.59, 0.09, 0.08)
+                col2Highlight:Hide()
+                col2Frame.highlight = col2Highlight
 
                 local noteText = col2Frame.noteText or col2Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 noteText:SetPoint("LEFT", col2Frame, "LEFT", 10, 0)
@@ -937,6 +1313,9 @@ function iWR:PopulateDatabase()
                     if data[7] then
                         GameTooltip:AddLine("Server: " .. iWR.Colors.Reset .. data[7], 1, 0.82, 0)
                     end
+                    local ttSign = data[2] > 0 and "+" or ""
+                    local ttColor = iWR.Colors[data[2]] or iWR.Colors.Default
+                    GameTooltip:AddLine("Type: " .. ttColor .. ttSign .. data[2] .. " — " .. iWR:GetTypeName(data[2]), 1, 0.82, 0)
                     if data[1] then
                         GameTooltip:AddLine("Note: " .. iWR.Colors[data[2]] .. data[1], 1, 0.82, 0)
                     end
@@ -951,8 +1330,12 @@ function iWR:PopulateDatabase()
                 col2Frame:SetScript("OnLeave", function()
                     GameTooltip:Hide()
                 end)
-                col2Frame:SetScript("OnMouseDown", function()
-                    iWR:ShowDetailWindow(databasekey)
+                col2Frame:SetScript("OnMouseDown", function(self, button)
+                    if button == "RightButton" then
+                        WhisperPlayer()
+                    else
+                        iWR:ShowDetailWindow(databasekey)
+                    end
                 end)
 
                 -- Reuse or create frame in Col3 (Buttons)
@@ -961,6 +1344,12 @@ function iWR:PopulateDatabase()
                 col3Frame:SetPoint("TOPLEFT", dbContainer.col3, "TOPLEFT", 0, yOffset)
                 col3Frame:Show()
                 table.insert(reusedFrames.col3, col3Frame)
+
+                local col3Highlight = col3Frame.highlight or col3Frame:CreateTexture(nil, "ARTWORK")
+                col3Highlight:SetAllPoints()
+                col3Highlight:SetColorTexture(1, 0.59, 0.09, 0.08)
+                col3Highlight:Hide()
+                col3Frame.highlight = col3Highlight
 
                 local editButton = col3Frame.editButton or CreateFrame("Button", nil, col3Frame, "UIPanelButtonTemplate")
                 editButton:SetSize(50, 24)
@@ -1019,11 +1408,71 @@ function iWR:PopulateDatabase()
                 end)
                 col3Frame.removeButton = removeButton
 
+                -- Link all columns in this row for synced hover highlight
+                local rowFrames = { col1Frame, col1bFrame, col2Frame, col3Frame }
+                local function ShowRowHighlight()
+                    for _, f in ipairs(rowFrames) do
+                        if f.highlight then f.highlight:Show() end
+                    end
+                end
+                local function HideRowHighlight()
+                    for _, f in ipairs(rowFrames) do
+                        if f.highlight then f.highlight:Hide() end
+                    end
+                end
+
+                -- Hook synced highlights into existing OnEnter/OnLeave
+                local col1OrigEnter = col1Frame:GetScript("OnEnter")
+                local col1OrigLeave = col1Frame:GetScript("OnLeave")
+                col1Frame:SetScript("OnEnter", function(self, ...)
+                    ShowRowHighlight()
+                    if col1OrigEnter then col1OrigEnter(self, ...) end
+                end)
+                col1Frame:SetScript("OnLeave", function(self, ...)
+                    HideRowHighlight()
+                    if col1OrigLeave then col1OrigLeave(self, ...) end
+                end)
+
+                col1bFrame:EnableMouse(true)
+                col1bFrame:SetScript("OnEnter", function() ShowRowHighlight() end)
+                col1bFrame:SetScript("OnLeave", function() HideRowHighlight() end)
+                col1bFrame:SetScript("OnMouseDown", function(self, button)
+                    if button == "RightButton" then
+                        WhisperPlayer()
+                    else
+                        iWR:ShowDetailWindow(databasekey)
+                    end
+                end)
+
+                local col2OrigEnter = col2Frame:GetScript("OnEnter")
+                local col2OrigLeave = col2Frame:GetScript("OnLeave")
+                col2Frame:SetScript("OnEnter", function(self, ...)
+                    ShowRowHighlight()
+                    if col2OrigEnter then col2OrigEnter(self, ...) end
+                end)
+                col2Frame:SetScript("OnLeave", function(self, ...)
+                    HideRowHighlight()
+                    if col2OrigLeave then col2OrigLeave(self, ...) end
+                end)
+
+                col3Frame:EnableMouse(true)
+                col3Frame:SetScript("OnEnter", function() ShowRowHighlight() end)
+                col3Frame:SetScript("OnLeave", function() HideRowHighlight() end)
+                col3Frame:SetScript("OnMouseDown", function(self, button)
+                    if button == "RightButton" then
+                        WhisperPlayer()
+                    end
+                end)
+
                 yOffset = yOffset - 30
             end
         end
     end
     dbContainer:SetHeight(math.abs(yOffset))
+
+    -- Update entry count in sidebar
+    local entryCount = math.floor(math.abs(yOffset + 5) / 30)
+    dbEntryCount:SetText("|cFF808080" .. entryCount .. " entries|r")
 end
 
 -- ╭─────────────────────────────────────────────────╮

@@ -571,6 +571,12 @@ function iWR:CreateOptionsPanel()
         L["DescShowChatIcons"], y, "ShowChatIcons")
     checkboxRefs.ShowChatIcons = cbChatIcons
 
+    local cbSimpleMenu
+    cbSimpleMenu, y = CreateSettingsCheckbox(generalContent, L["SimpleMenu"] or "Simple Menu",
+        L["DescSimpleMenu"] or "|cFF808080Replaces the slider with simple type buttons (Hated, Disliked, Liked, Respected, Superior).|r",
+        y, "SimpleMenu")
+    checkboxRefs.SimpleMenu = cbSimpleMenu
+
     -- Warning Settings
     y = y - 8
     _, y = CreateSectionHeader(generalContent, L["WarningSettings"], y)
@@ -960,10 +966,11 @@ function iWR:CreateOptionsPanel()
     local iconRowLabels = {}
 
     local iconTypes = {
-        {key = 5,  label = iWR:GetTypeName(5)},
-        {key = 3,  label = iWR:GetTypeName(3)},
-        {key = -3, label = iWR:GetTypeName(-3)},
-        {key = -5, label = iWR:GetTypeName(-5)},
+        {key = 10, label = iWR:GetTypeName(10)},
+        {key = 6,  label = iWR:GetTypeName(6)},
+        {key = 1,  label = iWR:GetTypeName(1)},
+        {key = -1, label = iWR:GetTypeName(-1)},
+        {key = -6, label = iWR:GetTypeName(-6)},
     }
 
     for _, it in ipairs(iconTypes) do
@@ -1030,10 +1037,11 @@ function iWR:CreateOptionsPanel()
     local labelEditBoxes = {}
 
     local labelTypes = {
-        {key = 5,  label = iWR.Colors[5] .. "Respected:|r"},
-        {key = 3,  label = iWR.Colors[3] .. "Liked:|r"},
-        {key = -3, label = iWR.Colors[-3] .. "Disliked:|r"},
-        {key = -5, label = iWR.Colors[-5] .. "Hated:|r"},
+        {key = 10, label = iWR.Colors[10] .. "Superior:|r"},
+        {key = 6,  label = iWR.Colors[6] .. "Respected:|r"},
+        {key = 1,  label = iWR.Colors[1] .. "Liked:|r"},
+        {key = -1, label = iWR.Colors[-1] .. "Disliked:|r"},
+        {key = -6, label = iWR.Colors[-6] .. "Hated:|r"},
     }
 
     for _, lt in ipairs(labelTypes) do

@@ -122,13 +122,15 @@ iWR.SettingsDefault = {
         backupTime = "",
     },
     ButtonLabels = {
-        [5]  = "Respected",
-        [3]  = "Liked",
-        [-3] = "Disliked",
-        [-5] = "Hated",
+        [10]  = "Superior",
+        [6]   = "Respected",
+        [1]   = "Liked",
+        [-1]  = "Disliked",
+        [-6]  = "Hated",
     },
     CustomIcons = {},
     GroupLogEnabled = true,
+    SimpleMenu = false,
 }
 
 -- Database entry template
@@ -180,13 +182,32 @@ iWR.Colors = {
     Orange = "|cFFFFA500",
     Gray = "|cFFC0C0C0",
 
-    -- Relationship Colors
-    [10]    = "|cff80f451", -- Superior Colour
-    [5]     = "|cff80f451", -- Respected Colour
-    [3]     = "|cff80f451", -- Liked Colour
-    [1]     = "|cff80f451", -- Neutral Colour
-    [-3]    = "|cfffd7030", -- Disliked Colour
-    [-5]    = "|cffff2121", -- Hated Colour
+    -- Relationship Colors (full -10 to +10 range)
+    -- Hated: -10 to -6
+    [-10]   = "|cffff2121",
+    [-9]    = "|cffff2121",
+    [-8]    = "|cffff2121",
+    [-7]    = "|cffff2121",
+    [-6]    = "|cffff2121",
+    -- Disliked: -5 to -1
+    [-5]    = "|cfffd7030",
+    [-4]    = "|cfffd7030",
+    [-3]    = "|cfffd7030",
+    [-2]    = "|cfffd7030",
+    [-1]    = "|cfffd7030",
+    -- Liked: +1 to +5
+    [1]     = "|cff80f451",
+    [2]     = "|cff80f451",
+    [3]     = "|cff80f451",
+    [4]     = "|cff80f451",
+    [5]     = "|cff80f451",
+    -- Respected: +6 to +9
+    [6]     = "|cff80f451",
+    [7]     = "|cff80f451",
+    [8]     = "|cff80f451",
+    [9]     = "|cff80f451",
+    -- Superior: 10
+    [10]    = "|cff4da6ff",
 
     -- WoW Class Colors
     Classes = {
@@ -213,23 +234,27 @@ iWR.Colors = {
 -- │      List of Types     │
 -- ╰────────────────────────╯
 iWR.Types = {
-    -- Number to name
-    [10]    = "Superior",
-    [5]     = "Respected",
-    [3]     = "Liked",
-    [1]     = "Neutral",
-    [0]     = "Clear",
-    [-3]    = "Disliked",
-    [-5]    = "Hated",
-    
-    -- Name to number
-    Superior = 10,
-    Respected = 5,
-    Liked = 3,
-    Neutral = 1,
+    -- Number to name (full -10 to +10 range)
+    -- Hated: -10 to -6
+    [-10] = "Hated", [-9] = "Hated", [-8] = "Hated", [-7] = "Hated", [-6] = "Hated",
+    -- Disliked: -5 to -1
+    [-5] = "Disliked", [-4] = "Disliked", [-3] = "Disliked", [-2] = "Disliked", [-1] = "Disliked",
+    -- Clear: 0
+    [0] = "Clear",
+    -- Liked: +1 to +5
+    [1] = "Liked", [2] = "Liked", [3] = "Liked", [4] = "Liked", [5] = "Liked",
+    -- Respected: +6 to +9
+    [6] = "Respected", [7] = "Respected", [8] = "Respected", [9] = "Respected",
+    -- Superior: 10
+    [10] = "Superior",
+
+    -- Name to number (representative value per group)
+    Hated = -10,
+    Disliked = -5,
     Clear = 0,
-    Disliked = -3,
-    Hated = -5,
+    Liked = 1,
+    Respected = 6,
+    Superior = 10,
 }
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
@@ -251,11 +276,32 @@ end)
 -- │      List of Targeting Frames     │
 -- ╰───────────────────────────────────╯
 iWR.TargetFrames = {
-    [10]    = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Superior.blp",
-    [5]     = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Respected.blp",
-    [3]     = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Liked.blp",
-    [-3]    = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Disliked.blp",
-    [-5]    = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Hated.blp",
+    -- Hated: -10 to -6
+    [-10] = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Hated.blp",
+    [-9]  = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Hated.blp",
+    [-8]  = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Hated.blp",
+    [-7]  = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Hated.blp",
+    [-6]  = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Hated.blp",
+    -- Disliked: -5 to -1
+    [-5]  = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Disliked.blp",
+    [-4]  = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Disliked.blp",
+    [-3]  = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Disliked.blp",
+    [-2]  = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Disliked.blp",
+    [-1]  = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Disliked.blp",
+    -- Clear: 0 (no target frame)
+    -- Liked: +1 to +5
+    [1]   = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Liked.blp",
+    [2]   = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Liked.blp",
+    [3]   = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Liked.blp",
+    [4]   = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Liked.blp",
+    [5]   = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Liked.blp",
+    -- Respected: +6 to +9
+    [6]   = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Respected.blp",
+    [7]   = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Respected.blp",
+    [8]   = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Respected.blp",
+    [9]   = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Respected.blp",
+    -- Superior: 10
+    [10]  = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Superior.blp",
 }
 
 -- ╭────────────────────────╮
@@ -264,20 +310,61 @@ iWR.TargetFrames = {
 iWR.Icons = {
     iWRIcon     = iWR.AddonPath .. "Images\\Logo_iWR.blp",
     Database    = iWR.AddonPath .. "Images\\Icons\\Database.blp",
-    [10]        = iWR.AddonPath .. "Images\\Icons\\Respected.blp",
-    [5]         = iWR.AddonPath .. "Images\\Icons\\Respected.blp",
-    [3]         = iWR.AddonPath .. "Images\\Icons\\Liked.blp",
-    [1]         = iWR.AddonPath .. "Images\\Icons\\Neutral.blp",
-    [0]         = iWR.AddonPath .. "Images\\Icons\\Clear.blp",
+    -- Hated: -10 to -6
+    [-10]       = iWR.AddonPath .. "Images\\Icons\\Hated.blp",
+    [-9]        = iWR.AddonPath .. "Images\\Icons\\Hated.blp",
+    [-8]        = iWR.AddonPath .. "Images\\Icons\\Hated.blp",
+    [-7]        = iWR.AddonPath .. "Images\\Icons\\Hated.blp",
+    [-6]        = iWR.AddonPath .. "Images\\Icons\\Hated.blp",
+    -- Disliked: -5 to -1
+    [-5]        = iWR.AddonPath .. "Images\\Icons\\Disliked.blp",
+    [-4]        = iWR.AddonPath .. "Images\\Icons\\Disliked.blp",
     [-3]        = iWR.AddonPath .. "Images\\Icons\\Disliked.blp",
-    [-5]        = iWR.AddonPath .. "Images\\Icons\\Hated.blp",
+    [-2]        = iWR.AddonPath .. "Images\\Icons\\Disliked.blp",
+    [-1]        = iWR.AddonPath .. "Images\\Icons\\Disliked.blp",
+    -- Clear: 0
+    [0]         = iWR.AddonPath .. "Images\\Icons\\Clear.blp",
+    -- Liked: +1 to +5
+    [1]         = iWR.AddonPath .. "Images\\Icons\\Liked.blp",
+    [2]         = iWR.AddonPath .. "Images\\Icons\\Liked.blp",
+    [3]         = iWR.AddonPath .. "Images\\Icons\\Liked.blp",
+    [4]         = iWR.AddonPath .. "Images\\Icons\\Liked.blp",
+    [5]         = iWR.AddonPath .. "Images\\Icons\\Liked.blp",
+    -- Respected: +6 to +9
+    [6]         = iWR.AddonPath .. "Images\\Icons\\Respected.blp",
+    [7]         = iWR.AddonPath .. "Images\\Icons\\Respected.blp",
+    [8]         = iWR.AddonPath .. "Images\\Icons\\Respected.blp",
+    [9]         = iWR.AddonPath .. "Images\\Icons\\Respected.blp",
+    -- Superior: 10
+    [10]        = "Interface\\Icons\\Spell_ChargePositive",
 }
 
 iWR.ChatIcons = {
-    [5]     = iWR.AddonPath .. "Images\\ChatIcons\\Respected.blp",
-    [3]     = iWR.AddonPath .. "Images\\ChatIcons\\Liked.blp",
-    [-3]    = iWR.AddonPath .. "Images\\ChatIcons\\Disliked.blp",
-    [-5]    = iWR.AddonPath .. "Images\\ChatIcons\\Hated.blp",
+    -- Hated: -10 to -6
+    [-10] = iWR.AddonPath .. "Images\\ChatIcons\\Hated.blp",
+    [-9]  = iWR.AddonPath .. "Images\\ChatIcons\\Hated.blp",
+    [-8]  = iWR.AddonPath .. "Images\\ChatIcons\\Hated.blp",
+    [-7]  = iWR.AddonPath .. "Images\\ChatIcons\\Hated.blp",
+    [-6]  = iWR.AddonPath .. "Images\\ChatIcons\\Hated.blp",
+    -- Disliked: -5 to -1
+    [-5]  = iWR.AddonPath .. "Images\\ChatIcons\\Disliked.blp",
+    [-4]  = iWR.AddonPath .. "Images\\ChatIcons\\Disliked.blp",
+    [-3]  = iWR.AddonPath .. "Images\\ChatIcons\\Disliked.blp",
+    [-2]  = iWR.AddonPath .. "Images\\ChatIcons\\Disliked.blp",
+    [-1]  = iWR.AddonPath .. "Images\\ChatIcons\\Disliked.blp",
+    -- Liked: +1 to +5
+    [1]   = iWR.AddonPath .. "Images\\ChatIcons\\Liked.blp",
+    [2]   = iWR.AddonPath .. "Images\\ChatIcons\\Liked.blp",
+    [3]   = iWR.AddonPath .. "Images\\ChatIcons\\Liked.blp",
+    [4]   = iWR.AddonPath .. "Images\\ChatIcons\\Liked.blp",
+    [5]   = iWR.AddonPath .. "Images\\ChatIcons\\Liked.blp",
+    -- Respected: +6 to +9
+    [6]   = iWR.AddonPath .. "Images\\ChatIcons\\Respected.blp",
+    [7]   = iWR.AddonPath .. "Images\\ChatIcons\\Respected.blp",
+    [8]   = iWR.AddonPath .. "Images\\ChatIcons\\Respected.blp",
+    [9]   = iWR.AddonPath .. "Images\\ChatIcons\\Respected.blp",
+    -- Superior: 10 (fallback to Respected icon)
+    [10]  = iWR.AddonPath .. "Images\\ChatIcons\\Respected.blp",
 }
 
 -- ╭──────────────────────────────╮
@@ -314,22 +401,21 @@ iWR.IconPickerList = {
 -- ╭───────────────────────╮
 -- │      Game Version     │
 -- ╰───────────────────────╯
-local major, minor, patch = string.match(iWR.GameTocVersion, "(%d)(%d%d)(%d%d)")
-if major and minor and patch then
-    local gameTocNumber = tonumber(major) * 10000 + tonumber(minor) * 100 + tonumber(patch)
-    if gameTocNumber > 50000 and gameTocNumber < 59999 then
-        iWR.GameVersionName = "Classic MoP"
-    elseif gameTocNumber > 40000 and gameTocNumber < 49999 then
-        iWR.GameVersionName = "Classic Cata"
-    elseif gameTocNumber > 30000 and gameTocNumber < 39999 then
-        iWR.GameVersionName = "Classic WotLK"
-    elseif gameTocNumber > 20000 and gameTocNumber < 29999 then
-        iWR.GameVersionName = "Classic TBC"
-    elseif gameTocNumber > 10000 and gameTocNumber < 19999 then
-        iWR.GameVersionName = "Classic Era"
-    else
-        iWR.GameVersionName = "Unknown Version"
-    end
+local gameTocNumber = tonumber(iWR.GameTocVersion) or 0
+if gameTocNumber >= 120000 then
+    iWR.GameVersionName = "Retail WoW"
+elseif gameTocNumber > 50000 and gameTocNumber < 59999 then
+    iWR.GameVersionName = "Classic MoP"
+elseif gameTocNumber > 40000 and gameTocNumber < 49999 then
+    iWR.GameVersionName = "Classic Cata"
+elseif gameTocNumber > 30000 and gameTocNumber < 39999 then
+    iWR.GameVersionName = "Classic WotLK"
+elseif gameTocNumber > 20000 and gameTocNumber < 29999 then
+    iWR.GameVersionName = "Classic TBC"
+elseif gameTocNumber > 10000 and gameTocNumber < 19999 then
+    iWR.GameVersionName = "Classic Era"
+else
+    iWR.GameVersionName = "Unknown Version"
 end
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮

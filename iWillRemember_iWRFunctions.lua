@@ -525,23 +525,29 @@ function iWR:SetTargetFrameShadowedUnitFrames()
         dragonTexture:SetDrawLayer('ARTWORK', 3)
 
         local targetRelation = iWRDatabase[databaseKey][2]
+        local typeName = iWR.Types[targetRelation]
 
-        if targetRelation == iWR.Types["Respected"] then
+        if typeName == "Superior" then
+            dragonTexture:SetTexture('Interface\\Addons\\iWillRemember\\Images\\TargetFrames\\ShadowedUnitFrames\\winged-dragon-elite.blp')
+            dragonTexture:SetSize(77, 75)
+            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 81, -12)
+            dragonTexture:SetVertexColor(0.3, 0.65, 1, 1)
+        elseif typeName == "Respected" then
             dragonTexture:SetTexture('Interface\\Addons\\iWillRemember\\Images\\TargetFrames\\ShadowedUnitFrames\\winged-dragon-elite.blp')
             dragonTexture:SetSize(77, 75)
             dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 81, -12)
             dragonTexture:SetVertexColor(0, 0.9, 0, 1)
-        elseif targetRelation == iWR.Types["Liked"] then
+        elseif typeName == "Liked" then
             dragonTexture:SetTexture('Interface\\Addons\\iWillRemember\\Images\\TargetFrames\\ShadowedUnitFrames\\dragon-elite.blp')
             dragonTexture:SetSize(77, 75)
             dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 81, -12)
             dragonTexture:SetVertexColor(0, 0.7, 0, 1)
-        elseif targetRelation == iWR.Types["Disliked"] then
+        elseif typeName == "Disliked" then
             dragonTexture:SetTexture('Interface\\Addons\\iWillRemember\\Images\\TargetFrames\\ShadowedUnitFrames\\dragon-elite.blp')
             dragonTexture:SetSize(77, 75)
             dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 81, -12)
             dragonTexture:SetVertexColor(0.7, 0, 0, 1)
-        elseif targetRelation == iWR.Types["Hated"] then
+        elseif typeName == "Hated" then
             dragonTexture:SetTexture('Interface\\Addons\\iWillRemember\\Images\\TargetFrames\\ShadowedUnitFrames\\winged-dragon-elite.blp')
             dragonTexture:SetSize(77, 75)
             dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 81, -12)
@@ -597,23 +603,29 @@ function iWR:SetTargetFrameDragonFlightUI()
         dragonTexture:SetDrawLayer('ARTWORK', 3)
 
         local targetRelation = iWRDatabase[databaseKey][2]
+        local typeName = iWR.Types[targetRelation]
 
-        if targetRelation == iWR.Types["Respected"] then
+        if typeName == "Superior" then
+            dragonTexture:SetTexCoord(0.001953125, 0.388671875, 0.001953125, 0.31835937)
+            dragonTexture:SetSize(99, 81)
+            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 54.5, 8)
+            dragonTexture:SetVertexColor(0.3, 0.65, 1, 1)
+        elseif typeName == "Respected" then
             dragonTexture:SetTexCoord(0.001953125, 0.388671875, 0.001953125, 0.31835937)
             dragonTexture:SetSize(99, 81)
             dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 54.5, 8)
             dragonTexture:SetVertexColor(0, 0.9, 0, 1)
-        elseif targetRelation == iWR.Types["Liked"] then
+        elseif typeName == "Liked" then
             dragonTexture:SetTexCoord(0.001953125, 0.314453125, 0.322265625, 0.630859375)
             dragonTexture:SetSize(80, 79)
             dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 45, 8)
             dragonTexture:SetVertexColor(0, 0.7, 0, 1)
-        elseif targetRelation == iWR.Types["Disliked"] then
+        elseif typeName == "Disliked" then
             dragonTexture:SetTexCoord(0.001953125, 0.314453125, 0.322265625, 0.630859375)
             dragonTexture:SetSize(80, 79)
             dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 45, 8)
             dragonTexture:SetVertexColor(0.7, 0, 0, 1)
-        elseif targetRelation == iWR.Types["Hated"] then
+        elseif typeName == "Hated" then
             dragonTexture:SetTexCoord(0.001953125, 0.388671875, 0.001953125, 0.31835937)
             dragonTexture:SetSize(99, 81)
             dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 54.5, 8)
@@ -945,10 +957,12 @@ function iWR:ShowDetailWindow(playerName)
     -- Populate new content
     local yOffset = -5
     local detailsContent = {}
+    local detailSign = data[2] > 0 and "+" or ""
+    local detailTypeValue = detailSign .. data[2] .. " — " .. iWR:GetTypeName(data[2])
     if data[7] and data[7] ~= iWR.CurrentRealm then
         detailsContent = {
             {label = iWR.Colors.Default .. "Name:" .. iWR.Colors.Reset, value = data[4]..iWR.Colors.Reset.."-"..data[7]},
-            {label = iWR.Colors.Default .. "Type:" .. iWR.Colors[data[2]], value = iWR:GetTypeName(data[2])},
+            {label = iWR.Colors.Default .. "Type:" .. iWR.Colors[data[2]], value = detailTypeValue},
             {label = iWR.Colors.Default .. "Note:" .. iWR.Colors[data[2]], value = data[1], isNote = true},
             {label = iWR.Colors.Default .. "Author:" .. iWR.Colors.Reset, value = data[6]},
             {label = iWR.Colors.Default .. "Date:", value = data[5]},
@@ -956,7 +970,7 @@ function iWR:ShowDetailWindow(playerName)
     else
         detailsContent = {
             {label = iWR.Colors.Default .. "Name:" .. iWR.Colors.Reset, value = data[4]},
-            {label = iWR.Colors.Default .. "Type:" .. iWR.Colors[data[2]], value = iWR:GetTypeName(data[2])},
+            {label = iWR.Colors.Default .. "Type:" .. iWR.Colors[data[2]], value = detailTypeValue},
             {label = iWR.Colors.Default .. "Note:" .. iWR.Colors[data[2]], value = data[1], isNote = true},
             {label = iWR.Colors.Default .. "Author:" .. iWR.Colors.Reset, value = data[6]},
             {label = iWR.Colors.Default .. "Date:", value = data[5]},
@@ -1082,6 +1096,42 @@ function iWR:InitializeDatabase()
                 data[7] = iWR.CurrentRealm
             end
         end
+
+    end
+
+    -- One-time migration: old type values to new slider range
+    if not iWRSettings.SliderMigrationDone then
+        for playerKey, data in pairs(iWRDatabase) do
+            local oldType = data[2]
+            if oldType == 3 then
+                data[2] = 4         -- Old Liked (3) → mid Liked range
+            elseif oldType == 5 then
+                data[2] = 9         -- Old Respected (5) → upper Respected range
+            elseif oldType == 10 then
+                data[2] = 10        -- Old Superior (10) → stays Superior
+            elseif oldType == -3 then
+                data[2] = -4        -- Old Disliked (-3) → mid Disliked range
+            elseif oldType == -5 then
+                data[2] = -9        -- Old Hated (-5) → upper Hated range
+            end
+            -- oldType 1 (Neutral) stays at 1 = now Liked range
+            -- oldType 0 (Clear) stays at 0
+        end
+        iWRSettings.SliderMigrationDone = true
+        iWR:DebugMsg("Database migrated to new slider range.", 3)
+    end
+
+    -- One-time migration: reset ButtonLabels to match new group boundaries
+    if not iWRSettings.ButtonLabelsMigrated then
+        iWRSettings.ButtonLabels = {
+            [10]  = "Superior",
+            [6]   = "Respected",
+            [1]   = "Liked",
+            [-1]  = "Disliked",
+            [-6]  = "Hated",
+        }
+        iWRSettings.ButtonLabelsMigrated = true
+        iWR:DebugMsg("ButtonLabels migrated to new group boundaries.", 3)
     end
 end
 
@@ -1177,6 +1227,8 @@ end
 function iWR:MenuOpen(menuName, classToken)
     if not iWR.State.InCombat then
         iWRPanel:Show()
+        local lookupName, lookupRealm
+
         if menuName ~= "" and menuName and menuName ~= UnitName("target") then
             if classToken then
                 iWRNameInput:SetText(iWR:ColorizePlayerNameByClass(menuName, classToken))
@@ -1184,6 +1236,15 @@ function iWR:MenuOpen(menuName, classToken)
                 iWRNameInput:SetText(menuName)
             end
             iWRNoteInput:SetText(L["DefaultNoteInput"])
+
+            -- Determine database key for slider lookup (strip color codes for clean lookup)
+            local cleanName = StripColorCodes(menuName)
+            if cleanName:find("-") then
+                lookupName, lookupRealm = strsplit("-", cleanName)
+            else
+                lookupName = cleanName
+                lookupRealm = iWR.CurrentRealm
+            end
         else
             iWRNameInput:SetText(L["DefaultNameInput"])
             iWRNoteInput:SetText(L["DefaultNoteInput"])
@@ -1195,7 +1256,28 @@ function iWR:MenuOpen(menuName, classToken)
                 else
                     iWRNameInput:SetText(playerName)
                 end
+                lookupName = playerName
+                local targetRealm = select(2, UnitName("target"))
+                lookupRealm = (targetRealm and targetRealm ~= "") and targetRealm or iWR.CurrentRealm
             end
+        end
+
+        -- Set slider to existing note's type value, or 0 if no note exists
+        local sliderValue = 0
+        if lookupName then
+            local capName, capRealm = iWR:FormatNameAndRealm(lookupName, lookupRealm or iWR.CurrentRealm)
+            local dbKey = capName .. "-" .. capRealm
+            local data = iWRDatabase[dbKey]
+            if data and data[2] and data[2] ~= 0 then
+                sliderValue = data[2]
+                -- Also pre-fill existing note text
+                if data[1] and data[1] ~= "" then
+                    iWRNoteInput:SetText(data[1])
+                end
+            end
+        end
+        if iWR.SetSliderValue then
+            iWR:SetSliderValue(sliderValue)
         end
     else
         print(L["InCombat"])
