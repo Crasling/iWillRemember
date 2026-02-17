@@ -2,6 +2,27 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.19.2
+--------------------------------------------------------------------------------
+
+ [FIX] Target Frame on Classic
+  - Restored direct texture swap for Classic Era (TargetFrameTextureFrameTexture)
+  - Fixed overlay covering entire TargetFrame instead of just portrait border
+  - Correctly restores elite/rare/boss borders when switching from DB player to NPC
+
+ [FIX] Database Whisper
+  - Right-click to whisper now works on all columns (Name, Level, Notes, Buttons)
+
+ [FIX] Search Box
+  - Fixed editBox nil error on Retail (EditBox vs editBox capitalization)
+
+ [NEW] Simple Menu Icons
+  - Simple Menu now uses icon-based buttons matching the old pre-slider design
+  - 53x53 buttons with icon textures and labels below
+
+ [UPDATED] iSP About Page
+  - Aligned with iWR/iNIF style: 64x64 icon, Discord section, matching layout
+
 v0.19.0
 --------------------------------------------------------------------------------
 

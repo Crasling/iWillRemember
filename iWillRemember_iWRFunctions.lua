@@ -674,32 +674,38 @@ function iWR:SetTargetFrameDefault()
         return
     end
 
-    -- Use overlay on all clients (never modify TargetFrameTextureFrameTexture directly)
-    local portraitParent = _G["TargetFrame"]
-    if not portraitParent then
-        iWR:DebugMsg("TargetFrame not found for overlay. [SetTargetFrameDefault]", 1)
-        return
+    -- Classic Era has TargetFrameTextureFrameTexture — set it directly
+    if TargetFrameTextureFrameTexture then
+        TargetFrameTextureFrameTexture:SetTexture(iWR.TargetFrames[targetType])
+        iWR.modifiedTargetTexture = true
+        iWR:DebugMsg("Default frame updated for target [" .. databaseKey .. "] with type [" .. iWR.Colors[targetType] .. iWR:GetTypeName(targetType) .. "].", 3)
+    else
+        -- Fallback: use custom overlay frame on TargetFrame
+        local portraitParent = _G["TargetFrame"]
+        if not portraitParent then
+            iWR:DebugMsg("TargetFrame not found for overlay. [SetTargetFrameDefault]", 1)
+            return
+        end
+
+        if not iWR.customFrame then
+            iWR.customFrame = CreateFrame("Frame", nil, portraitParent)
+            iWR.customFrame.texture = iWR.customFrame:CreateTexture(nil, "OVERLAY")
+        end
+
+        local overlayFrame = iWR.customFrame
+        overlayFrame:SetParent(portraitParent)
+        overlayFrame:SetFrameLevel(portraitParent:GetFrameLevel() + 2)
+        overlayFrame:Show()
+
+        local overlayTexture = overlayFrame.texture
+        overlayTexture:ClearAllPoints()
+        overlayTexture:SetTexture(iWR.TargetFrames[targetType])
+        overlayTexture:SetDrawLayer("ARTWORK", 3)
+        overlayTexture:SetAllPoints(portraitParent)
+        overlayTexture:Show()
+
+        iWR:DebugMsg("Overlay frame updated for target [" .. databaseKey .. "] with type [" .. iWR.Colors[targetType] .. iWR:GetTypeName(targetType) .. "].", 3)
     end
-
-    -- Create or reuse the custom overlay frame
-    if not iWR.customFrame then
-        iWR.customFrame = CreateFrame("Frame", nil, portraitParent)
-        iWR.customFrame.texture = iWR.customFrame:CreateTexture(nil, "OVERLAY")
-    end
-
-    local overlayFrame = iWR.customFrame
-    overlayFrame:SetParent(portraitParent)
-    overlayFrame:SetFrameLevel(portraitParent:GetFrameLevel() + 2)
-    overlayFrame:Show()
-
-    local overlayTexture = overlayFrame.texture
-    overlayTexture:ClearAllPoints()
-    overlayTexture:SetTexture(iWR.TargetFrames[targetType])
-    overlayTexture:SetDrawLayer("ARTWORK", 3)
-    overlayTexture:SetAllPoints(portraitParent)
-    overlayTexture:Show()
-
-    iWR:DebugMsg("Overlay frame updated for target [" .. databaseKey .. "] with type [" .. iWR.Colors[targetType] .. iWR:GetTypeName(targetType) .. "].", 3)
 end
 
 -- ╭────────────────────────────────────────╮
@@ -747,13 +753,34 @@ function iWR:SetTargetingFrame()
         targetRealm = iWR.CurrentRealm
     end
 
-    -- Hide custom overlay if previously shown
+    -- Reset Classic texture only if iWR modified it
+    if iWR.modifiedTargetTexture and TargetFrameTextureFrameTexture then
+        -- Restore correct texture based on target classification (elite/rare/boss/normal)
+        local classification = UnitExists("target") and UnitClassification("target") or "normal"
+        if classification == "worldboss" or classification == "boss" then
+            TargetFrameTextureFrameTexture:SetTexture("Interface\\TargetingFrame\\UI-TargetingFrame-Elite")
+        elseif classification == "rareelite" then
+            TargetFrameTextureFrameTexture:SetTexture("Interface\\TargetingFrame\\UI-TargetingFrame-Rare-Elite")
+        elseif classification == "elite" then
+            TargetFrameTextureFrameTexture:SetTexture("Interface\\TargetingFrame\\UI-TargetingFrame-Elite")
+        elseif classification == "rare" then
+            TargetFrameTextureFrameTexture:SetTexture("Interface\\TargetingFrame\\UI-TargetingFrame-Rare")
+        else
+            TargetFrameTextureFrameTexture:SetTexture("Interface\\TargetingFrame\\UI-TargetingFrame")
+        end
+        iWR:DebugMsg("Restored target frame texture for classification: " .. classification, 3)
+        iWR.modifiedTargetTexture = false
+    end
     if iWR.customFrame then
         iWR.customFrame:Hide()
     end
 
     -- Only proceed for players
     if not UnitExists("target") or not UnitIsPlayer("target") then
+        if UnitExists("target") then
+            local classification = UnitClassification("target") or "normal"
+            iWR:DebugMsg("Target is NPC [" .. (GetUnitName("target", false) or "Unknown") .. "], classification: " .. classification .. ". Skipping. [SetTargetingFrame]", 3)
+        end
         return
     end
 
