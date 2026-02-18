@@ -45,7 +45,8 @@ local Colors = {
     Reset = "|r"
 }
     -- Translator ZamestoTV
-local L = LibStub("AceLocale-3.0"):NewLocale("iWR", "ruRU", true)
+local L = LibStub("AceLocale-3.0"):NewLocale("iWR", "ruRU")
+if not L then return end
 local DefaultMessageStart = Colors.iWR .. "[iWR]: "
 local function Msg(message)
     return DefaultMessageStart .. message

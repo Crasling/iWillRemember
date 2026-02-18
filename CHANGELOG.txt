@@ -20,9 +20,6 @@ v0.19.2
   - Simple Menu now uses icon-based buttons matching the old pre-slider design
   - 53x53 buttons with icon textures and labels below
 
- [UPDATED] iSP About Page
-  - Aligned with iWR/iNIF style: 64x64 icon, Discord section, matching layout
-
 v0.19.0
 --------------------------------------------------------------------------------
 
