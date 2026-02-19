@@ -217,6 +217,18 @@ L["GroupLogCleared"] = Msg("Group log cleared.")
 L["EnableGroupLog"] = "Enable Group Log"
 L["DescEnableGroupLog"] = "|cFF808080Automatically log players you group with. View them in the Database under the Group Log tab.|r"
 
+-- Guild Watchlist
+L["GuildsTab"] = "Guilds"
+L["GuildWatchlistHeader"] = "Guild Watchlist"
+L["GuildWatchlistDesc"] = "|cFF808080Add a guild name and a relation type. Players from watched guilds are auto-imported when targeted or grouped.|r"
+L["GuildNameLabel"] = "Guild Name:"
+L["GuildWatchlistAdd"] = "Add"
+L["GuildWatchlistEmpty"] = "No guilds in watchlist."
+L["GuildWatchlistAdded"] = Msg("Guild added: %s (%s)")
+L["GuildWatchlistRemoved"] = Msg("Guild removed: %s")
+L["GuildWatchlistAutoImport"] = Msg("Guild Watchlist: Auto-imported %s (Guild: %s)")
+L["GuildWatchlistDefaultNote"] = "Auto-imported from guild: %s"
+
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Menu Slider                                   │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯

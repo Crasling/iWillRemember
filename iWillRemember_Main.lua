@@ -131,6 +131,7 @@ iWR.SettingsDefault = {
     CustomIcons = {},
     GroupLogEnabled = true,
     SimpleMenu = false,
+    GuildWatchlist = {},
 }
 
 -- Database entry template
@@ -162,6 +163,15 @@ if not iWRMemory then
 end
 if not iWRSettings.SyncList then
     iWRSettings.SyncList = {}
+end
+if not iWRSettings.GuildWatchlist then
+    iWRSettings.GuildWatchlist = {}
+end
+-- Migrate old integer-only GuildWatchlist entries to table format {type, author}
+for guildName, val in pairs(iWRSettings.GuildWatchlist) do
+    if type(val) ~= "table" then
+        iWRSettings.GuildWatchlist[guildName] = { type = val, author = "" }
+    end
 end
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮

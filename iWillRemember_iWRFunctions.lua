@@ -267,6 +267,40 @@ function iWR:ShowNotificationPopup(matches)
     end
 end
 
+-- ╭──────────────────────────────────────────────╮
+-- │      Guild Watchlist: Auto-Import Check     │
+-- ╰──────────────────────────────────────────────╯
+function iWR:CheckGuildWatchlist(databaseKey, guildName, playerName, playerRealm, classToken)
+    if not iWRSettings.GuildWatchlist or not next(iWRSettings.GuildWatchlist) then return end
+    if not guildName or guildName == "" then return end
+    if iWRDatabase[databaseKey] then return end
+
+    local watchEntry = iWRSettings.GuildWatchlist[guildName]
+    if not watchEntry then return end
+    local relationType = watchEntry.type
+
+    local currentTime, currentDate = iWR:GetCurrentTimeByHours()
+    local noteAuthor = (watchEntry.author and watchEntry.author ~= "") and watchEntry.author or iWR:ColorizePlayerNameByClass(UnitName("player"), select(2, UnitClass("player")))
+    local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(playerName, playerRealm)
+    local dbName = classToken and iWR.Colors.Classes[classToken] and (iWR.Colors.Classes[classToken] .. capitalizedName) or (iWR.Colors.Gray .. capitalizedName)
+
+    iWRDatabase[databaseKey] = {
+        string.format(L["GuildWatchlistDefaultNote"], guildName),  -- [1] Note (auto guild note)
+        relationType,       -- [2] Type
+        currentTime,        -- [3] Timestamp
+        dbName,             -- [4] Display name (colored)
+        currentDate,        -- [5] Date
+        noteAuthor,         -- [6] Author
+        capitalizedRealm    -- [7] Realm
+    }
+
+    print(string.format(L["GuildWatchlistAutoImport"], dbName .. iWR.Colors.Reset, guildName))
+    iWR:DebugMsg("Guild Watchlist: Auto-imported " .. capitalizedName .. "-" .. capitalizedRealm .. " (Guild: " .. guildName .. ", Type: " .. relationType .. ")", 3)
+
+    -- Update target frame if we just imported the current target
+    iWR:UpdateTargetFrame()
+end
+
 function iWR:HandleGroupRosterUpdate(wasInGroup)
     local isInGroup = IsInGroup() -- Check if the player is currently in a group
     if not isInGroup and wasInGroup then
@@ -305,13 +339,33 @@ function iWR:CheckGroupMembersAgainstDatabase()
             local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
             local databaseKey = capitalizedName .. "-" .. capitalizedRealm
 
-            if playerName ~= targetName and iWRDatabase[databaseKey] then
-                local data = iWR:GetDatabaseEntry(databaseKey)
-                if data and next(data) ~= nil then
-                    local relationValue = data[2]
-                    if relationValue and relationValue < 0 then
-                        local note = data[1] or ""
-                        table.insert(matches, { name = data[4], relation = relationValue, note = note })
+            if playerName ~= targetName then
+                if iWRDatabase[databaseKey] then
+                    local data = iWR:GetDatabaseEntry(databaseKey)
+                    if data and next(data) ~= nil then
+                        local relationValue = data[2]
+                        if relationValue and relationValue < 0 then
+                            local note = data[1] or ""
+                            table.insert(matches, { name = data[4], relation = relationValue, note = note })
+                        end
+                    end
+                else
+                    -- Guild Watchlist: auto-import if group member's guild is watched
+                    local guildName = GetGuildInfo(unitID)
+                    if guildName and iWRSettings.GuildWatchlist and iWRSettings.GuildWatchlist[guildName] then
+                        local _, classToken = UnitClass(unitID)
+                        iWR:CheckGuildWatchlist(databaseKey, guildName, capitalizedName, capitalizedRealm, classToken)
+                        -- Check if auto-imported with negative type for warning
+                        if iWRDatabase[databaseKey] then
+                            local data = iWR:GetDatabaseEntry(databaseKey)
+                            if data and next(data) ~= nil then
+                                local relationValue = data[2]
+                                if relationValue and relationValue < 0 then
+                                    local note = data[1] or ""
+                                    table.insert(matches, { name = data[4], relation = relationValue, note = note })
+                                end
+                            end
+                        end
                     end
                 end
             end
@@ -795,15 +849,25 @@ function iWR:SetTargetingFrame()
     -- Check if the target is in the database
     if not iWRDatabase[databaseKey] then
         local _, class = UnitClass("target")
-        if iWRNameInput then
-            iWRNameInput:SetText(class and iWR:ColorizePlayerNameByClass(targetName, class) or targetName)
+
+        -- Guild Watchlist: auto-import if target's guild is watched
+        local guildName = GetGuildInfo("target")
+        if guildName and iWRSettings.GuildWatchlist and iWRSettings.GuildWatchlist[guildName] then
+            iWR:CheckGuildWatchlist(databaseKey, guildName, targetName, targetRealm, class)
         end
-        if targetRealm == iWR.CurrentRealm then
-            iWR:DebugMsg("Target [|r" .. (iWR.Colors.Classes[class] or iWR.Colors.Gray) .. targetName .. iWR.Colors.iWR .. "] was not found in Database. [SetTargetingFrame]", 3)
-        else
-            iWR:DebugMsg("Target [|r" .. (iWR.Colors.Classes[class] or iWR.Colors.Gray) .. targetName .. iWR.Colors.iWR .. "] from realm [" .. iWR.Colors.Reset .. (targetRealm or "Unknown Realm") .. iWR.Colors.iWR .. "] was not found in Database.", 3)
+
+        -- Re-check after potential guild import
+        if not iWRDatabase[databaseKey] then
+            if iWRNameInput then
+                iWRNameInput:SetText(class and iWR:ColorizePlayerNameByClass(targetName, class) or targetName)
+            end
+            if targetRealm == iWR.CurrentRealm then
+                iWR:DebugMsg("Target [|r" .. (iWR.Colors.Classes[class] or iWR.Colors.Gray) .. targetName .. iWR.Colors.iWR .. "] was not found in Database. [SetTargetingFrame]", 3)
+            else
+                iWR:DebugMsg("Target [|r" .. (iWR.Colors.Classes[class] or iWR.Colors.Gray) .. targetName .. iWR.Colors.iWR .. "] from realm [" .. iWR.Colors.Reset .. (targetRealm or "Unknown Realm") .. iWR.Colors.iWR .. "] was not found in Database.", 3)
+            end
+            return
         end
-        return
     end
 
     -- If the target is in the database and has a valid type

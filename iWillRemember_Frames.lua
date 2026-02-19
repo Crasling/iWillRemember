@@ -700,6 +700,9 @@ dbEntryCount:SetText("|cFF8080800 entries|r")
 local dbGroupLogBtn = CreateSidebarButton(dbSidebar, L["GroupLogTab"] or "Group Log", 2, -52)
 dbSidebarButtons[2] = dbGroupLogBtn
 
+local dbGuildsBtn = CreateSidebarButton(dbSidebar, L["GuildsTab"] or "Guilds", 3, -78)
+dbSidebarButtons[3] = dbGuildsBtn
+
 -- Notes container (inside content area)
 local notesContainer = CreateFrame("Frame", nil, dbContentArea)
 notesContainer:SetPoint("TOPLEFT", dbContentArea, "TOPLEFT", 5, -5)
@@ -712,13 +715,22 @@ groupLogContainer:SetPoint("TOPLEFT", dbContentArea, "TOPLEFT", 5, -5)
 groupLogContainer:SetPoint("BOTTOMRIGHT", dbContentArea, "BOTTOMRIGHT", -5, 5)
 groupLogContainer:Hide()
 
+-- Guild Watchlist container (inside content area)
+local guildWatchContainer = CreateFrame("Frame", nil, dbContentArea)
+guildWatchContainer:SetPoint("TOPLEFT", dbContentArea, "TOPLEFT", 5, -5)
+guildWatchContainer:SetPoint("BOTTOMRIGHT", dbContentArea, "BOTTOMRIGHT", -5, 5)
+guildWatchContainer:Hide()
+
 -- ShowDatabaseTab: sidebar-based tab switching
 ShowDatabaseTab = function(tabIndex)
     dbActiveTab = tabIndex
     notesContainer:SetShown(tabIndex == 1)
     groupLogContainer:SetShown(tabIndex == 2)
+    guildWatchContainer:SetShown(tabIndex == 3)
     if tabIndex == 2 then
         iWR:PopulateGroupLog()
+    elseif tabIndex == 3 then
+        iWR:RefreshGuildWatchlist()
     end
     for i, btn in ipairs(dbSidebarButtons) do
         if i == tabIndex then
@@ -1716,4 +1728,174 @@ function iWR:PopulateGroupLog()
     end
 
     glContainer:SetHeight(math.max(math.abs(yOffset), 1))
+end
+
+-- ╭───────────────────────────────────────────────────────╮
+-- │      Guild Watchlist Tab: UI & RefreshGuildWatchlist   │
+-- ╰───────────────────────────────────────────────────────╯
+
+-- Header
+local gwHeader = guildWatchContainer:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+gwHeader:SetPoint("TOPLEFT", guildWatchContainer, "TOPLEFT", 10, -10)
+gwHeader:SetText(L["GuildWatchlistHeader"] or "Guild Watchlist")
+
+-- Description
+local gwDesc = guildWatchContainer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+gwDesc:SetPoint("TOPLEFT", gwHeader, "BOTTOMLEFT", 0, -4)
+gwDesc:SetWidth(550)
+gwDesc:SetJustifyH("LEFT")
+gwDesc:SetText(L["GuildWatchlistDesc"] or "Add a guild name and relation type. Players from watched guilds are auto-imported when targeted or grouped.")
+
+-- Input row: Guild name EditBox
+local gwInputLabel = guildWatchContainer:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+gwInputLabel:SetPoint("TOPLEFT", gwDesc, "BOTTOMLEFT", 0, -12)
+gwInputLabel:SetText(L["GuildNameLabel"] or "Guild Name:")
+
+local gwInput = CreateFrame("EditBox", nil, guildWatchContainer, "InputBoxTemplate")
+gwInput:SetSize(250, 20)
+gwInput:SetPoint("LEFT", gwInputLabel, "RIGHT", 8, 0)
+gwInput:SetAutoFocus(false)
+gwInput:SetMaxLetters(60)
+
+-- Type cycling button
+local gwTypeValue = 1 -- default to Liked +1
+local gwTypeBtn = CreateFrame("Button", nil, guildWatchContainer, "UIPanelButtonTemplate")
+gwTypeBtn:SetSize(120, 22)
+gwTypeBtn:SetPoint("LEFT", gwInput, "RIGHT", 8, 0)
+
+local typeOrder = {-6, -1, 1, 6, 10}
+local typeOrderIndex = 3 -- starts at +1 (Liked)
+
+local function UpdateGWTypeButton()
+    gwTypeValue = typeOrder[typeOrderIndex]
+    local typeName = iWR:GetTypeName(gwTypeValue)
+    local typeColor = iWR.Colors[gwTypeValue] or iWR.Colors.Gray
+    gwTypeBtn:SetText(typeColor .. typeName .. "|r")
+end
+UpdateGWTypeButton()
+
+gwTypeBtn:SetScript("OnClick", function()
+    typeOrderIndex = (typeOrderIndex % #typeOrder) + 1
+    UpdateGWTypeButton()
+end)
+
+-- Add button
+local gwAddBtn = CreateFrame("Button", nil, guildWatchContainer, "UIPanelButtonTemplate")
+gwAddBtn:SetSize(60, 22)
+gwAddBtn:SetPoint("LEFT", gwTypeBtn, "RIGHT", 8, 0)
+gwAddBtn:SetText(L["GuildWatchlistAdd"] or "Add")
+
+gwAddBtn:SetScript("OnClick", function()
+    local guildName = strtrim(gwInput:GetText())
+    if guildName == "" then return end
+    if not iWRSettings.GuildWatchlist then iWRSettings.GuildWatchlist = {} end
+    local authorName = iWR:ColorizePlayerNameByClass(UnitName("player"), select(2, UnitClass("player")))
+    iWRSettings.GuildWatchlist[guildName] = { type = gwTypeValue, author = authorName }
+    gwInput:SetText("")
+    gwInput:ClearFocus()
+    iWR:RefreshGuildWatchlist()
+    print(string.format(L["GuildWatchlistAdded"], guildName, iWR:GetTypeName(gwTypeValue)))
+end)
+
+gwInput:SetScript("OnEnterPressed", function()
+    gwAddBtn:Click()
+end)
+
+-- Scrollable list area
+local gwListBorder = CreateFrame("Frame", nil, guildWatchContainer, "BackdropTemplate")
+gwListBorder:SetPoint("TOPLEFT", gwInputLabel, "BOTTOMLEFT", -5, -12)
+gwListBorder:SetPoint("BOTTOMRIGHT", guildWatchContainer, "BOTTOMRIGHT", -10, 10)
+gwListBorder:SetBackdrop({
+    bgFile = "Interface\\BUTTONS\\WHITE8X8",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    edgeSize = 12,
+    insets = {left = 3, right = 3, top = 3, bottom = 3},
+})
+gwListBorder:SetBackdropColor(0.04, 0.04, 0.06, 0.8)
+gwListBorder:SetBackdropBorderColor(0.4, 0.4, 0.5, 0.6)
+
+local gwScrollFrame = CreateFrame("ScrollFrame", nil, gwListBorder, "UIPanelScrollFrameTemplate")
+gwScrollFrame:SetPoint("TOPLEFT", gwListBorder, "TOPLEFT", 5, -5)
+gwScrollFrame:SetPoint("BOTTOMRIGHT", gwListBorder, "BOTTOMRIGHT", -25, 5)
+
+local gwScrollChild = CreateFrame("Frame", nil, gwScrollFrame)
+gwScrollChild:SetSize(gwScrollFrame:GetWidth(), 1)
+gwScrollFrame:SetScrollChild(gwScrollChild)
+
+local gwEmptyText = guildWatchContainer:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+gwEmptyText:SetPoint("CENTER", gwListBorder, "CENTER", 0, 0)
+gwEmptyText:SetText(L["GuildWatchlistEmpty"] or "No guilds in watchlist.")
+
+-- Refresh function
+function iWR:RefreshGuildWatchlist()
+    -- Clear existing rows
+    local children = {gwScrollChild:GetChildren()}
+    for _, child in ipairs(children) do
+        child:Hide()
+        child:SetParent(nil)
+    end
+
+    if not iWRSettings.GuildWatchlist or not next(iWRSettings.GuildWatchlist) then
+        gwEmptyText:Show()
+        gwScrollChild:SetHeight(1)
+        return
+    end
+
+    gwEmptyText:Hide()
+
+    -- Sort alphabetically
+    local sorted = {}
+    for guildName, data in pairs(iWRSettings.GuildWatchlist) do
+        table.insert(sorted, {name = guildName, typeVal = data.type, author = data.author})
+    end
+    table.sort(sorted, function(a, b) return a.name:lower() < b.name:lower() end)
+
+    local ROW_HEIGHT = 24
+    local yOffset = 0
+
+    for i, entry in ipairs(sorted) do
+        local row = CreateFrame("Frame", nil, gwScrollChild)
+        row:SetSize(gwScrollChild:GetWidth(), ROW_HEIGHT)
+        row:SetPoint("TOPLEFT", gwScrollChild, "TOPLEFT", 0, yOffset)
+
+        -- Alternating row background
+        if i % 2 == 0 then
+            local rowBg = row:CreateTexture(nil, "BACKGROUND")
+            rowBg:SetAllPoints(row)
+            rowBg:SetColorTexture(1, 1, 1, 0.03)
+        end
+
+        -- Guild name (colored by type)
+        local typeColor = iWR.Colors[entry.typeVal] or iWR.Colors.Gray
+        local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        nameText:SetPoint("LEFT", row, "LEFT", 8, 0)
+        nameText:SetText(typeColor .. entry.name .. "|r")
+
+        -- Type label
+        local typeName = iWR:GetTypeName(entry.typeVal)
+        local typeLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        typeLabel:SetPoint("RIGHT", row, "RIGHT", -40, 0)
+        local signStr = entry.typeVal > 0 and "+" or ""
+        typeLabel:SetText(typeColor .. "[" .. signStr .. entry.typeVal .. " " .. typeName .. "]|r")
+
+        -- Remove button
+        local removeBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+        removeBtn:SetSize(22, 22)
+        removeBtn:SetPoint("RIGHT", row, "RIGHT", -5, 0)
+        removeBtn:SetText("X")
+        removeBtn:SetNormalFontObject(GameFontNormalSmall)
+
+        local capturedName = entry.name
+        removeBtn:SetScript("OnClick", function()
+            if iWRSettings.GuildWatchlist then
+                iWRSettings.GuildWatchlist[capturedName] = nil
+            end
+            iWR:RefreshGuildWatchlist()
+            print(string.format(L["GuildWatchlistRemoved"], capturedName))
+        end)
+
+        yOffset = yOffset - ROW_HEIGHT
+    end
+
+    gwScrollChild:SetHeight(math.max(math.abs(yOffset), 1))
 end

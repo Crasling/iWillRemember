@@ -161,6 +161,18 @@ L["ISPOpenSettingsButton"] = "Открыть настройки iSP"
 L["ISPPromoDesc"] = Colors.iWR .. "iSoundPlayer" .. Colors.Reset .. " — аддон для воспроизведения звуков. Проигрывайте свои MP3-файлы при событиях в игре: убийства, повышение уровня, встречи с боссами и многое другое.\n\n" .. Colors.Reset .. "Добавьте звуковые файлы и назначьте триггеры — полностью настраиваемый."
 L["ISPPromoLink"] = "Доступно в CurseForge App и на curseforge.com/wow/addons/isoundplayer"
 
+-- Guild Watchlist
+L["GuildsTab"] = "Гильдии"
+L["GuildWatchlistHeader"] = "Список гильдий"
+L["GuildWatchlistDesc"] = "|cFF808080Добавьте название гильдии и тип отношения. Игроки из отслеживаемых гильдий автоматически добавляются при нацеливании или в группе.|r"
+L["GuildNameLabel"] = "Название гильдии:"
+L["GuildWatchlistAdd"] = "Добавить"
+L["GuildWatchlistEmpty"] = "Список гильдий пуст."
+L["GuildWatchlistAdded"] = Msg("Гильдия добавлена: %s (%s)")
+L["GuildWatchlistRemoved"] = Msg("Гильдия удалена: %s")
+L["GuildWatchlistAutoImport"] = Msg("Список гильдий: Автоимпорт %s (Гильдия: %s)")
+L["GuildWatchlistDefaultNote"] = "Автоимпорт из гильдии: %s"
+
 L["iWRLoaded"] = Msg("iWillRemember")
 L["iWRWelcomeStart"] = Msg("Спасибо ")
 L["iWRWelcomeEnd"] = Colors.iWR .. (" за участие в разработке iWillRemember, если у вас возникнут проблемы, пожалуйста, свяжитесь с нами на CurseForge в разделе комментариев или в Discord.")
