@@ -1,5 +1,5 @@
 ## Interface: 11506, 11508, 20505, 30405, 40401, 40402, 50503, 120001
-## Title: |cffff9716iWillRemember |cFF00FF00v0.19.3.1|r
+## Title: |cffff9716iWillRemember |cFF00FF00v0.19.4|r
 ## Version: 0.19.4
 ## Notes: |cffff9716Personalized Player Notes Addon|n|cFFFF0000Never forget again.|r
 ## Author: Crasling

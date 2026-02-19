@@ -7,6 +7,12 @@
 -- ╚═╝  ╚══╝╚══╝  ╚══════╝ 
 -- ═════════════════════════
 
+local addonName, addon = ...
+
+-- Translator ZamestoTV
+-- Only load Russian localization on Russian clients
+if GetLocale() ~= "ruRU" then return end
+
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                     Цвета                                     │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
@@ -44,9 +50,7 @@ local Colors = {
     -- Сброс цвета
     Reset = "|r"
 }
-    -- Translator ZamestoTV
-local L = LibStub("AceLocale-3.0"):NewLocale("iWR", "ruRU")
-if not L then return end
+
 local DefaultMessageStart = Colors.iWR .. "[iWR]: "
 local function Msg(message)
     return DefaultMessageStart .. message
