@@ -577,6 +577,11 @@ function iWR:CreateOptionsPanel()
         y, "SimpleMenu")
     checkboxRefs.SimpleMenu = cbSimpleMenu
 
+    local cbGroupLog
+    cbGroupLog, y = CreateSettingsCheckbox(generalContent, L["EnableGroupLog"],
+        L["DescEnableGroupLog"], y, "GroupLogEnabled")
+    checkboxRefs.GroupLogEnabled = cbGroupLog
+
     -- Warning Settings
     y = y - 8
     _, y = CreateSectionHeader(generalContent, L["WarningSettings"], y)
@@ -634,12 +639,6 @@ function iWR:CreateOptionsPanel()
     local sdh = soundDesc:GetStringHeight()
     if sdh < 12 then sdh = 12 end
     y = y - sdh - 6
-
-    -- Group Log
-    local cbGroupLog
-    cbGroupLog, y = CreateSettingsCheckbox(generalContent, L["EnableGroupLog"],
-        L["DescEnableGroupLog"], y, "GroupLogEnabled")
-    checkboxRefs.GroupLogEnabled = cbGroupLog
 
     -- Tooltip Settings
     y = y - 8
