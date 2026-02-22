@@ -222,23 +222,39 @@ sliderFill:SetHeight(SLIDER_HEIGHT - 2)
 sliderFill:SetPoint("TOP", sliderTrack, "TOP", 0, -1)
 sliderFill:SetTexture("Interface\\Buttons\\WHITE8x8")
 
--- Tick marks at group boundaries
-local function CreateTick(parent, xOffset)
-    local tick = parent:CreateTexture(nil, "OVERLAY")
-    tick:SetSize(1, SLIDER_HEIGHT)
-    tick:SetPoint("CENTER", parent, "LEFT", xOffset, 0)
-    tick:SetColorTexture(0.5, 0.5, 0.5, 0.6)
-    return tick
-end
-
+-- Tick marks at relation level boundaries (dynamic)
 local centerX = SLIDER_WIDTH / 2
 local stepWidth = SLIDER_WIDTH / 20 -- 20 steps from -10 to +10
-CreateTick(sliderTrack, centerX - (10 * stepWidth)) -- -10 (Hated start)
-CreateTick(sliderTrack, centerX - (6 * stepWidth))  -- -6 (Hated end)
-CreateTick(sliderTrack, centerX - (1 * stepWidth))  -- -1 (Disliked end)
-CreateTick(sliderTrack, centerX + (1 * stepWidth))  -- +1 (Liked start)
-CreateTick(sliderTrack, centerX + (6 * stepWidth))  -- +6 (Respected start)
-CreateTick(sliderTrack, centerX + (10 * stepWidth)) -- +10 (Superior)
+local sliderTicks = {}
+
+local function RebuildSliderTicks()
+    -- Hide existing ticks
+    for _, tick in ipairs(sliderTicks) do
+        tick:Hide()
+    end
+    wipe(sliderTicks)
+
+    -- Get active level keys from settings
+    local goodLevels = (iWRSettings and iWRSettings.GoodLevels) or iWR.SettingsDefault.GoodLevels
+    local badLevels  = (iWRSettings and iWRSettings.BadLevels)  or iWR.SettingsDefault.BadLevels
+    local posKeys, negKeys = iWR.GetLevelKeys(goodLevels, badLevels)
+
+    -- Create ticks at each level key position
+    local tickPositions = {}
+    for _, key in ipairs(posKeys) do tickPositions[#tickPositions + 1] = key end
+    for _, key in ipairs(negKeys) do tickPositions[#tickPositions + 1] = key end
+
+    for _, value in ipairs(tickPositions) do
+        local tick = sliderTrack:CreateTexture(nil, "OVERLAY")
+        tick:SetSize(1, SLIDER_HEIGHT)
+        tick:SetPoint("CENTER", sliderTrack, "LEFT", centerX + (value * stepWidth), 0)
+        tick:SetColorTexture(0.5, 0.5, 0.5, 0.6)
+        sliderTicks[#sliderTicks + 1] = tick
+    end
+end
+
+RebuildSliderTicks()
+iWR.RebuildSliderTicks = RebuildSliderTicks
 
 -- Thumb (draggable knob)
 local sliderThumb = CreateFrame("Frame", nil, sliderTrack)
@@ -410,66 +426,131 @@ simpleContainer:SetPoint("TOP", iWRNoteInput, "BOTTOM", 0, -10)
 simpleContainer:SetSize(300, 75)
 simpleContainer:Hide()
 
--- Simple menu buttons config: {value, label fallback, position}
 local simpleButtons = {}
-local simpleBtnConfig = {
-    {  0, "Clear",     1 },
-    {  6, "Respected", 2 },
-    {  1, "Liked",     3 },
-    { -1, "Disliked",  4 },
-    { -6, "Hated",     5 },
-}
 
-for _, cfg in ipairs(simpleBtnConfig) do
-    local value, fallback, pos = cfg[1], cfg[2], cfg[3]
-    local btn = CreateFrame("Button", nil, simpleContainer, "UIPanelButtonTemplate")
-    btn:SetSize(53, 53)
+-- Build simple menu with classic fixed buttons: Hated, Disliked, Clear, Liked, Respected
+local function BuildSimpleMenu()
+    -- Hide and release existing buttons
+    for _, btn in ipairs(simpleButtons) do
+        if btn.label then btn.label:Hide() end
+        btn:Hide()
+    end
+    wipe(simpleButtons)
 
-    -- Center buttons in a row: pos 3 = center (0), offsets = (pos - 3) * 60
-    local xOffset = (pos - 3) * 60
-    btn:SetPoint("TOP", simpleContainer, "TOP", xOffset, -2)
-    btn:SetText("")
+    -- Fixed classic button order: Hated(-6), Disliked(-1), Clear(0), Liked(+1), Respected(+6)
+    local btnValues = {-6, -1, 0, 1, 6}
 
-    btn:SetScript("OnClick", function()
+    local totalButtons = #btnValues
+
+    -- Dynamic sizing based on button count
+    local btnSize, iconSize, spacing, labelFont
+    if totalButtons <= 7 then
+        btnSize  = 53
+        iconSize = 45
+        spacing  = 60
+        labelFont = "GameFontNormalSmall"
+    elseif totalButtons <= 13 then
+        btnSize  = 42
+        iconSize = 34
+        spacing  = 48
+        labelFont = "GameFontNormalSmall"
+    else
+        btnSize  = 34
+        iconSize = 26
+        spacing  = 40
+        labelFont = "GameFontNormalTiny"
+    end
+
+    -- Calculate grid layout
+    local containerWidth = 300
+    local maxPerRow = math.floor(containerWidth / spacing)
+    if maxPerRow < 1 then maxPerRow = 1 end
+    local rows = math.ceil(totalButtons / maxPerRow)
+    local rowHeight = btnSize + 18  -- button + label + gap
+    local containerHeight = rows * rowHeight + 4
+
+    simpleContainer:SetSize(containerWidth, containerHeight)
+
+    -- Create buttons in grid
+    for idx, value in ipairs(btnValues) do
+        local row = math.floor((idx - 1) / maxPerRow)
+        local col = (idx - 1) % maxPerRow
+        local buttonsInThisRow = math.min(maxPerRow, totalButtons - row * maxPerRow)
+
+        -- Center each row
+        local rowWidth = buttonsInThisRow * spacing
+        local rowStartX = -rowWidth / 2 + spacing / 2
+        local xOffset = rowStartX + col * spacing
+        local yOffset = -(row * rowHeight) - 2
+
+        local btn = CreateFrame("Button", nil, simpleContainer, "UIPanelButtonTemplate")
+        btn:SetSize(btnSize, btnSize)
+        btn:SetPoint("TOP", simpleContainer, "TOP", xOffset, yOffset)
+        btn:SetText("")
+
+        btn:SetScript("OnClick", function()
+            if value == 0 then
+                iWR:ClearNote(iWRNameInput:GetText())
+            else
+                iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), value)
+            end
+        end)
+
+        -- Icon texture
+        local iconTex = btn:CreateTexture(nil, "ARTWORK")
+        iconTex:SetSize(iconSize, iconSize)
+        iconTex:SetPoint("CENTER", btn, "CENTER", 0, 0)
+        iconTex:SetTexture(iWR:GetIcon(value))
+        btn.iconTexture = iconTex
+
+        -- Label under button (numeric for values, "Clear" for 0)
+        local btnLabel = simpleContainer:CreateFontString(nil, "OVERLAY", labelFont)
+        btnLabel:SetPoint("TOP", btn, "BOTTOM", 0, -2)
+        btnLabel:SetWidth(spacing)
+        btnLabel:SetWordWrap(false)
+
+        local labelText
         if value == 0 then
-            iWR:ClearNote(iWRNameInput:GetText())
+            labelText = iWR:GetTypeName(0) ~= "" and iWR:GetTypeName(0) or "Clear"
+        elseif value > 0 then
+            labelText = "+" .. value
         else
-            iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), value)
+            labelText = tostring(value)
         end
-    end)
+        btnLabel:SetText(labelText)
+        btn.label = btnLabel
 
-    -- Icon texture (45x45 centered)
-    local iconTex = btn:CreateTexture(nil, "ARTWORK")
-    iconTex:SetSize(45, 45)
-    iconTex:SetPoint("CENTER", btn, "CENTER", 0, 0)
-    iconTex:SetTexture(iWR:GetIcon(value))
-    btn.iconTexture = iconTex
+        -- Tooltip showing category name + value
+        btn:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            local typeName = iWR:GetTypeName(value)
+            local color = iWR.Colors[value] or iWR.Colors.Default
+            if value == 0 then
+                GameTooltip:SetText(color .. typeName .. "|r")
+            else
+                local sign = value > 0 and "+" or ""
+                GameTooltip:SetText(color .. typeName .. " (" .. sign .. value .. ")|r")
+            end
+            GameTooltip:Show()
+        end)
+        btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- Label under button
-    local btnLabel = simpleContainer:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    btnLabel:SetPoint("TOP", btn, "BOTTOM", 0, -3)
-    btnLabel:SetWidth(57)
-    btnLabel:SetWordWrap(false)
-    btnLabel:SetText(iWR:GetTypeName(value) ~= "" and iWR:GetTypeName(value) or fallback)
-    btn.label = btnLabel
+        -- Highlight texture for active state
+        local activeBg = btn:CreateTexture(nil, "BACKGROUND")
+        activeBg:SetAllPoints()
+        activeBg:SetColorTexture(1, 0.59, 0.09, 0.3)
+        activeBg:Hide()
+        btn.activeBg = activeBg
+        btn.typeValue = value
 
-    -- Highlight texture for active state
-    local activeBg = btn:CreateTexture(nil, "BACKGROUND")
-    activeBg:SetAllPoints()
-    activeBg:SetColorTexture(1, 0.59, 0.09, 0.3)
-    activeBg:Hide()
-    btn.activeBg = activeBg
-    btn.typeValue = value
-
-    simpleButtons[#simpleButtons + 1] = btn
+        simpleButtons[#simpleButtons + 1] = btn
+    end
 end
 
--- Highlight the matching simple button for current value
+-- Highlight the matching simple button for current value (exact match)
 UpdateSimpleHighlight = function(value)
-    local typeName = iWR:GetTypeName(value)
     for _, btn in ipairs(simpleButtons) do
-        local btnTypeName = iWR:GetTypeName(btn.typeValue)
-        if typeName == btnTypeName and value ~= 0 then
+        if btn.typeValue == value and value ~= 0 then
             btn.activeBg:Show()
         else
             btn.activeBg:Hide()
@@ -517,7 +598,14 @@ local function UpdateMenuMode()
         sliderValueText:Hide()
         saveNoteButton:Hide()
         clearNoteButton:Hide()
+
+        -- Build dynamic buttons and resize panel
+        BuildSimpleMenu()
         simpleContainer:Show()
+
+        -- Resize panel height: base 185 + simple menu height
+        local menuHeight = simpleContainer:GetHeight()
+        iWRPanel:SetHeight(185 + menuHeight)
     else
         sliderSeparator:Show()
         sliderHeader:Show()
@@ -530,8 +618,14 @@ local function UpdateMenuMode()
         saveNoteButton:Show()
         clearNoteButton:Show()
         simpleContainer:Hide()
+
+        -- Restore default panel height
+        iWRPanel:SetHeight(260)
     end
 end
+
+-- Expose for options panel to trigger rebuild when level counts change
+iWR.UpdateMenuMode = UpdateMenuMode
 
 iWRPanel:HookScript("OnShow", function()
     UpdateSliderDisplay(0)
@@ -1216,9 +1310,24 @@ function iWR:PopulateDatabase()
                 statusDot:Show()
                 col1Frame.statusDot = statusDot
 
+                -- Faction icon (Horde/Alliance flag)
+                local factionIcon = col1Frame.factionIcon or col1Frame:CreateTexture(nil, "ARTWORK")
+                factionIcon:SetSize(14, 14)
+                factionIcon:SetPoint("LEFT", statusDot, "RIGHT", 3, 0)
+                if data[8] == "Horde" then
+                    factionIcon:SetTexture("Interface\\Icons\\INV_BannerPVP_01")
+                    factionIcon:Show()
+                elseif data[8] == "Alliance" then
+                    factionIcon:SetTexture("Interface\\Icons\\INV_BannerPVP_02")
+                    factionIcon:Show()
+                else
+                    factionIcon:Hide()
+                end
+                col1Frame.factionIcon = factionIcon
+
                 local iconTexture = col1Frame.iconTexture or col1Frame:CreateTexture(nil, "ARTWORK")
                 iconTexture:SetSize(20, 20)
-                iconTexture:SetPoint("LEFT", statusDot, "RIGHT", 3, 0)
+                iconTexture:SetPoint("LEFT", factionIcon, "RIGHT", 3, 0)
                 iconTexture:SetTexture(iWR:GetIcon(data[2]) or "Interface\\Icons\\INV_Misc_QuestionMark")
                 col1Frame.iconTexture = iconTexture
 
@@ -1233,7 +1342,10 @@ function iWR:PopulateDatabase()
                 local databasekey = StripColorCodes(data[4]) .. "-" .. data[7]
 
                 -- Whisper helper for this row
+                local playerFaction = UnitFactionGroup("player")
+                local canWhisper = not data[8] or data[8] == "" or data[8] == playerFaction
                 local function WhisperPlayer()
+                    if not canWhisper then return end
                     local whisperName = StripColorCodes(data[4])
                     if data[7] and data[7] ~= iWR.CurrentRealm then
                         whisperName = whisperName .. "-" .. data[7]
@@ -1252,6 +1364,9 @@ function iWR:PopulateDatabase()
                     if data[7] then
                         GameTooltip:AddLine("Server: " .. iWR.Colors.Reset .. data[7], 1, 0.82, 0)
                     end
+                    if data[8] and data[8] ~= "" then
+                        GameTooltip:AddLine("Faction: " .. iWR.Colors.Reset .. data[8], 1, 0.82, 0)
+                    end
                     local ttSign = data[2] > 0 and "+" or ""
                     local ttColor = iWR.Colors[data[2]] or iWR.Colors.Default
                     GameTooltip:AddLine("Type: " .. ttColor .. ttSign .. data[2] .. " — " .. iWR:GetTypeName(data[2]), 1, 0.82, 0)
@@ -1264,7 +1379,9 @@ function iWR:PopulateDatabase()
                     if data[5] then
                         GameTooltip:AddLine("Date: " .. data[5], 1, 0.82, 0)
                     end
-                    GameTooltip:AddLine("|cFF808080Right-click to whisper|r", 0.5, 0.5, 0.5)
+                    if canWhisper then
+                        GameTooltip:AddLine("|cFF808080Right-click to whisper|r", 0.5, 0.5, 0.5)
+                    end
                     GameTooltip:Show()
                 end)
                 col1Frame:SetScript("OnLeave", function()
@@ -1779,10 +1896,21 @@ gwTypeBtn:SetScript("OnClick", function()
     UpdateGWTypeButton()
 end)
 
+-- Default note input
+local gwNoteLabel = guildWatchContainer:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+gwNoteLabel:SetPoint("TOPLEFT", gwInputLabel, "BOTTOMLEFT", 0, -8)
+gwNoteLabel:SetText(L["GuildNoteLabel"] or "Default Note:")
+
+local gwNoteInput = CreateFrame("EditBox", nil, guildWatchContainer, "InputBoxTemplate")
+gwNoteInput:SetSize(250, 20)
+gwNoteInput:SetPoint("LEFT", gwNoteLabel, "RIGHT", 8, 0)
+gwNoteInput:SetAutoFocus(false)
+gwNoteInput:SetMaxLetters(120)
+
 -- Add button
 local gwAddBtn = CreateFrame("Button", nil, guildWatchContainer, "UIPanelButtonTemplate")
 gwAddBtn:SetSize(60, 22)
-gwAddBtn:SetPoint("LEFT", gwTypeBtn, "RIGHT", 8, 0)
+gwAddBtn:SetPoint("LEFT", gwNoteInput, "RIGHT", 8, 0)
 gwAddBtn:SetText(L["GuildWatchlistAdd"] or "Add")
 
 gwAddBtn:SetScript("OnClick", function()
@@ -1790,20 +1918,27 @@ gwAddBtn:SetScript("OnClick", function()
     if guildName == "" then return end
     if not iWRSettings.GuildWatchlist then iWRSettings.GuildWatchlist = {} end
     local authorName = iWR:ColorizePlayerNameByClass(UnitName("player"), select(2, UnitClass("player")))
-    iWRSettings.GuildWatchlist[guildName] = { type = gwTypeValue, author = authorName }
+    local noteText = strtrim(gwNoteInput:GetText())
+    iWRSettings.GuildWatchlist[guildName] = { type = gwTypeValue, author = authorName, note = noteText }
     gwInput:SetText("")
+    gwNoteInput:SetText("")
     gwInput:ClearFocus()
+    gwNoteInput:ClearFocus()
     iWR:RefreshGuildWatchlist()
     print(string.format(L["GuildWatchlistAdded"], guildName, iWR:GetTypeName(gwTypeValue)))
 end)
 
 gwInput:SetScript("OnEnterPressed", function()
+    gwNoteInput:SetFocus()
+end)
+
+gwNoteInput:SetScript("OnEnterPressed", function()
     gwAddBtn:Click()
 end)
 
 -- Scrollable list area
 local gwListBorder = CreateFrame("Frame", nil, guildWatchContainer, "BackdropTemplate")
-gwListBorder:SetPoint("TOPLEFT", gwInputLabel, "BOTTOMLEFT", -5, -12)
+gwListBorder:SetPoint("TOPLEFT", gwNoteLabel, "BOTTOMLEFT", -5, -12)
 gwListBorder:SetPoint("BOTTOMRIGHT", guildWatchContainer, "BOTTOMRIGHT", -10, 10)
 gwListBorder:SetBackdrop({
     bgFile = "Interface\\BUTTONS\\WHITE8X8",
@@ -1846,7 +1981,18 @@ function iWR:RefreshGuildWatchlist()
     -- Sort alphabetically
     local sorted = {}
     for guildName, data in pairs(iWRSettings.GuildWatchlist) do
-        table.insert(sorted, {name = guildName, typeVal = data.type, author = data.author})
+        local typeVal, author, note
+        if type(data) == "table" then
+            typeVal = data.type
+            author = data.author
+            note = data.note or ""
+        else
+            typeVal = data
+            author = ""
+            note = ""
+            iWRSettings.GuildWatchlist[guildName] = { type = typeVal, author = "", note = "" }
+        end
+        table.insert(sorted, {name = guildName, typeVal = typeVal, author = author, note = note})
     end
     table.sort(sorted, function(a, b) return a.name:lower() < b.name:lower() end)
 
@@ -1871,6 +2017,14 @@ function iWR:RefreshGuildWatchlist()
         nameText:SetPoint("LEFT", row, "LEFT", 8, 0)
         nameText:SetText(typeColor .. entry.name .. "|r")
 
+        -- Note text (truncated)
+        if entry.note and entry.note ~= "" then
+            local noteText = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+            noteText:SetPoint("LEFT", nameText, "RIGHT", 8, 0)
+            local displayNote = #entry.note > 30 and (entry.note:sub(1, 27) .. "...") or entry.note
+            noteText:SetText("|cFF808080" .. displayNote .. "|r")
+        end
+
         -- Type label
         local typeName = iWR:GetTypeName(entry.typeVal)
         local typeLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -1879,13 +2033,12 @@ function iWR:RefreshGuildWatchlist()
         typeLabel:SetText(typeColor .. "[" .. signStr .. entry.typeVal .. " " .. typeName .. "]|r")
 
         -- Remove button
+        local capturedName = entry.name
         local removeBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
         removeBtn:SetSize(22, 22)
         removeBtn:SetPoint("RIGHT", row, "RIGHT", -5, 0)
         removeBtn:SetText("X")
         removeBtn:SetNormalFontObject(GameFontNormalSmall)
-
-        local capturedName = entry.name
         removeBtn:SetScript("OnClick", function()
             if iWRSettings.GuildWatchlist then
                 iWRSettings.GuildWatchlist[capturedName] = nil

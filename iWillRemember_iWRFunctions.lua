@@ -274,24 +274,38 @@ function iWR:CheckGuildWatchlist(databaseKey, guildName, playerName, playerRealm
     if not iWRSettings.GuildWatchlist or not next(iWRSettings.GuildWatchlist) then return end
     if not guildName or guildName == "" then return end
     if iWRDatabase[databaseKey] then return end
+    if playerName == UnitName("player") then return end
 
     local watchEntry = iWRSettings.GuildWatchlist[guildName]
     if not watchEntry then return end
-    local relationType = watchEntry.type
+    local relationType, noteAuthorOverride, customNote
+    if type(watchEntry) == "table" then
+        relationType = watchEntry.type
+        noteAuthorOverride = watchEntry.author
+        customNote = watchEntry.note
+    else
+        relationType = watchEntry
+        noteAuthorOverride = ""
+        customNote = ""
+        iWRSettings.GuildWatchlist[guildName] = { type = relationType, author = "", note = "" }
+    end
 
     local currentTime, currentDate = iWR:GetCurrentTimeByHours()
-    local noteAuthor = (watchEntry.author and watchEntry.author ~= "") and watchEntry.author or iWR:ColorizePlayerNameByClass(UnitName("player"), select(2, UnitClass("player")))
+    local noteAuthor = (noteAuthorOverride and noteAuthorOverride ~= "") and noteAuthorOverride or iWR:ColorizePlayerNameByClass(UnitName("player"), select(2, UnitClass("player")))
     local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(playerName, playerRealm)
     local dbName = classToken and iWR.Colors.Classes[classToken] and (iWR.Colors.Classes[classToken] .. capitalizedName) or (iWR.Colors.Gray .. capitalizedName)
 
+    local importNote = (customNote and customNote ~= "") and customNote or string.format(L["GuildWatchlistDefaultNote"], guildName)
+
     iWRDatabase[databaseKey] = {
-        string.format(L["GuildWatchlistDefaultNote"], guildName),  -- [1] Note (auto guild note)
+        importNote,             -- [1] Note (custom or auto guild note)
         relationType,       -- [2] Type
         currentTime,        -- [3] Timestamp
         dbName,             -- [4] Display name (colored)
         currentDate,        -- [5] Date
         noteAuthor,         -- [6] Author
-        capitalizedRealm    -- [7] Realm
+        capitalizedRealm,   -- [7] Realm
+        UnitFactionGroup("target") or ""  -- [8] Faction
     }
 
     print(string.format(L["GuildWatchlistAutoImport"], dbName .. iWR.Colors.Reset, guildName))
@@ -877,6 +891,13 @@ function iWR:SetTargetingFrame()
         -- Verify and update the class in the database if necessary
         iWR:VerifyTargetClassinDB(databaseKey, class)
 
+        -- Update faction if available
+        local faction = UnitFactionGroup("target")
+        if faction then
+            iWRDatabase[databaseKey][8] = faction
+            iWR:DebugMsg("Target faction: " .. faction, 3)
+        end
+
         -- Set the input box to the colored player name (guard for panel not yet created)
         if iWRNameInput then
             iWRNameInput:SetText(class and iWR:ColorizePlayerNameByClass(targetName, class) or targetName)
@@ -1074,7 +1095,7 @@ function iWR:ShowDetailWindow(playerName)
         row:SetWordWrap(true)
         row:SetText(item.label .. " " .. (item.value or "N/A"))
         row:Show()
-        table.insert(self.detailRows, row) 
+        table.insert(self.detailRows, row)
         if item.isNote then
             local noteHeight = row:GetStringHeight()
             yOffset = yOffset - noteHeight - 10
@@ -1082,7 +1103,53 @@ function iWR:ShowDetailWindow(playerName)
             yOffset = yOffset - 20
         end
     end
-    local frameHeight = math.abs(yOffset) + 60
+
+    -- Edit & Remove buttons
+    if not self.detailEditBtn then
+        self.detailEditBtn = CreateFrame("Button", nil, self.detailContent, "UIPanelButtonTemplate")
+        self.detailEditBtn:SetSize(80, 22)
+        self.detailEditBtn:SetText("Edit")
+        self.detailEditBtn:SetNormalFontObject(GameFontNormal)
+    end
+    if not self.detailRemoveBtn then
+        self.detailRemoveBtn = CreateFrame("Button", nil, self.detailContent, "UIPanelButtonTemplate")
+        self.detailRemoveBtn:SetSize(80, 22)
+        self.detailRemoveBtn:SetText("Remove")
+        self.detailRemoveBtn:SetNormalFontObject(GameFontNormal)
+    end
+
+    yOffset = yOffset - 10
+    self.detailEditBtn:SetPoint("TOPLEFT", self.detailContent, "TOPLEFT", 50, yOffset)
+    self.detailRemoveBtn:SetPoint("TOPLEFT", self.detailContent, "TOPLEFT", 170, yOffset)
+    self.detailEditBtn:Show()
+    self.detailRemoveBtn:Show()
+
+    local capturedKey = playerName
+    self.detailEditBtn:SetScript("OnClick", function()
+        self.detailFrame:Hide()
+        iWR:MenuOpen(data[4])
+    end)
+    self.detailRemoveBtn:SetScript("OnClick", function()
+        StaticPopupDialogs["IWR_DETAIL_REMOVE"] = {
+            text = iWR.Colors.iWR .. "Remove " .. (data[4] or capturedKey) .. iWR.Colors.iWR .. " from database?",
+            button1 = "Yes",
+            button2 = "No",
+            OnAccept = function()
+                iWRDatabase[capturedKey] = nil
+                self.detailFrame:Hide()
+                iWR:PopulateDatabase()
+                iWR:UpdateTargetFrame()
+                print(L["CharNoteStart"] .. (data[4] or capturedKey) .. L["CharNoteRemoved"])
+            end,
+            timeout = 0,
+            whileDead = true,
+            hideOnEscape = true,
+            preferredIndex = 3,
+        }
+        StaticPopup_Show("IWR_DETAIL_REMOVE")
+    end)
+
+    local frameHeight = math.abs(yOffset) + 80
     self.detailFrame:SetHeight(frameHeight)
     self.detailFrame:Show()
 end
@@ -1223,6 +1290,14 @@ function iWR:InitializeDatabase()
         }
         iWRSettings.ButtonLabelsMigrated = true
         iWR:DebugMsg("ButtonLabels migrated to new group boundaries.", 3)
+    end
+
+    -- Clamp GoodLevels/BadLevels to new minimums (3 positive, 2 negative)
+    if iWRSettings.GoodLevels and iWRSettings.GoodLevels < 3 then
+        iWRSettings.GoodLevels = 3
+    end
+    if iWRSettings.BadLevels and iWRSettings.BadLevels < 2 then
+        iWRSettings.BadLevels = 2
     end
 end
 
@@ -1594,6 +1669,12 @@ function iWR:CreateNote(Name, Note, Type)
         playerUpdate = true
     end
 
+    -- Capture faction from target (if target matches this note)
+    local noteFaction = ""
+    if targetName and targetName == capitalizedName then
+        noteFaction = UnitFactionGroup("target") or ""
+    end
+
     -- Save to the database
     iWRDatabase[databaseKey] = {
         Note,               -- [1]: Note text
@@ -1602,7 +1683,8 @@ function iWR:CreateNote(Name, Note, Type)
         dbName,             -- [4]: Display name
         currentDate,        -- [5]: Date
         noteAuthor,         -- [6]: Author
-        capitalizedRealm    -- [7]: Realm
+        capitalizedRealm,   -- [7]: Realm
+        noteFaction          -- [8]: Faction
     }
 
     -- Update target frame

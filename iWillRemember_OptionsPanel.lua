@@ -573,7 +573,7 @@ function iWR:CreateOptionsPanel()
 
     local cbSimpleMenu
     cbSimpleMenu, y = CreateSettingsCheckbox(generalContent, L["SimpleMenu"] or "Simple Menu",
-        L["DescSimpleMenu"] or "|cFF808080Replaces the slider with simple type buttons (Hated, Disliked, Liked, Respected, Superior).|r",
+        L["DescSimpleMenu"] or "|cFF808080Replaces the slider with configurable level buttons.|r",
         y, "SimpleMenu")
     checkboxRefs.SimpleMenu = cbSimpleMenu
 
@@ -947,127 +947,249 @@ function iWR:CreateOptionsPanel()
     -- ╭───────────────────────────────────────────────────────────────╮
     -- │                    Customize Tab Content                       │
     -- ╰───────────────────────────────────────────────────────────────╯
-    y = -10
 
-    -- Customize info text (local/visual only)
-    local customizeInfo
-    customizeInfo, y = CreateInfoText(customizeContent, L["DescCustomizeInfo"], y, "GameFontDisableSmall")
+    -- Container for all dynamically built customize rows
+    local customizeDynamicFrame = CreateFrame("Frame", nil, customizeContent)
+    customizeDynamicFrame:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 0, 0)
+    customizeDynamicFrame:SetPoint("TOPRIGHT", customizeContent, "TOPRIGHT", 0, 0)
+    customizeDynamicFrame:SetHeight(1) -- will be resized
 
-    -- Custom Icons Section
-    _, y = CreateSectionHeader(customizeContent, L["CustomIconsSettings"] or (iWR.Colors.iWR .. "Custom Icons"), y)
+    local customizeRows = {} -- track all dynamic frames for cleanup
 
-    local iconDesc
-    iconDesc, y = CreateInfoText(customizeContent,
-        L["DescCustomIcons"] or "|cFF808080Choose custom icons for each rating. Changes apply to buttons, tooltips, and database displays.|r",
-        y, "GameFontDisableSmall")
-
-    local iconPreviewTextures = {}
-    local iconRowLabels = {}
-
-    local iconTypes = {
-        {key = 10, label = iWR:GetTypeName(10)},
-        {key = 6,  label = iWR:GetTypeName(6)},
-        {key = 1,  label = iWR:GetTypeName(1)},
-        {key = -1, label = iWR:GetTypeName(-1)},
-        {key = -6, label = iWR:GetTypeName(-6)},
-    }
-
-    for _, it in ipairs(iconTypes) do
-        y = y - 4
-
-        -- Row container
-        local rowFrame = CreateFrame("Frame", nil, customizeContent)
-        rowFrame:SetSize(500, 36)
-        rowFrame:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 20, y)
-
-        -- Icon preview
-        local preview = rowFrame:CreateTexture(nil, "ARTWORK")
-        preview:SetSize(32, 32)
-        preview:SetPoint("LEFT", rowFrame, "LEFT", 0, 0)
-        local currentIcon = iWR:GetIcon(it.key) or iWR.Icons[it.key]
-        if currentIcon then
-            preview:SetTexture(currentIcon)
+    local function BuildCustomizeContent()
+        -- Clean up previous dynamic content
+        for _, frame in ipairs(customizeRows) do
+            frame:Hide()
+            frame:SetParent(nil)
         end
-        iconPreviewTextures[it.key] = preview
+        wipe(customizeRows)
 
-        -- Label (colored by rating type)
-        local typeColor = iWR.Colors[it.key] or "|cFFFFFFFF"
-        local label = rowFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        label:SetPoint("LEFT", preview, "RIGHT", 10, 0)
-        label:SetWidth(100)
-        label:SetJustifyH("LEFT")
-        label:SetText(typeColor .. it.label .. "|r")
-        iconRowLabels[it.key] = label
+        local y = -10
 
-        -- Change button
-        local changeBtn = CreateFrame("Button", nil, rowFrame, "UIPanelButtonTemplate")
-        changeBtn:SetSize(70, 24)
-        changeBtn:SetPoint("LEFT", label, "RIGHT", 10, 0)
-        changeBtn:SetText(L["ChangeIcon"] or "Change")
-        changeBtn:SetScript("OnClick", function()
-            ShowIconPicker(it.key, preview)
-        end)
+        -- Customize info text
+        local customizeInfo = customizeContent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        customizeInfo:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 25, y)
+        customizeInfo:SetWidth(500)
+        customizeInfo:SetJustifyH("LEFT")
+        customizeInfo:SetText(L["DescCustomizeInfo"])
+        customizeRows[#customizeRows + 1] = customizeInfo
+        y = y - (customizeInfo:GetStringHeight() + 8)
 
-        -- Reset button
-        local resetIconBtn = CreateFrame("Button", nil, rowFrame, "UIPanelButtonTemplate")
-        resetIconBtn:SetSize(60, 24)
-        resetIconBtn:SetPoint("LEFT", changeBtn, "RIGHT", 6, 0)
-        resetIconBtn:SetText(L["ResetIcon"] or "Reset")
-        resetIconBtn:SetScript("OnClick", function()
-            if iWRSettings.CustomIcons then
-                iWRSettings.CustomIcons[it.key] = nil
+        -- ── Relation Levels Section ──
+        local levelsHeader = customizeContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        levelsHeader:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 14, y)
+        levelsHeader:SetText(L["RelationLevelsHeader"] or (iWR.Colors.iWR .. "Relation Levels"))
+        customizeRows[#customizeRows + 1] = levelsHeader
+        y = y - 22
+
+        local levelsDesc = customizeContent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        levelsDesc:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 25, y)
+        levelsDesc:SetWidth(500)
+        levelsDesc:SetJustifyH("LEFT")
+        levelsDesc:SetText(L["DescRelationLevels"] or "|cFF808080Set the number of positive and negative relation levels. The base levels (Superior, Respected, Liked, Disliked, Hated) are always present.|r")
+        customizeRows[#customizeRows + 1] = levelsDesc
+        y = y - (levelsDesc:GetStringHeight() + 8)
+
+        -- Level count dropdowns row
+        local levelRow = CreateFrame("Frame", nil, customizeContent)
+        levelRow:SetSize(500, 30)
+        levelRow:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 25, y)
+        customizeRows[#customizeRows + 1] = levelRow
+
+        local goodLabel = levelRow:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        goodLabel:SetPoint("LEFT", levelRow, "LEFT", 0, 0)
+        goodLabel:SetText(L["GoodLevels"] or "Positive Levels")
+
+        local goodDropdown = CreateFrame("Frame", "iWRDropdown_CustGoodLevels", levelRow, "UIDropDownMenuTemplate")
+        goodDropdown:SetPoint("LEFT", goodLabel, "RIGHT", -10, -2)
+        UIDropDownMenu_SetWidth(goodDropdown, 50)
+        UIDropDownMenu_Initialize(goodDropdown, function(frame, level)
+            for i = 3, 10 do
+                local info = UIDropDownMenu_CreateInfo()
+                info.text = tostring(i)
+                info.value = i
+                info.checked = ((iWRSettings.GoodLevels or iWR.SettingsDefault.GoodLevels) == i)
+                info.func = function()
+                    iWRSettings.GoodLevels = i
+                    UIDropDownMenu_SetText(goodDropdown, tostring(i))
+                    CloseDropDownMenus()
+                    BuildCustomizeContent()
+                    if iWR.RebuildSliderTicks then iWR.RebuildSliderTicks() end
+                    if iWR.UpdateMenuMode then iWR.UpdateMenuMode() end
+                end
+                UIDropDownMenu_AddButton(info, level)
             end
-            local defaultIcon = iWR.Icons[it.key]
-            if defaultIcon then
-                preview:SetTexture(defaultIcon)
+        end)
+        UIDropDownMenu_SetText(goodDropdown, tostring(iWRSettings.GoodLevels or iWR.SettingsDefault.GoodLevels))
+
+        local badLabel = levelRow:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        badLabel:SetPoint("LEFT", goodDropdown, "RIGHT", 10, 2)
+        badLabel:SetText(L["BadLevels"] or "Negative Levels")
+
+        local badDropdown = CreateFrame("Frame", "iWRDropdown_CustBadLevels", levelRow, "UIDropDownMenuTemplate")
+        badDropdown:SetPoint("LEFT", badLabel, "RIGHT", -10, -2)
+        UIDropDownMenu_SetWidth(badDropdown, 50)
+        UIDropDownMenu_Initialize(badDropdown, function(frame, level)
+            for i = 2, 10 do
+                local info = UIDropDownMenu_CreateInfo()
+                info.text = tostring(i)
+                info.value = i
+                info.checked = ((iWRSettings.BadLevels or iWR.SettingsDefault.BadLevels) == i)
+                info.func = function()
+                    iWRSettings.BadLevels = i
+                    UIDropDownMenu_SetText(badDropdown, tostring(i))
+                    CloseDropDownMenus()
+                    BuildCustomizeContent()
+                    if iWR.RebuildSliderTicks then iWR.RebuildSliderTicks() end
+                    if iWR.UpdateMenuMode then iWR.UpdateMenuMode() end
+                end
+                UIDropDownMenu_AddButton(info, level)
             end
         end)
+        UIDropDownMenu_SetText(badDropdown, tostring(iWRSettings.BadLevels or iWR.SettingsDefault.BadLevels))
 
-        y = y - 38
-    end
+        y = y - 40
 
-    -- Button Labels Section (moved from General tab)
-    y = y - 8
-    _, y = CreateSectionHeader(customizeContent, L["ButtonLabelsSettings"], y)
+        -- ── Build active level keys based on current settings ──
+        local goodLevels = iWRSettings.GoodLevels or iWR.SettingsDefault.GoodLevels
+        local badLevels  = iWRSettings.BadLevels  or iWR.SettingsDefault.BadLevels
 
-    local labelDesc
-    labelDesc, y = CreateInfoText(customizeContent, L["DescButtonLabels"], y, "GameFontDisableSmall")
+        local posKeys, negKeys = iWR.GetLevelKeys(goodLevels, badLevels)
+        local activeLevels = {}
+        for _, key in ipairs(posKeys) do
+            activeLevels[#activeLevels + 1] = key
+        end
+        for _, key in ipairs(negKeys) do
+            activeLevels[#activeLevels + 1] = key
+        end
 
-    local labelEditBoxes = {}
+        -- ── Custom Icons Section ──
+        y = y - 4
+        local iconHeader = customizeContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        iconHeader:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 14, y)
+        iconHeader:SetText(L["CustomIconsSettings"] or (iWR.Colors.iWR .. "Custom Icons"))
+        customizeRows[#customizeRows + 1] = iconHeader
+        y = y - 22
 
-    local labelTypes = {
-        {key = 10, label = iWR.Colors[10] .. "Superior:|r"},
-        {key = 6,  label = iWR.Colors[6] .. "Respected:|r"},
-        {key = 1,  label = iWR.Colors[1] .. "Liked:|r"},
-        {key = -1, label = iWR.Colors[-1] .. "Disliked:|r"},
-        {key = -6, label = iWR.Colors[-6] .. "Hated:|r"},
-    }
+        local iconDesc = customizeContent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        iconDesc:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 25, y)
+        iconDesc:SetWidth(500)
+        iconDesc:SetJustifyH("LEFT")
+        iconDesc:SetText(L["DescCustomIcons"] or "|cFF808080Choose custom icons for each rating.|r")
+        customizeRows[#customizeRows + 1] = iconDesc
+        y = y - (iconDesc:GetStringHeight() + 8)
 
-    for _, lt in ipairs(labelTypes) do
-        local eb, _, newY = CreateSettingsEditBox(customizeContent, lt.label, y, 150,
-            function() return iWRSettings.ButtonLabels and iWRSettings.ButtonLabels[lt.key] or iWR.Types[lt.key] or "" end,
-            function(text)
-                if not iWRSettings.ButtonLabels then iWRSettings.ButtonLabels = {} end
-                if text == "" then text = iWR.SettingsDefault.ButtonLabels[lt.key] end
-                iWRSettings.ButtonLabels[lt.key] = text
+        for _, key in ipairs(activeLevels) do
+            y = y - 4
+
+            local rowFrame = CreateFrame("Frame", nil, customizeContent)
+            rowFrame:SetSize(500, 36)
+            rowFrame:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 20, y)
+            customizeRows[#customizeRows + 1] = rowFrame
+
+            -- Icon preview
+            local preview = rowFrame:CreateTexture(nil, "ARTWORK")
+            preview:SetSize(32, 32)
+            preview:SetPoint("LEFT", rowFrame, "LEFT", 0, 0)
+            local currentIcon = iWR:GetIcon(key) or iWR.Icons[key]
+            if currentIcon then preview:SetTexture(currentIcon) end
+
+            -- Label (colored by rating type)
+            local typeColor = iWR.Colors[key] or "|cFFFFFFFF"
+            local typeName = iWR:GetTypeName(key)
+            local sign = key > 0 and "+" or ""
+            local label = rowFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+            label:SetPoint("LEFT", preview, "RIGHT", 10, 0)
+            label:SetWidth(100)
+            label:SetJustifyH("LEFT")
+            label:SetText(typeColor .. sign .. key .. " " .. typeName .. "|r")
+
+            -- Change button
+            local changeBtn = CreateFrame("Button", nil, rowFrame, "UIPanelButtonTemplate")
+            changeBtn:SetSize(70, 24)
+            changeBtn:SetPoint("LEFT", label, "RIGHT", 10, 0)
+            changeBtn:SetText(L["ChangeIcon"] or "Change")
+            changeBtn:SetScript("OnClick", function()
+                ShowIconPicker(key, preview)
             end)
-        labelEditBoxes[lt.key] = eb
-        y = newY
-    end
 
-    y = y - 4
-    local resetLabelsBtn
-    resetLabelsBtn, y = CreateSettingsButton(customizeContent, L["ResetLabels"], 200, y,
-        function()
-            for _, lt in ipairs(labelTypes) do
-                iWRSettings.ButtonLabels[lt.key] = iWR.SettingsDefault.ButtonLabels[lt.key]
-                if labelEditBoxes[lt.key] then
-                    labelEditBoxes[lt.key]:SetText(iWR.SettingsDefault.ButtonLabels[lt.key])
+            -- Reset button
+            local resetIconBtn = CreateFrame("Button", nil, rowFrame, "UIPanelButtonTemplate")
+            resetIconBtn:SetSize(60, 24)
+            resetIconBtn:SetPoint("LEFT", changeBtn, "RIGHT", 6, 0)
+            resetIconBtn:SetText(L["ResetIcon"] or "Reset")
+            resetIconBtn:SetScript("OnClick", function()
+                if iWRSettings.CustomIcons then
+                    iWRSettings.CustomIcons[key] = nil
+                end
+                local defaultIcon = iWR.Icons[key]
+                if defaultIcon then preview:SetTexture(defaultIcon) end
+            end)
+
+            y = y - 38
+        end
+
+        -- ── Button Labels Section ──
+        y = y - 8
+        local labelsHeader = customizeContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        labelsHeader:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 14, y)
+        labelsHeader:SetText(L["ButtonLabelsSettings"])
+        customizeRows[#customizeRows + 1] = labelsHeader
+        y = y - 22
+
+        local labelDesc = customizeContent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        labelDesc:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 25, y)
+        labelDesc:SetWidth(500)
+        labelDesc:SetJustifyH("LEFT")
+        labelDesc:SetText(L["DescButtonLabels"])
+        customizeRows[#customizeRows + 1] = labelDesc
+        y = y - (labelDesc:GetStringHeight() + 8)
+
+        local labelEditBoxes = {}
+
+        for _, key in ipairs(activeLevels) do
+            local typeColor = iWR.Colors[key] or "|cFFFFFFFF"
+            local sign = key > 0 and "+" or ""
+            local displayLabel = typeColor .. sign .. key .. ":|r"
+
+            local eb, labelStr, newY = CreateSettingsEditBox(customizeContent, displayLabel, y, 150,
+                function() return iWRSettings.ButtonLabels and iWRSettings.ButtonLabels[key] or iWR.Types[key] or "" end,
+                function(text)
+                    if not iWRSettings.ButtonLabels then iWRSettings.ButtonLabels = {} end
+                    if text == "" then text = iWR.Types[key] or "" end
+                    iWRSettings.ButtonLabels[key] = text
+                end)
+            labelEditBoxes[key] = eb
+            customizeRows[#customizeRows + 1] = eb
+            customizeRows[#customizeRows + 1] = labelStr
+            y = newY
+        end
+
+        -- Reset Labels button
+        y = y - 4
+        local resetLabelsBtn = CreateFrame("Button", nil, customizeContent, "UIPanelButtonTemplate")
+        resetLabelsBtn:SetSize(200, 24)
+        resetLabelsBtn:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 20, y)
+        resetLabelsBtn:SetText(L["ResetLabels"])
+        resetLabelsBtn:SetScript("OnClick", function()
+            for _, key in ipairs(activeLevels) do
+                local defaultLabel = iWR.Types[key] or ""
+                if iWRSettings.ButtonLabels then
+                    iWRSettings.ButtonLabels[key] = defaultLabel
+                end
+                if labelEditBoxes[key] then
+                    labelEditBoxes[key]:SetText(defaultLabel)
                 end
             end
         end)
+        customizeRows[#customizeRows + 1] = resetLabelsBtn
+        y = y - 34
 
-    scrollChildren[4]:SetHeight(math.abs(y) + 20)
+        scrollChildren[4]:SetHeight(math.abs(y) + 20)
+    end
+
+    -- Build on first load
+    BuildCustomizeContent()
 
     -- ╭───────────────────────────────────────────────────────────────╮
     -- │                     iNIF Settings Tab                        │

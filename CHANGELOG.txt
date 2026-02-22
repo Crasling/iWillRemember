@@ -2,6 +2,43 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.20.0
+--------------------------------------------------------------------------------
+
+ [NEW] Faction Flags
+  - Horde/Alliance icon displayed per player in the Database frame
+  - Faction auto-captured when targeting known players (backfills old entries)
+  - Faction stored on note creation and guild watchlist auto-import
+  - Faction shown in player tooltip
+  - Whisper blocked for opposite-faction players in Database
+
+ [NEW] Guild Watchlist: Default Note
+  - Added note input field to guild watchlist
+  - Custom note used as default for auto-imported guild members
+  - Note displayed in guild watchlist rows (truncated to 30 chars)
+
+ [NEW] Detail Popup Buttons
+  - Edit button opens the iWR Menu with the player pre-filled
+  - Remove button with confirmation dialog
+
+ [NEW] Relation Levels (Customize tab)
+  - Renamed from "Simple Menu Levels" to "Relation Levels"
+  - Base levels (+10 Superior, +6 Respected, +1 Liked, -1 Disliked, -6 Hated)
+    are always present
+  - Minimum 3 positive and 2 negative levels enforced
+  - Keys now use proper representative type values instead of sequential integers
+  - Dynamic slider ticks update when levels are added or removed
+
+ [FIX] Simple Menu
+  - Fixed to always show classic 5 buttons: Hated, Disliked, Clear, Liked, Respected
+
+ [FIX] Faction Icons
+  - Swapped Horde/Alliance banner icons (were reversed)
+
+ [FIX] Guild Watchlist
+  - No longer auto-imports yourself
+  - Defensive migration for old integer-only watchlist entries
+
 v0.19.2
 --------------------------------------------------------------------------------
 

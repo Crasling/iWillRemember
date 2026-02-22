@@ -131,6 +131,8 @@ iWR.SettingsDefault = {
     CustomIcons = {},
     GroupLogEnabled = true,
     SimpleMenu = false,
+    GoodLevels = 3,
+    BadLevels = 2,
     GuildWatchlist = {},
 }
 
@@ -143,6 +145,7 @@ iWR.DatabaseDefault = {
     "",  -- [5] Date
     "",  -- [6] Author
     "",  -- [7] Realm
+    "",  -- [8] Faction ("Horde"/"Alliance"/"")
 }
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
@@ -266,6 +269,40 @@ iWR.Types = {
     Respected = 6,
     Superior = 10,
 }
+
+-- ╭──────────────────────────────────────╮
+-- │      Relation Level Key Maps         │
+-- ╰──────────────────────────────────────╯
+-- Maps level count → ordered keys (high to low for positive, mild to harsh for negative)
+-- Base keys (+10, +6, +1, -1, -6) are always present at minimum counts (3 pos, 2 neg)
+iWR.PositiveKeyMap = {
+    [3]  = {10, 6, 1},
+    [4]  = {10, 6, 3, 1},
+    [5]  = {10, 8, 6, 3, 1},
+    [6]  = {10, 8, 6, 4, 2, 1},
+    [7]  = {10, 9, 7, 6, 4, 2, 1},
+    [8]  = {10, 9, 8, 6, 5, 3, 2, 1},
+    [9]  = {10, 9, 8, 7, 6, 4, 3, 2, 1},
+    [10] = {10, 9, 8, 7, 6, 5, 4, 3, 2, 1},
+}
+
+iWR.NegativeKeyMap = {
+    [2]  = {-1, -6},
+    [3]  = {-1, -3, -6},
+    [4]  = {-1, -2, -4, -6},
+    [5]  = {-1, -2, -3, -5, -6},
+    [6]  = {-1, -2, -3, -4, -5, -6},
+    [7]  = {-1, -2, -3, -4, -5, -6, -8},
+    [8]  = {-1, -2, -3, -4, -5, -6, -8, -10},
+    [9]  = {-1, -2, -3, -4, -5, -6, -7, -9, -10},
+    [10] = {-1, -2, -3, -4, -5, -6, -7, -8, -9, -10},
+}
+
+function iWR.GetLevelKeys(goodCount, badCount)
+    goodCount = math.max(3, math.min(10, goodCount or 3))
+    badCount  = math.max(2, math.min(10, badCount or 2))
+    return iWR.PositiveKeyMap[goodCount], iWR.NegativeKeyMap[badCount]
+end
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                    Set Paths                                   │
