@@ -965,7 +965,7 @@ searchDatabaseButton:SetScript("OnClick", function()
             if searchQuery and searchQuery ~= "" then
                 local foundEntries = {}
                 for playerName, data in pairs(iWRDatabase) do
-                    if string.find(string.lower(playerName), string.lower(searchQuery)) then
+                    if string.find(playerName:lower(), searchQuery:lower(), 1, true) then
                         table.insert(foundEntries, {name = playerName, data = data})
                     end
                 end

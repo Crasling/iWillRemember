@@ -39,6 +39,31 @@ v0.20.0
   - No longer auto-imports yourself
   - Defensive migration for old integer-only watchlist entries
 
+v0.20.1
+--------------------------------------------------------------------------------
+
+ [NEW] Relation Level Propagation
+  - Custom labels and icons now propagate to intermediate levels
+  - Example: if only -1 (Disliked), -3 (Hated), -6 (KoS) are configured,
+    -2 inherits Disliked, -4/-5 inherit Hated, -7 to -10 inherit KoS
+  - Works for both positive and negative sides
+
+ [UPDATED] Negative Relation Levels
+  - Negative key map now mirrors the positive side
+  - Third negative level is now pinned to -10 (matching +10 on positive)
+
+ [FIX] UTF-8 Player Names
+  - Fixed accented characters (é, ê, etc.) being corrupted into garbled text
+  - Added UTF-8 safe helpers for first-character capitalization
+  - Multi-byte characters are now preserved correctly in all name formatting
+
+ [FIX] Customize Tab Crash
+  - Fixed nil table error when opening the Customize tab
+  - Icon preview textures and label edit boxes are now properly scoped
+
+ [FIX] Database Search
+  - Search no longer breaks on names containing special pattern characters
+
 v0.19.2
 --------------------------------------------------------------------------------
 

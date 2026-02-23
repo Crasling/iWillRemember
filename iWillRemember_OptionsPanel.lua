@@ -955,6 +955,9 @@ function iWR:CreateOptionsPanel()
     customizeDynamicFrame:SetHeight(1) -- will be resized
 
     local customizeRows = {} -- track all dynamic frames for cleanup
+    local iconPreviewTextures = {}
+    local iconRowLabels = {}
+    local labelEditBoxes = {}
 
     local function BuildCustomizeContent()
         -- Clean up previous dynamic content
@@ -963,6 +966,9 @@ function iWR:CreateOptionsPanel()
             frame:SetParent(nil)
         end
         wipe(customizeRows)
+        wipe(iconPreviewTextures)
+        wipe(iconRowLabels)
+        wipe(labelEditBoxes)
 
         local y = -10
 
@@ -1093,6 +1099,7 @@ function iWR:CreateOptionsPanel()
             preview:SetPoint("LEFT", rowFrame, "LEFT", 0, 0)
             local currentIcon = iWR:GetIcon(key) or iWR.Icons[key]
             if currentIcon then preview:SetTexture(currentIcon) end
+            iconPreviewTextures[key] = preview
 
             -- Label (colored by rating type)
             local typeColor = iWR.Colors[key] or "|cFFFFFFFF"
@@ -1103,6 +1110,7 @@ function iWR:CreateOptionsPanel()
             label:SetWidth(100)
             label:SetJustifyH("LEFT")
             label:SetText(typeColor .. sign .. key .. " " .. typeName .. "|r")
+            iconRowLabels[key] = label
 
             -- Change button
             local changeBtn = CreateFrame("Button", nil, rowFrame, "UIPanelButtonTemplate")
@@ -1144,8 +1152,6 @@ function iWR:CreateOptionsPanel()
         labelDesc:SetText(L["DescButtonLabels"])
         customizeRows[#customizeRows + 1] = labelDesc
         y = y - (labelDesc:GetStringHeight() + 8)
-
-        local labelEditBoxes = {}
 
         for _, key in ipairs(activeLevels) do
             local typeColor = iWR.Colors[key] or "|cFFFFFFFF"
@@ -1466,13 +1472,11 @@ function iWR:CreateOptionsPanel()
         end
 
         -- Update label edit boxes on Customize tab
-        for _, lt in ipairs(labelTypes) do
-            if labelEditBoxes[lt.key] then
-                labelEditBoxes[lt.key]:SetText(
-                    iWRSettings.ButtonLabels and iWRSettings.ButtonLabels[lt.key]
-                    or iWR.Types[lt.key] or ""
-                )
-            end
+        for key, eb in pairs(labelEditBoxes) do
+            eb:SetText(
+                iWRSettings.ButtonLabels and iWRSettings.ButtonLabels[key]
+                or iWR.Types[key] or ""
+            )
         end
 
         -- Update debug info visibility

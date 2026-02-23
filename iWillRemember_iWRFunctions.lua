@@ -10,6 +10,33 @@
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                  iWR Functions                                 │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
+
+-- ╭────────────────────────────────────────────────────────────────────────────────╮
+-- │                              UTF-8 Safe Helpers                                │
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
+-- Returns byte length of the first UTF-8 character in a string
+local function UTF8FirstCharLen(str)
+    if not str or str == "" then return 0 end
+    local byte = string.byte(str, 1)
+    if byte < 128 then return 1
+    elseif byte < 224 then return 2
+    elseif byte < 240 then return 3
+    else return 4
+    end
+end
+
+-- Uppercase the first character of a string, UTF-8 safe
+-- Only applies upper() to single-byte (ASCII) first chars; leaves multi-byte chars as-is
+local function UTF8UcFirst(str)
+    if not str or str == "" then return str end
+    local len = UTF8FirstCharLen(str)
+    if len == 1 then
+        return str:sub(1, 1):upper() .. str:sub(2)
+    end
+    -- Multi-byte first char: return unchanged (WoW already provides correct casing)
+    return str
+end
+
 -- Print debug message if Debug mode is active
 function iWR:DebugMsg(message,level)
     if iWRSettings.DebugMode then
@@ -65,29 +92,85 @@ function iWR:CreateiWRStyleFrame(parent, width, height, point, backdrop)
     return frame
 end
 
+-- Resolve a type value to its effective configured level key
+-- E.g., with keys {-1, -6, -10}: -4 resolves to -1, -7 resolves to -6
+function iWR:ResolveLevel(typeIndex)
+    typeIndex = tonumber(typeIndex)
+    if not typeIndex or typeIndex == 0 then return typeIndex end
+
+    local goodLevels = iWRSettings and iWRSettings.GoodLevels or iWR.SettingsDefault.GoodLevels
+    local badLevels  = iWRSettings and iWRSettings.BadLevels  or iWR.SettingsDefault.BadLevels
+    local posKeys, negKeys = iWR.GetLevelKeys(goodLevels, badLevels)
+
+    if typeIndex > 0 then
+        -- posKeys sorted descending: {10, 6, 1}
+        -- Find first (largest) configured key <= typeIndex
+        for _, k in ipairs(posKeys) do
+            if k <= typeIndex then
+                return k
+            end
+        end
+        return posKeys[#posKeys]
+    else
+        -- negKeys sorted ascending in abs: {-1, -6, -10}
+        -- Find most negative configured key that's still >= typeIndex
+        local resolved = negKeys[1]
+        for _, k in ipairs(negKeys) do
+            if k >= typeIndex then
+                resolved = k
+            end
+        end
+        return resolved
+    end
+end
+
 function iWR:GetTypeName(typeIndex)
     typeIndex = tonumber(typeIndex)
-    if typeIndex and iWRSettings.ButtonLabels and iWRSettings.ButtonLabels[typeIndex]
-       and iWRSettings.ButtonLabels[typeIndex] ~= "" then
-        return iWRSettings.ButtonLabels[typeIndex]
+    if not typeIndex then return "" end
+
+    local resolved = iWR:ResolveLevel(typeIndex)
+    if not resolved then resolved = typeIndex end
+
+    -- Check custom label for resolved key
+    if iWRSettings and iWRSettings.ButtonLabels and iWRSettings.ButtonLabels[resolved]
+       and iWRSettings.ButtonLabels[resolved] ~= "" then
+        return iWRSettings.ButtonLabels[resolved]
     end
-    return iWR.Types[typeIndex] or ""
+
+    -- Fall back to default type name for resolved key
+    return iWR.Types[resolved] or iWR.Types[typeIndex] or ""
 end
 
 function iWR:GetIcon(typeIndex)
     typeIndex = tonumber(typeIndex)
-    if typeIndex and iWRSettings.CustomIcons and iWRSettings.CustomIcons[typeIndex] then
-        return iWRSettings.CustomIcons[typeIndex]
+    if not typeIndex then return nil end
+
+    local resolved = iWR:ResolveLevel(typeIndex)
+    if not resolved then resolved = typeIndex end
+
+    -- Check custom icon for resolved key
+    if iWRSettings and iWRSettings.CustomIcons and iWRSettings.CustomIcons[resolved] then
+        return iWRSettings.CustomIcons[resolved]
     end
-    return iWR.Icons[typeIndex]
+
+    -- Fall back to default icon for resolved key
+    return iWR.Icons[resolved] or iWR.Icons[typeIndex]
 end
 
 function iWR:GetChatIcon(typeIndex)
     typeIndex = tonumber(typeIndex)
-    if typeIndex and iWRSettings.CustomIcons and iWRSettings.CustomIcons[typeIndex] then
-        return iWRSettings.CustomIcons[typeIndex]
+    if not typeIndex then return "Interface\\Icons\\INV_Misc_QuestionMark" end
+
+    local resolved = iWR:ResolveLevel(typeIndex)
+    if not resolved then resolved = typeIndex end
+
+    -- Check custom icon for resolved key
+    if iWRSettings and iWRSettings.CustomIcons and iWRSettings.CustomIcons[resolved] then
+        return iWRSettings.CustomIcons[resolved]
     end
-    return iWR.ChatIcons[typeIndex] or "Interface\\Icons\\INV_Misc_QuestionMark"
+
+    -- Fall back to default chat icon for resolved key
+    return iWR.ChatIcons[resolved] or iWR.ChatIcons[typeIndex] or "Interface\\Icons\\INV_Misc_QuestionMark"
 end
 
 function iWR:VerifyInputName(Name)
@@ -552,8 +635,8 @@ function iWR:FormatNameAndRealm(name, realm)
         iWR:DebugMsg("Format realm not string: " .. realm or nil,3)
         realm = ""
     end
-    local formattedName = name:sub(1, 1):upper() .. name:sub(2):gsub("^%l", string.lower)
-    local formattedRealm = realm:sub(1, 1):upper() .. realm:sub(2):gsub("^%l", string.lower)
+    local formattedName = UTF8UcFirst(name)
+    local formattedRealm = UTF8UcFirst(realm)
     return formattedName, formattedRealm
 end
 
@@ -929,9 +1012,9 @@ local function NormalizeRealmName(realm)
     -- Ensure space is added before capital letters if missing (e.g., "LoneWolf" → "Lone Wolf")
     local formattedRealm = realm:gsub("(%l)(%u)", "%1 %2")
 
-    -- Ensure correct casing (capitalize first letter of each word)
+    -- Ensure correct casing (capitalize first letter of each word, UTF-8 safe)
     formattedRealm = formattedRealm:gsub("(%a)([%w]*)", function(first, rest)
-        return first:upper() .. rest:lower()
+        return first:upper() .. rest:lower()  -- Realm names are ASCII, safe to use upper/lower
     end)
 
     -- Check if either format exists in the database
