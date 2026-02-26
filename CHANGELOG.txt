@@ -2,6 +2,22 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.20.3
+--------------------------------------------------------------------------------
+
+ [REWORK] Database Search
+  - Replaced side-panel search popup with inline search filter
+  - Search box at the top of the Notes tab filters entries in real-time
+  - Matches player name and note text (case-insensitive)
+  - Clear button (X) and ESC key to reset the filter
+  - Entry count shows "X of Y entries" when filtered
+  - Search filter resets automatically when opening the database
+
+ Alpha Build History
+ ~~~~~~~~~~~~~~~~~~~
+  0.20.2.1 - Menu auto-fill on target change
+  0.20.2   - Faction backfill messages, friends list fix, chat icon guard
+
 v0.20.0
 --------------------------------------------------------------------------------
 
@@ -63,6 +79,23 @@ v0.20.1
 
  [FIX] Database Search
   - Search no longer breaks on names containing special pattern characters
+
+v0.20.2
+--------------------------------------------------------------------------------
+
+ [NEW] Faction Backfill Messages
+  - Prints notification when missing faction is added on re-targeting a known player
+  - Warns on note creation when faction information is unavailable
+
+ [NEW] Menu Auto-Fill on Target Change
+  - Note text and slider auto-populate when the menu is open and target changes
+  - Resets to defaults when target is not in the database
+
+ [FIX] Friends List Refresh
+  - Removed ShowFriends() call that caused the Blizzard friends frame to flicker
+
+ [FIX] Chat Icon Duplication
+  - Added guard preventing double icons on chat messages
 
 v0.19.2
 --------------------------------------------------------------------------------

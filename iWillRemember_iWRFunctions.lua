@@ -955,15 +955,38 @@ function iWR:SetTargetingFrame()
 
         -- Re-check after potential guild import
         if not iWRDatabase[databaseKey] then
-            if iWRNameInput then
-                iWRNameInput:SetText(class and iWR:ColorizePlayerNameByClass(targetName, class) or targetName)
-            end
-            if targetRealm == iWR.CurrentRealm then
-                iWR:DebugMsg("Target [|r" .. (iWR.Colors.Classes[class] or iWR.Colors.Gray) .. targetName .. iWR.Colors.iWR .. "] was not found in Database. [SetTargetingFrame]", 3)
+            -- Easter egg: auto-add addon author (Anniversary TBC only)
+            local toc = tonumber(iWR.GameTocVersion) or 0
+            if databaseKey == "Baldvin-Spineshatter" and toc >= 20500 and toc < 30000 and UnitName("player") ~= "Baldvin" then
+                local currentTime, currentDate = iWR:GetCurrentTimeByHours()
+                local dbName = class and (iWR.Colors.Classes[class] .. "Baldvin") or (iWR.Colors.Gray .. "Baldvin")
+                local faction = UnitFactionGroup("target") or ""
+                iWRDatabase[databaseKey] = {
+                    "iWR Author",                           -- [1] Note
+                    10,                                     -- [2] Type (Superior)
+                    currentTime,                            -- [3] Timestamp
+                    dbName,                                 -- [4] Display name
+                    currentDate,                            -- [5] Date
+                    iWR.Colors.iWR .. "iWillRemember",      -- [6] Author
+                    "Spineshatter",                         -- [7] Realm
+                    faction,                                -- [8] Faction
+                }
             else
-                iWR:DebugMsg("Target [|r" .. (iWR.Colors.Classes[class] or iWR.Colors.Gray) .. targetName .. iWR.Colors.iWR .. "] from realm [" .. iWR.Colors.Reset .. (targetRealm or "Unknown Realm") .. iWR.Colors.iWR .. "] was not found in Database.", 3)
+                if iWRNameInput then
+                    iWRNameInput:SetText(class and iWR:ColorizePlayerNameByClass(targetName, class) or targetName)
+                end
+                -- Reset menu fields if open (target not in database)
+                if iWRPanel and iWRPanel:IsVisible() then
+                    if iWRNoteInput then iWRNoteInput:SetText(L["DefaultNoteInput"]) end
+                    if iWR.SetSliderValue then iWR:SetSliderValue(0) end
+                end
+                if targetRealm == iWR.CurrentRealm then
+                    iWR:DebugMsg("Target [|r" .. (iWR.Colors.Classes[class] or iWR.Colors.Gray) .. targetName .. iWR.Colors.iWR .. "] was not found in Database. [SetTargetingFrame]", 3)
+                else
+                    iWR:DebugMsg("Target [|r" .. (iWR.Colors.Classes[class] or iWR.Colors.Gray) .. targetName .. iWR.Colors.iWR .. "] from realm [" .. iWR.Colors.Reset .. (targetRealm or "Unknown Realm") .. iWR.Colors.iWR .. "] was not found in Database.", 3)
+                end
+                return
             end
-            return
         end
     end
 
@@ -974,16 +997,32 @@ function iWR:SetTargetingFrame()
         -- Verify and update the class in the database if necessary
         iWR:VerifyTargetClassinDB(databaseKey, class)
 
-        -- Update faction if available
+        -- Update faction if available and missing
         local faction = UnitFactionGroup("target")
         if faction then
-            iWRDatabase[databaseKey][8] = faction
+            if not iWRDatabase[databaseKey][8] or iWRDatabase[databaseKey][8] == "" then
+                iWRDatabase[databaseKey][8] = faction
+                print(L["CharNoteStart"] .. iWRDatabase[databaseKey][4] .. L["CharNoteFactionUpdate"])
+            end
             iWR:DebugMsg("Target faction: " .. faction, 3)
         end
 
         -- Set the input box to the colored player name (guard for panel not yet created)
         if iWRNameInput then
             iWRNameInput:SetText(class and iWR:ColorizePlayerNameByClass(targetName, class) or targetName)
+        end
+
+        -- Auto-fill menu fields if open (target found in database)
+        if iWRPanel and iWRPanel:IsVisible() then
+            local data = iWRDatabase[databaseKey]
+            if iWRNoteInput and data[1] and data[1] ~= "" then
+                iWRNoteInput:SetText(data[1])
+            elseif iWRNoteInput then
+                iWRNoteInput:SetText(L["DefaultNoteInput"])
+            end
+            if iWR.SetSliderValue then
+                iWR:SetSliderValue(data[2] or 0)
+            end
         end
 
         -- Update the target frame based on settings
@@ -1046,7 +1085,7 @@ local function AddRelationshipIconToChat(self, event, message, author, flags, ..
         local databaseKey = authorName .. "-" .. authorRealm
 
         -- Check the database using the constructed key
-        if iWRDatabase[databaseKey] then
+        if iWRDatabase[databaseKey] and not message:find("|Haddon:iWR:") then
             -- Get the font size from the current chat frame
             local font, fontSize = self:GetFont()
             local iconSize = math.floor(fontSize * 1.2)
@@ -1565,6 +1604,7 @@ function iWR:DatabaseOpen()
     if not iWR.State.InCombat then
         iWRDatabaseFrame:Show()
         iWR:ResetDatabaseTab()
+        if iWR.ClearDatabaseSearch then iWR:ClearDatabaseSearch() end
         iWRNameInput:SetText(L["DefaultNameInput"])
         iWRNoteInput:SetText(L["DefaultNoteInput"])
         if UnitExists("target") and UnitIsPlayer("target") then
@@ -1754,9 +1794,11 @@ function iWR:CreateNote(Name, Note, Type)
 
     -- Capture faction from target (if target matches this note)
     local noteFaction = ""
+    local noFaction = true
     if targetName and targetName == capitalizedName then
         noteFaction = UnitFactionGroup("target") or ""
     end
+    if noteFaction ~= "" then noFaction = false end
 
     -- Save to the database
     iWRDatabase[databaseKey] = {
@@ -1783,18 +1825,13 @@ function iWR:CreateNote(Name, Note, Type)
 
     -- Print confirmation message
     local updateMessage = playerUpdate and L["CharNoteUpdated"] or L["CharNoteCreated"]
+    local missingInfo = ""
+    if noClass then missingInfo = missingInfo .. iWR.Colors.iWR .. L["CharNoteClassMissing"] end
+    if noFaction then missingInfo = missingInfo .. iWR.Colors.iWR .. L["CharNoteFactionMissing"] end
     if capitalizedRealm ~= iWR.CurrentRealm then
-        if noClass then
-            print(L["CharNoteStart"] .. dbName .. iWR.Colors.Reset .. "-" .. capitalizedRealm .. updateMessage .. iWR.Colors.iWR .. L["CharNoteClassMissing"])
-        else
-            print(L["CharNoteStart"] .. dbName .. iWR.Colors.Reset .. "-" .. capitalizedRealm .. updateMessage)
-        end
+        print(L["CharNoteStart"] .. dbName .. iWR.Colors.Reset .. "-" .. capitalizedRealm .. updateMessage .. missingInfo)
     else
-        if noClass then
-            print(L["CharNoteStart"] .. dbName .. updateMessage .. iWR.Colors.iWR .. L["CharNoteClassMissing"])
-        else
-            print(L["CharNoteStart"] .. dbName .. updateMessage)
-        end
+        print(L["CharNoteStart"] .. dbName .. updateMessage .. missingInfo)
     end
 end
 

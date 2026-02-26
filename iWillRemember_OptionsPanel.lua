@@ -794,7 +794,6 @@ function iWR:CreateOptionsPanel()
     UpdateWhitelistDisplay()
 
     UIDropDownMenu_Initialize(addFriendDropdown, function(frame, level)
-        C_FriendList.ShowFriends()
         local currentRealm = GetRealmName()
         local numFriends = C_FriendList.GetNumFriends()
         for i = 1, numFriends do

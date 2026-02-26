@@ -803,6 +803,69 @@ notesContainer:SetPoint("TOPLEFT", dbContentArea, "TOPLEFT", 5, -5)
 notesContainer:SetPoint("BOTTOMRIGHT", dbContentArea, "BOTTOMRIGHT", -5, 5)
 notesContainer:Show()
 
+-- ╭──────────────────────────────────────────────╮
+-- │      Database Search Filter                   │
+-- ╰──────────────────────────────────────────────╯
+local dbSearchFilter = ""
+
+local dbSearchIcon = notesContainer:CreateTexture(nil, "ARTWORK")
+dbSearchIcon:SetSize(14, 14)
+dbSearchIcon:SetPoint("TOPLEFT", notesContainer, "TOPLEFT", 8, -8)
+dbSearchIcon:SetTexture("Interface\\Icons\\INV_Misc_Spyglass_03")
+
+local dbSearchBox = CreateFrame("EditBox", nil, notesContainer, "InputBoxTemplate")
+dbSearchBox:SetSize(200, 20)
+dbSearchBox:SetPoint("LEFT", dbSearchIcon, "RIGHT", 6, 0)
+dbSearchBox:SetAutoFocus(false)
+dbSearchBox:SetMaxLetters(40)
+dbSearchBox:SetFontObject(GameFontHighlight)
+
+local dbSearchPlaceholder = dbSearchBox:CreateFontString(nil, "ARTWORK", "GameFontDisable")
+dbSearchPlaceholder:SetPoint("LEFT", dbSearchBox, "LEFT", 8, 0)
+dbSearchPlaceholder:SetText("Search...")
+
+-- Clear button (X) — appears when search has text
+local dbSearchClearBtn = CreateFrame("Button", nil, notesContainer)
+dbSearchClearBtn:SetSize(16, 16)
+dbSearchClearBtn:SetPoint("LEFT", dbSearchBox, "RIGHT", 2, 0)
+dbSearchClearBtn:SetNormalTexture("Interface\\Buttons\\UI-StopButton")
+dbSearchClearBtn:Hide()
+dbSearchClearBtn:SetScript("OnClick", function()
+    dbSearchBox:SetText("")
+    dbSearchBox:ClearFocus()
+    dbSearchFilter = ""
+    iWR:PopulateDatabase()
+end)
+
+dbSearchBox:SetScript("OnTextChanged", function(self, userInput)
+    local text = self:GetText()
+    dbSearchPlaceholder:SetShown(text == "")
+    dbSearchClearBtn:SetShown(text ~= "")
+    if userInput then
+        dbSearchFilter = text:lower()
+        iWR:PopulateDatabase()
+    end
+end)
+
+dbSearchBox:SetScript("OnEscapePressed", function(self)
+    self:SetText("")
+    self:ClearFocus()
+    dbSearchFilter = ""
+    iWR:PopulateDatabase()
+end)
+
+dbSearchBox:SetScript("OnEnterPressed", function(self)
+    self:ClearFocus()
+end)
+
+-- Expose for clearing from DatabaseOpen
+function iWR:ClearDatabaseSearch()
+    dbSearchFilter = ""
+    dbSearchBox:SetText("")
+    dbSearchPlaceholder:Show()
+    dbSearchClearBtn:Hide()
+end
+
 -- Group Log container (inside content area)
 local groupLogContainer = CreateFrame("Frame", nil, dbContentArea)
 groupLogContainer:SetPoint("TOPLEFT", dbContentArea, "TOPLEFT", 5, -5)
@@ -847,7 +910,7 @@ end
 
 -- Notes tab: scrollable frame for database entries
 local dbScrollFrame = CreateFrame("ScrollFrame", nil, notesContainer, "UIPanelScrollFrameTemplate")
-dbScrollFrame:SetPoint("TOPLEFT", notesContainer, "TOPLEFT", 0, 0)
+dbScrollFrame:SetPoint("TOPLEFT", notesContainer, "TOPLEFT", 0, -30)
 dbScrollFrame:SetPoint("BOTTOMRIGHT", notesContainer, "BOTTOMRIGHT", -22, 45)
 
 -- Create a container for the database entries (this will be scrollable)
@@ -913,262 +976,6 @@ shareDatabaseButton:SetScript("OnClick", function()
     StaticPopup_Show("SHARE_DATABASE_CONFIRM")
 end)
 
--- ╭───────────────────────────────────────────────╮
--- │      Create the "Search Database" Button      │
--- ╰───────────────────────────────────────────────╯
-local searchDatabaseButton = CreateFrame("Button", nil, notesContainer, "UIPanelButtonTemplate")
-searchDatabaseButton:SetSize(30, 30)
-searchDatabaseButton:SetPoint("BOTTOMLEFT", notesContainer, "BOTTOMLEFT", 10, 10)
-
-local searchTexture = searchDatabaseButton:CreateTexture(nil, "ARTWORK")
-searchTexture:SetAllPoints()
-searchTexture:SetTexture("Interface\\Icons\\INV_Misc_Spyglass_03") -- Magnifying glass texture
-searchDatabaseButton:SetNormalTexture(searchTexture)
-
-searchDatabaseButton:SetScript("OnClick", function()
-    -- Check if the SearchResultsFrame already exists and is visible
-    if SearchResultsFrame and SearchResultsFrame:IsVisible() then
-        SearchResultsFrame:Hide()
-        -- Clear all child frames from the SearchResultsFrame
-        for _, child in ipairs({SearchResultsFrame:GetChildren()}) do
-            ---@diagnostic disable-next-line: undefined-field
-            child:Hide()
-            ---@diagnostic disable-next-line: undefined-field
-            child:SetParent(nil)
-        end
-        if NoResultsText then
-            NoResultsText:Hide()
-            NoResultsText:SetParent(nil)
-            NoResultsText = nil
-        end
-        if TooManyText then
-            TooManyText:Hide()
-            TooManyText:SetParent(nil)
-            TooManyText = nil
-        end
-        if SearchTitle then
-            SearchTitle:Hide()
-            SearchTitle:SetParent(nil)
-            SearchTitle = nil
-        end
-    end
-
-    -- Prompt for search input
-    StaticPopupDialogs["SEARCH_DATABASE"] = {
-        text = "Enter the name of the player to search:",
-        button1 = "Search",
-        button2 = "Cancel",
-        hasEditBox = true,
-        OnAccept = function(self)
-            local eb = self.editBox or self.EditBox
-            local searchQuery = eb and eb:GetText()
-            if searchQuery and searchQuery ~= "" then
-                local foundEntries = {}
-                for playerName, data in pairs(iWRDatabase) do
-                    if string.find(playerName:lower(), searchQuery:lower(), 1, true) then
-                        table.insert(foundEntries, {name = playerName, data = data})
-                    end
-                end
-
-                -- Create the SearchResultsFrame if it doesn't already exist
-                if not SearchResultsFrame then
-                    SearchResultsFrame = iWR:CreateiWRStyleFrame(iWRDatabaseFrame, 280, 400, {"RIGHT", iWRDatabaseFrame, "RIGHT", 280, 0})
-                    SearchResultsFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.9)
-                    SearchResultsFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1)
-                end
-
-                -- Clear previous content
-                for _, child in ipairs({SearchResultsFrame:GetChildren()}) do
-                    ---@diagnostic disable-next-line: undefined-field
-                    child:Hide()
-                    ---@diagnostic disable-next-line: undefined-field
-                    child:SetParent(nil)
-                    if NoResultsText then
-                        NoResultsText:Hide()
-                        NoResultsText:SetParent(nil)
-                        NoResultsText = nil
-                    end
-                    if TooManyText then
-                        TooManyText:Hide()
-                        TooManyText:SetParent(nil)
-                        TooManyText = nil
-                    end
-                    if SearchTitle then
-                        SearchTitle:Hide()
-                        SearchTitle:SetParent(nil)
-                        SearchTitle = nil
-                    end
-                end
-                SearchResultsFrame:Show()
-
-                -- Add title to the search results
-                SearchTitle = SearchResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-                SearchTitle:SetPoint("TOP", SearchResultsFrame, "TOP", 0, -10)
-                SearchTitle:SetText("Search Results for: " .. searchQuery)
-
-                if #foundEntries > 0 then
-                    local maxEntries = 7
-                    for index, entry in ipairs(foundEntries) do
-                        if index > maxEntries then
-                            TooManyText = SearchResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-                            TooManyText:SetPoint("TOP", SearchResultsFrame, "TOP", 0, -40 * (maxEntries + 1))
-                            TooManyText:SetText("Too many results, refine your search.")
-                            break
-                        end
-
-                        local playerName, data = entry.name, entry.data
-
-                        -- Create a frame for each entry
-                        local entryFrame = CreateFrame("Frame", nil, SearchResultsFrame, "BackdropTemplate")
-                        entryFrame:SetSize(230, 30)
-                        entryFrame:SetPoint("TOP", SearchResultsFrame, "TOP", 0, -40 * index)
-
-                        -- Add the icon for the type
-                        local iconTexture = entryFrame:CreateTexture(nil, "ARTWORK")
-                        iconTexture:SetSize(20, 20)
-                        iconTexture:SetPoint("LEFT", entryFrame, "LEFT", -5, 0)
-
-                        -- Set the icon texture
-                        local typeIcon = iWR:GetIcon(data[2])
-                        if typeIcon then
-                            iconTexture:SetTexture(typeIcon)
-                        else
-                            iconTexture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark") -- Fallback icon
-                        end
-
-                        -- Add player name and note
-                        local entryText = entryFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-                        entryText:SetPoint("LEFT", iconTexture, "RIGHT", 5, 0)
-                        if data[7] ~= iWR.CurrentRealm then
-                            entryText:SetText(data[4]..iWR.Colors.Reset.."-"..data[7])
-                        else
-                            entryText:SetText(data[4])
-                        end
-
-                        -- Tooltip functionality
-                        entryFrame:SetScript("OnEnter", function()
-                            ---@diagnostic disable-next-line: param-type-mismatch
-                            GameTooltip:SetOwner(entryFrame, "ANCHOR_RIGHT")
-                            if data[7] ~= iWR.CurrentRealm then
-                                GameTooltip:AddLine(data[4]..iWR.Colors.Reset.."-"..data[7], 1, 1, 1) -- Title (Player Name)
-                            else
-                                GameTooltip:AddLine(data[4], 1, 1, 1) -- Title (Player Name)
-                            end
-                            if #data[1] <= 30 then
-                                GameTooltip:AddLine("Note: " .. iWR.Colors[data[2]] .. data[1], 1, 0.82, 0) -- Add note in tooltip
-                            else
-                                local firstLine, secondLine = iWR:splitOnSpace(data[1], 30) -- Split text on the nearest space
-                                GameTooltip:AddLine("Note: " .. iWR.Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
-                                GameTooltip:AddLine(iWR.Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
-                            end
-                            if data[6] ~= "" and data[6] ~= nil then
-                                GameTooltip:AddLine("Author: " .. data[6], 1, 0.82, 0) -- Add author in tooltip
-                            end
-                            if data[5] ~= "" and data[5] ~= nil then
-                                GameTooltip:AddLine("Date: " .. data[5], 1, 0.82, 0) -- Add date in tooltip
-                            end
-                            GameTooltip:Show()
-                        end)
-                        entryFrame:SetScript("OnLeave", function()
-                            GameTooltip:Hide()
-                        end)
-
-                        -- Add Edit button
-                        local editButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
-                        editButton:SetSize(50, 30)
-                        editButton:SetPoint("RIGHT", entryFrame, "RIGHT", -50, 0)
-                        editButton:SetText("Edit")
-                        editButton.playerName = data[4] or playerName
-                        editButton.note = data[1]
-                        editButton:SetScript("OnClick", function(self)
-                            iWR:MenuOpen(self.playerName)
-                            iWRNameInput:SetText(self.playerName)
-                            iWRNoteInput:SetText(self.note or "")
-                        end)
-
-                        -- Add Remove button
-                        local removeButton = CreateFrame("Button", nil, entryFrame, "UIPanelButtonTemplate")
-                        removeButton:SetSize(60, 30)
-                        removeButton:SetPoint("RIGHT", editButton, "RIGHT", 60, 0)
-                        removeButton:SetText("Remove")
-                        removeButton:SetScript("OnClick", function()
-                            local removeText
-                            if iWRDatabase[playerName][7] ~= iWR.CurrentRealm then
-                                removeText = iWR.Colors.iWR .. "Are you sure you want to remove" .. iWR.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. "-" .. iWRDatabase[playerName][7] .. iWR.Colors.iWR .. "]|n|n from the iWR database?"
-                            else
-                                removeText = iWR.Colors.iWR .. "Are you sure you want to remove" .. iWR.Colors.iWR .. " |n|n[" .. iWRDatabase[playerName][4] .. iWR.Colors.iWR .. "]|n|n from the iWR database?"
-                            end
-                            StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
-                                text = removeText,
-                                button1 = "Yes",
-                                button2 = "No",
-                                OnAccept = function()
-                                    print(L["CharNoteStart"] .. iWRDatabase[playerName][4]  .. L["CharNoteRemoved"])
-                                    iWRDatabase[playerName] = nil
-                                    if SearchResultsFrame then
-                                        SearchResultsFrame:Hide()
-                                    end
-                                    iWR:PopulateDatabase()
-                                    iWR:SendRemoveRequestToFriends(playerName)
-                                end,
-                                timeout = 0,
-                                whileDead = true,
-                                hideOnEscape = true,
-                                preferredIndex = 3,
-                            }
-                            StaticPopup_Show("REMOVE_PLAYER_CONFIRM")
-                        end)
-                    end
-                else
-                    NoResultsText = SearchResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-                    NoResultsText:SetPoint("CENTER", SearchResultsFrame, "CENTER", 0, 0)
-                    NoResultsText:SetText("No players found for: " .. searchQuery)
-                end
-
-                local closeResultsButton = CreateFrame("Button", nil, SearchResultsFrame, "UIPanelButtonTemplate")
-                closeResultsButton:SetSize(80, 24)
-                closeResultsButton:SetPoint("BOTTOM", SearchResultsFrame, "BOTTOM", 0, 20)
-                closeResultsButton:SetText("Close")
-                closeResultsButton:SetScript("OnClick", function()
-                    SearchResultsFrame:Hide()
-                    for _, child in ipairs({SearchResultsFrame:GetChildren()}) do
-                        ---@diagnostic disable-next-line: undefined-field
-                        child:Hide()
-                        ---@diagnostic disable-next-line: undefined-field
-                        child:SetParent(nil)
-                        if NoResultsText then
-                            NoResultsText:Hide()
-                            NoResultsText:SetParent(nil)
-                            NoResultsText = nil
-                        end
-                        if TooManyText then
-                            TooManyText:Hide()
-                            TooManyText:SetParent(nil)
-                            TooManyText = nil
-                        end
-                        if SearchTitle then
-                            SearchTitle:Hide()
-                            SearchTitle:SetParent(nil)
-                            SearchTitle = nil
-                        end
-                    end
-                end)
-            end
-        end,
-        OnShow = function(self)
-            local eb = self.editBox or self.EditBox
-            if eb then
-                eb:SetMaxLetters(15)
-            end
-        end,
-        timeout = 0,
-        whileDead = true,
-        hideOnEscape = true,
-        preferredIndex = 3,
-    }
-    StaticPopup_Show("SEARCH_DATABASE")
-end)
-
 -- ╭─────────────────────────────────────────╮
 -- │      Function to Populate Database      │
 -- ╰─────────────────────────────────────────╯
@@ -1210,12 +1017,31 @@ function iWR:PopulateDatabase()
     resetColumn(dbContainer.col2)
     resetColumn(dbContainer.col3)
 
-    -- Categorize entries
+    -- Categorize entries (with optional search filter)
     local categorizedData = {}
+    local totalEntries = 0
+    local filteredEntries = 0
     for playerName, data in pairs(iWRDatabase) do
-        local category = data[2] or "Uncategorized"
-        categorizedData[category] = categorizedData[category] or {}
-        table.insert(categorizedData[category], { name = playerName, data = data })
+        totalEntries = totalEntries + 1
+        -- Apply search filter: match player name or note
+        if dbSearchFilter ~= "" then
+            local nameMatch = playerName:lower():find(dbSearchFilter, 1, true)
+            local noteMatch = data[1] and data[1]:lower():find(dbSearchFilter, 1, true)
+            local displayMatch = data[4] and StripColorCodes(data[4]):lower():find(dbSearchFilter, 1, true)
+            if not nameMatch and not noteMatch and not displayMatch then
+                -- skip this entry — doesn't match search
+            else
+                filteredEntries = filteredEntries + 1
+                local category = data[2] or "Uncategorized"
+                categorizedData[category] = categorizedData[category] or {}
+                table.insert(categorizedData[category], { name = playerName, data = data })
+            end
+        else
+            filteredEntries = filteredEntries + 1
+            local category = data[2] or "Uncategorized"
+            categorizedData[category] = categorizedData[category] or {}
+            table.insert(categorizedData[category], { name = playerName, data = data })
+        end
     end
 
     -- Sort categories in the correct order
@@ -1522,9 +1348,6 @@ function iWR:PopulateDatabase()
                         OnAccept = function()
                             print(L["CharNoteStart"] .. iWRDatabase[databasekey][4]  .. L["CharNoteRemoved"])
                             iWRDatabase[databasekey] = nil
-                            if SearchResultsFrame then
-                                SearchResultsFrame:Hide()
-                            end
                             iWR:PopulateDatabase()
                             iWR:SendRemoveRequestToFriends(databasekey)
                         end,
@@ -1600,8 +1423,11 @@ function iWR:PopulateDatabase()
     dbContainer:SetHeight(math.abs(yOffset))
 
     -- Update entry count in sidebar
-    local entryCount = math.floor(math.abs(yOffset + 5) / 30)
-    dbEntryCount:SetText("|cFF808080" .. entryCount .. " entries|r")
+    if dbSearchFilter ~= "" then
+        dbEntryCount:SetText("|cFF808080" .. filteredEntries .. " of " .. totalEntries .. " entries|r")
+    else
+        dbEntryCount:SetText("|cFF808080" .. totalEntries .. " entries|r")
+    end
 end
 
 -- ╭─────────────────────────────────────────────────╮
