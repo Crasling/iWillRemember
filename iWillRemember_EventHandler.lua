@@ -105,15 +105,27 @@ function iWR:OnEnable()
     ----------------------------------------------------------------
     -- TOOLTIP HOOK (SAFE AT ENABLE)
     ----------------------------------------------------------------
-    local ok = pcall(function()
-        self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
-    end)
-
-    if not ok then
-        GameTooltip:HookScript("OnTooltipSetUnit", function(tooltip, ...)
-            iWR:AddNoteToGameTooltip(tooltip, ...)
+    if TooltipDataProcessor then
+        -- Retail: OnTooltipSetUnit removed, use TooltipDataProcessor instead
+        TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, function(tooltip, ...)
+            if tooltip == GameTooltip then
+                iWR:AddNoteToGameTooltip(tooltip, ...)
+            end
         end)
-        iWR:DebugMsg("Fallback tooltip hook used.", 3)
+        iWR:DebugMsg("Retail tooltip hook used (TooltipDataProcessor).", 3)
+    else
+        -- Classic: use SecureHookScript with HookScript fallback
+        local ok = pcall(function()
+            self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
+        end)
+        if not ok then
+            pcall(function()
+                GameTooltip:HookScript("OnTooltipSetUnit", function(tooltip, ...)
+                    iWR:AddNoteToGameTooltip(tooltip, ...)
+                end)
+            end)
+            iWR:DebugMsg("Fallback tooltip hook used.", 3)
+        end
     end
 
     ----------------------------------------------------------------
@@ -124,6 +136,10 @@ function iWR:OnEnable()
     ----------------------------------------------------------------
     -- CORE INITIALIZATION
     ----------------------------------------------------------------
+    -- Register current character for Mine/Friends filter (account-wide)
+    if not iWRSettings.MyCharacters then iWRSettings.MyCharacters = {} end
+    iWRSettings.MyCharacters[UnitName("player")] = true
+
     iWR:InitializeSettings()
     iWR:InitializeDatabase()
     iWR:CreateOptionsPanel()

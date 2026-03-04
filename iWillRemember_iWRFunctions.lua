@@ -1193,6 +1193,7 @@ function iWR:ShowDetailWindow(playerName)
     local detailsContent = {}
     local detailSign = data[2] > 0 and "+" or ""
     local detailTypeValue = detailSign .. data[2] .. " — " .. iWR:GetTypeName(data[2])
+    local statusValue = data[9] and (iWR.Colors.Gray .. "Personal") or (iWR.Colors.Green .. "Shared")
     if data[7] and data[7] ~= iWR.CurrentRealm then
         detailsContent = {
             {label = iWR.Colors.Default .. "Name:" .. iWR.Colors.Reset, value = data[4]..iWR.Colors.Reset.."-"..data[7]},
@@ -1200,6 +1201,7 @@ function iWR:ShowDetailWindow(playerName)
             {label = iWR.Colors.Default .. "Note:" .. iWR.Colors[data[2]], value = data[1], isNote = true},
             {label = iWR.Colors.Default .. "Author:" .. iWR.Colors.Reset, value = data[6]},
             {label = iWR.Colors.Default .. "Date:", value = data[5]},
+            {label = iWR.Colors.Default .. "Status:", value = statusValue},
         }
     else
         detailsContent = {
@@ -1208,6 +1210,7 @@ function iWR:ShowDetailWindow(playerName)
             {label = iWR.Colors.Default .. "Note:" .. iWR.Colors[data[2]], value = data[1], isNote = true},
             {label = iWR.Colors.Default .. "Author:" .. iWR.Colors.Reset, value = data[6]},
             {label = iWR.Colors.Default .. "Date:", value = data[5]},
+            {label = iWR.Colors.Default .. "Status:", value = statusValue},
         }
     end
     for _, item in ipairs(detailsContent) do
@@ -1466,7 +1469,7 @@ function iWR:VerifyTargetClassinDB(databasekey, targetClass)
             iWRDatabase[databasekey][4] = iWR:ColorizePlayerNameByClass(targetName, targetClass)
             print(L["CharNoteStart"] .. iWRDatabase[databasekey][4] .. L["CharNoteColorUpdate"])
             iWR:PopulateDatabase()
-            if iWRSettings.DataSharing ~= false then
+            if iWRSettings.DataSharing ~= false and not iWRDatabase[databasekey][9] then
                 wipe(iWR.Cache.DataTable)
                 iWR.Cache.DataTable[tostring(databasekey)] = {
                     iWRDatabase[databasekey][1],     --Data[1]
@@ -1552,6 +1555,7 @@ function iWR:MenuOpen(menuName, classToken)
 
         -- Set slider to existing note's type value, or 0 if no note exists
         local sliderValue = 0
+        local isPersonal = false
         if lookupName then
             local capName, capRealm = iWR:FormatNameAndRealm(lookupName, lookupRealm or iWR.CurrentRealm)
             local dbKey = capName .. "-" .. capRealm
@@ -1562,10 +1566,14 @@ function iWR:MenuOpen(menuName, classToken)
                 if data[1] and data[1] ~= "" then
                     iWRNoteInput:SetText(data[1])
                 end
+                isPersonal = data[9] or false
             end
         end
         if iWR.SetSliderValue then
             iWR:SetSliderValue(sliderValue)
+        end
+        if iWR.SetPersonalCheckbox then
+            iWR:SetPersonalCheckbox(isPersonal)
         end
     else
         print(L["InCombat"])
@@ -1578,6 +1586,7 @@ end
 function iWR:MenuClose()
     iWRNameInput:SetText(L["DefaultNameInput"])
     iWRNoteInput:SetText(L["DefaultNoteInput"])
+    if iWR.SetPersonalCheckbox then iWR:SetPersonalCheckbox(false) end
     iWRPanel:Hide()
 end
 
@@ -1605,6 +1614,7 @@ function iWR:DatabaseOpen()
         iWRDatabaseFrame:Show()
         iWR:ResetDatabaseTab()
         if iWR.ClearDatabaseSearch then iWR:ClearDatabaseSearch() end
+        if iWR.ResetDatabaseFilter then iWR:ResetDatabaseFilter() end
         iWRNameInput:SetText(L["DefaultNameInput"])
         iWRNoteInput:SetText(L["DefaultNoteInput"])
         if UnitExists("target") and UnitIsPlayer("target") then
@@ -1632,14 +1642,14 @@ end
 -- ╭────────────────────────╮
 -- │      Add New Note      │
 -- ╰────────────────────────╯
-function iWR:AddNewNote(Name, Note, Type)
+function iWR:AddNewNote(Name, Note, Type, personal)
     iWRNameInput:ClearFocus()
     iWRNoteInput:ClearFocus()
     if iWR:VerifyInputName(Name) then
         if iWR:VerifyInputNote(Note) then
-            iWR:CreateNote(Name, tostring(Note), Type)
+            iWR:CreateNote(Name, tostring(Note), Type, personal)
         else
-            iWR:CreateNote(Name, "", Type)
+            iWR:CreateNote(Name, "", Type, personal)
         end
         iWR:PopulateDatabase()
     else
@@ -1697,6 +1707,9 @@ function iWR:ClearNote(Name)
 
     -- Check if the key exists in the database
     if iWRDatabase[databaseKey] then
+        -- Capture personal flag before deletion
+        local wasPersonal = iWRDatabase[databaseKey][9]
+
         -- Remove the entry from the iWR database
         print(L["CharNoteStart"] .. iWRDatabase[databaseKey][4] .. L["CharNoteRemoved"])
         iWRDatabase[databaseKey] = nil
@@ -1705,8 +1718,8 @@ function iWR:ClearNote(Name)
         iWR:PopulateDatabase()
         iWR:UpdateTargetFrame()
 
-        -- Notify friends if data sharing is enabled
-        if iWRSettings.DataSharing ~= false then
+        -- Notify friends if data sharing is enabled (skip personal notes)
+        if iWRSettings.DataSharing ~= false and not wasPersonal then
             iWR:SendRemoveRequestToFriends(databaseKey)
         end
     else
@@ -1719,7 +1732,7 @@ end
 -- ╭─────────────────────────────────╮
 -- │      Function: Create Note      │
 -- ╰─────────────────────────────────╯
-function iWR:CreateNote(Name, Note, Type)
+function iWR:CreateNote(Name, Note, Type, personal)
     -- Debug logging
     iWR:DebugMsg("New note Name: [|r" .. Name .. iWR.Colors.iWR .. "].", 3)
     iWR:DebugMsg("New note Note: [" .. (Note ~= "" and ("|r" .. Note .. iWR.Colors.iWR) or iWR.Colors.Reset .. "Nothing" .. iWR.Colors.iWR) .. "].", 3)
@@ -1800,6 +1813,12 @@ function iWR:CreateNote(Name, Note, Type)
     end
     if noteFaction ~= "" then noFaction = false end
 
+    -- Determine personal flag (preserve existing if not explicitly set)
+    local personalFlag = personal
+    if personalFlag == nil and existingData and next(existingData) ~= nil then
+        personalFlag = existingData[9]
+    end
+
     -- Save to the database
     iWRDatabase[databaseKey] = {
         Note,               -- [1]: Note text
@@ -1809,14 +1828,15 @@ function iWR:CreateNote(Name, Note, Type)
         currentDate,        -- [5]: Date
         noteAuthor,         -- [6]: Author
         capitalizedRealm,   -- [7]: Realm
-        noteFaction          -- [8]: Faction
+        noteFaction,        -- [8]: Faction
+        personalFlag or nil -- [9]: Personal flag (true = not shared)
     }
 
     -- Update target frame
     iWR:UpdateTargetFrame()
 
-    -- Send sync update if sharing is enabled
-    if iWRSettings.DataSharing ~= false then
+    -- Send sync update if sharing is enabled (skip personal notes)
+    if iWRSettings.DataSharing ~= false and not personalFlag then
         wipe(iWR.Cache.DataTable)
         iWR.Cache.DataTable[databaseKey] = iWRDatabase[databaseKey]
         iWR.Cache.Data = iWR:Serialize(iWR.Cache.DataTable)

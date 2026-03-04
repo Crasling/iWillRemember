@@ -170,6 +170,9 @@ end
 if not iWRSettings.GuildWatchlist then
     iWRSettings.GuildWatchlist = {}
 end
+if not iWRSettings.MyCharacters then
+    iWRSettings.MyCharacters = {}
+end
 -- Migrate old integer-only GuildWatchlist entries to table format {type, author}
 for guildName, val in pairs(iWRSettings.GuildWatchlist) do
     if type(val) ~= "table" then

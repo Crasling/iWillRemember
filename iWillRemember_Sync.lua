@@ -85,23 +85,33 @@ function iWR:CheckLatestVersion()
         return
     end
 
-    -- Loop through all friends in the friend list
+    local VersionCache = iWR:Serialize(versionNumber)
+
+    -- Send to online friends via whisper
     for i = 1, C_FriendList.GetNumFriends() do
-        -- Get friend's info (which includes friendName and connected status)
         local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
         local friendName = friendInfo and friendInfo.name
         local isOnline = friendInfo and friendInfo.connected
 
-        -- Ensure friendName is valid and the friend is online before sending
         if friendName and isOnline then
-            local VersionCache = iWR:Serialize(versionNumber)
             iWR:SendCommMessage("iWRVersionCheck", VersionCache, "WHISPER", friendName)
             iWR:DebugMsg("Version check sent to: " .. friendName, 3)
-        elseif friendName and not isOnline then
-            -- Nothing
-        else
+        elseif not friendName then
             iWR:DebugMsg("No valid friend found at index " .. i .. ".", 1)
         end
+    end
+
+    -- Send to guild
+    if IsInGuild() then
+        iWR:SendCommMessage("iWRVersionCheck", VersionCache, "GUILD")
+        iWR:DebugMsg("Version check sent to guild.", 3)
+    end
+
+    -- Send to General channel
+    local channelIndex = GetChannelName("General")
+    if channelIndex and channelIndex > 0 then
+        iWR:SendCommMessage("iWRVersionCheck", VersionCache, "CHANNEL", tostring(channelIndex))
+        iWR:DebugMsg("Version check sent to General channel.", 3)
     end
 end
 
@@ -216,11 +226,11 @@ function iWR:SendFullDBUpdateToFriends()
 
                 wipe(iWR.Cache.DataTable)
 
-                -- Filter database entries for the last 100 days
+                -- Filter database entries for the last 100 days (exclude personal notes)
                 for k, v in pairs(iWRDatabase) do
                     local entryTime = v[3]
                     local lastDays = 100 * 24 -- 100 days in hours
-                    if currentTime - entryTime <= lastDays then
+                    if currentTime - entryTime <= lastDays and not v[9] then
                         iWR.Cache.DataTable[k] = v
                     end
                 end
@@ -353,7 +363,9 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
 
                 if success then
                     for k, v in pairs(FullNotesTable) do
-                        if iWRDatabase[k] then
+                        if iWRDatabase[k] and iWRDatabase[k][9] then
+                            iWR:DebugMsg("Skipped full sync for " .. k .. " (personal note protected).", 3)
+                        elseif iWRDatabase[k] then
                             if iWR:IsNeedToUpdate(iWRDatabase[k][3], v[3]) then
                                 iWRDatabase[k] = v
                             end
@@ -398,7 +410,12 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
             iWR:DebugMsg("ErrorCode: " .. tostring(iWR.Cache.TempTable), 1)
         else
             for k, v in pairs(iWR.Cache.TempTable) do
-                iWRDatabase[k] = v
+                -- Don't overwrite personal notes with incoming sync data
+                if iWRDatabase[k] and iWRDatabase[k][9] then
+                    iWR:DebugMsg("Skipped sync for " .. k .. " (personal note protected).", 3)
+                else
+                    iWRDatabase[k] = v
+                end
             end
 
             iWR:UpdateTargetFrame()
@@ -439,6 +456,12 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     if not noteName or not iWRDatabase[noteName] then
         iWR:DebugMsg("Received remove request for a non-existent player: " .. (noteName or "nil") .. ".",3)
         return -- Exit if the player does not exist in the database
+    end
+
+    -- Don't remove personal notes via sync
+    if iWRDatabase[noteName][9] then
+        iWR:DebugMsg("Ignored remove request for " .. noteName .. " (personal note protected).", 3)
+        return
     end
 
     -- Add the request to the queue

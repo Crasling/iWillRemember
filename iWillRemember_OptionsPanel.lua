@@ -667,6 +667,76 @@ function iWR:CreateOptionsPanel()
         end)
     checkboxRefs.ShowMinimapButton = cbMinimap
 
+    -- My Characters (for Mine/Friends filter)
+    y = y - 8
+    _, y = CreateSectionHeader(generalContent, "My Characters", y)
+
+    local myCharsInfo
+    myCharsInfo, y = CreateInfoText(generalContent,
+        "|cFF808080Characters registered for the Mine/Friends database filter. Remove names that aren't yours.|r", y, "GameFontDisableSmall")
+
+    -- Character list panel
+    local mcPanel = CreateFrame("Frame", nil, generalContent, "BackdropTemplate")
+    mcPanel:SetPoint("TOPLEFT", generalContent, "TOPLEFT", 20, y)
+    mcPanel:SetSize(250, 80)
+    mcPanel:SetBackdrop({
+        bgFile = "Interface\\BUTTONS\\WHITE8X8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 12,
+        insets = {left = 3, right = 3, top = 3, bottom = 3},
+    })
+    mcPanel:SetBackdropColor(0.08, 0.08, 0.1, 0.8)
+    mcPanel:SetBackdropBorderColor(0.5, 0.5, 0.6, 0.6)
+
+    local mcText = mcPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    mcText:SetPoint("TOPLEFT", mcPanel, "TOPLEFT", 8, -6)
+    mcText:SetWidth(230)
+    mcText:SetJustifyH("LEFT")
+
+    local function UpdateMyCharsDisplay()
+        local t = {}
+        for name in pairs(iWRSettings.MyCharacters or {}) do
+            table.insert(t, "|cFF00FF00\226\128\162|r " .. name)
+        end
+        table.sort(t)
+        if #t == 0 then
+            mcText:SetText("|cFF808080No characters registered.|r")
+        else
+            mcText:SetText(table.concat(t, "\n"))
+        end
+        -- Resize panel to fit content
+        local lineCount = math.max(#t, 1)
+        mcPanel:SetHeight(math.max(lineCount * 14 + 14, 30))
+    end
+
+    UpdateMyCharsDisplay()
+
+    -- Remove dropdown
+    local mcRemoveLabel = generalContent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    mcRemoveLabel:SetPoint("TOPLEFT", mcPanel, "TOPRIGHT", 20, -4)
+    mcRemoveLabel:SetText("Remove")
+
+    local mcRemoveDropdown = CreateFrame("Frame", "iWRDropdown_RemoveMyChar", generalContent, "UIDropDownMenuTemplate")
+    mcRemoveDropdown:SetPoint("TOPLEFT", mcRemoveLabel, "BOTTOMLEFT", -20, -2)
+    UIDropDownMenu_SetWidth(mcRemoveDropdown, 140)
+
+    UIDropDownMenu_Initialize(mcRemoveDropdown, function(frame, level)
+        for name in pairs(iWRSettings.MyCharacters or {}) do
+            local info = UIDropDownMenu_CreateInfo()
+            info.text = name
+            info.value = name
+            info.func = function(self)
+                iWRSettings.MyCharacters[self.value] = nil
+                UpdateMyCharsDisplay()
+                UIDropDownMenu_SetText(frame, "")
+                CloseDropDownMenus()
+            end
+            UIDropDownMenu_AddButton(info, level)
+        end
+    end)
+
+    y = y - mcPanel:GetHeight() - 10
+
     scrollChildren[1]:SetHeight(math.abs(y) + 20)
 
     -- ╭───────────────────────────────────────────────────────────────╮

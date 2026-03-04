@@ -11,7 +11,7 @@
 -- │                                      Frames                                    │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 -- Main Panel
-iWRPanel = iWR:CreateiWRStyleFrame(UIParent, 350, 260, {"CENTER", UIParent, "CENTER"})
+iWRPanel = iWR:CreateiWRStyleFrame(UIParent, 350, 284, {"CENTER", UIParent, "CENTER"})
 iWRPanel:Hide()
 iWRPanel:EnableMouse(true)
 iWRPanel:SetMovable(true)
@@ -396,23 +396,44 @@ end)
 sliderTrack:EnableMouseWheel(true)
 
 -- ╭──────────────────────────────────────────╮
+-- │      Personal Note Checkbox               │
+-- ╰──────────────────────────────────────────╯
+local isPersonalNote = false
+
+local personalCheckbox = CreateFrame("CheckButton", nil, menuContent, "InterfaceOptionsCheckButtonTemplate")
+personalCheckbox:SetPoint("TOP", sliderValueText, "BOTTOM", -30, -2)
+personalCheckbox:SetChecked(false)
+personalCheckbox:SetScript("OnClick", function(self)
+    isPersonalNote = self:GetChecked()
+end)
+
+local personalLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+personalLabel:SetPoint("LEFT", personalCheckbox, "RIGHT", 0, 0)
+personalLabel:SetText("|cFF999999Personal (not shared)|r")
+
+function iWR:SetPersonalCheckbox(state)
+    isPersonalNote = state and true or false
+    personalCheckbox:SetChecked(isPersonalNote)
+end
+
+-- ╭──────────────────────────────────────────╮
 -- │      Save Note Button                     │
 -- ╰──────────────────────────────────────────╯
 local saveNoteButton = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
 saveNoteButton:SetSize(100, 24)
-saveNoteButton:SetPoint("TOP", sliderValueText, "BOTTOM", -52, -6)
+saveNoteButton:SetPoint("TOP", personalCheckbox, "BOTTOM", -26, -2)
 saveNoteButton:SetText(L["SaveNote"] or "Save Note")
 saveNoteButton:SetScript("OnClick", function()
     if currentSliderValue == 0 then
         iWR:ClearNote(iWRNameInput:GetText())
     else
-        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), currentSliderValue)
+        iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), currentSliderValue, isPersonalNote)
     end
 end)
 
 local clearNoteButton = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
 clearNoteButton:SetSize(100, 24)
-clearNoteButton:SetPoint("TOP", sliderValueText, "BOTTOM", 52, -6)
+clearNoteButton:SetPoint("LEFT", saveNoteButton, "RIGHT", 4, 0)
 clearNoteButton:SetText("Clear")
 clearNoteButton:SetScript("OnClick", function()
     iWR:ClearNote(iWRNameInput:GetText())
@@ -492,7 +513,7 @@ local function BuildSimpleMenu()
             if value == 0 then
                 iWR:ClearNote(iWRNameInput:GetText())
             else
-                iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), value)
+                iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), value, isPersonalNote)
             end
         end)
 
@@ -619,8 +640,8 @@ local function UpdateMenuMode()
         clearNoteButton:Show()
         simpleContainer:Hide()
 
-        -- Restore default panel height
-        iWRPanel:SetHeight(260)
+        -- Restore default panel height (284 accounts for personal checkbox)
+        iWRPanel:SetHeight(284)
     end
 end
 
@@ -804,13 +825,62 @@ notesContainer:SetPoint("BOTTOMRIGHT", dbContentArea, "BOTTOMRIGHT", -5, 5)
 notesContainer:Show()
 
 -- ╭──────────────────────────────────────────────╮
--- │      Database Search Filter                   │
+-- │      Database Filter & Search                 │
 -- ╰──────────────────────────────────────────────╯
 local dbSearchFilter = ""
+local dbNoteFilter = "all" -- "all", "mine", "friends"
 
+-- Filter buttons (left side): All | Mine | Friends
+local filterButtons = {}
+local filterValues = {"all", "mine", "friends"}
+local filterLabels = {"All", "Mine", "Friends"}
+
+local function UpdateFilterButtons()
+    for i, btn in ipairs(filterButtons) do
+        if filterValues[i] == dbNoteFilter then
+            btn.text:SetTextColor(1, 0.59, 0.09, 1) -- Orange for active
+        else
+            btn.text:SetTextColor(0.5, 0.5, 0.5, 1) -- Gray for inactive
+        end
+    end
+end
+
+for i = 1, 3 do
+    local btn = CreateFrame("Button", nil, notesContainer)
+    btn:SetSize(46, 20)
+    if i == 1 then
+        btn:SetPoint("TOPLEFT", notesContainer, "TOPLEFT", 4, -5)
+    else
+        btn:SetPoint("LEFT", filterButtons[i - 1], "RIGHT", 2, 0)
+    end
+
+    local text = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    text:SetPoint("CENTER", btn, "CENTER", 0, 0)
+    text:SetText(filterLabels[i])
+    btn.text = text
+
+    btn:SetScript("OnClick", function()
+        dbNoteFilter = filterValues[i]
+        UpdateFilterButtons()
+        iWR:PopulateDatabase()
+    end)
+
+    -- Separator between buttons
+    if i < 3 then
+        local sep = btn:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        sep:SetPoint("RIGHT", btn, "RIGHT", 1, 0)
+        sep:SetText("|cFF404040|||r")
+    end
+
+    filterButtons[i] = btn
+end
+
+UpdateFilterButtons()
+
+-- Search (right side): magnifying glass + edit box + X button
 local dbSearchIcon = notesContainer:CreateTexture(nil, "ARTWORK")
 dbSearchIcon:SetSize(14, 14)
-dbSearchIcon:SetPoint("TOPLEFT", notesContainer, "TOPLEFT", 8, -8)
+dbSearchIcon:SetPoint("TOPRIGHT", notesContainer, "TOPRIGHT", -240, -8)
 dbSearchIcon:SetTexture("Interface\\Icons\\INV_Misc_Spyglass_03")
 
 local dbSearchBox = CreateFrame("EditBox", nil, notesContainer, "InputBoxTemplate")
@@ -858,12 +928,17 @@ dbSearchBox:SetScript("OnEnterPressed", function(self)
     self:ClearFocus()
 end)
 
--- Expose for clearing from DatabaseOpen
+-- Expose for clearing/resetting from DatabaseOpen
 function iWR:ClearDatabaseSearch()
     dbSearchFilter = ""
     dbSearchBox:SetText("")
     dbSearchPlaceholder:Show()
     dbSearchClearBtn:Hide()
+end
+
+function iWR:ResetDatabaseFilter()
+    dbNoteFilter = "all"
+    UpdateFilterButtons()
 end
 
 -- Group Log container (inside content area)
@@ -1017,26 +1092,39 @@ function iWR:PopulateDatabase()
     resetColumn(dbContainer.col2)
     resetColumn(dbContainer.col3)
 
-    -- Categorize entries (with optional search filter)
+    -- Categorize entries (with optional search and author filter)
     local categorizedData = {}
     local totalEntries = 0
     local filteredEntries = 0
+    local myCharacters = iWRSettings and iWRSettings.MyCharacters or {}
     for playerName, data in pairs(iWRDatabase) do
         totalEntries = totalEntries + 1
+        local includeEntry = true
+
+        -- Apply author filter (Mine/Friends) — uses MyCharacters to include alts
+        if dbNoteFilter == "mine" then
+            local authorName = data[6] and StripColorCodes(data[6]) or ""
+            if not myCharacters[authorName] then
+                includeEntry = false
+            end
+        elseif dbNoteFilter == "friends" then
+            local authorName = data[6] and StripColorCodes(data[6]) or ""
+            if myCharacters[authorName] then
+                includeEntry = false
+            end
+        end
+
         -- Apply search filter: match player name or note
-        if dbSearchFilter ~= "" then
+        if includeEntry and dbSearchFilter ~= "" then
             local nameMatch = playerName:lower():find(dbSearchFilter, 1, true)
             local noteMatch = data[1] and data[1]:lower():find(dbSearchFilter, 1, true)
             local displayMatch = data[4] and StripColorCodes(data[4]):lower():find(dbSearchFilter, 1, true)
             if not nameMatch and not noteMatch and not displayMatch then
-                -- skip this entry — doesn't match search
-            else
-                filteredEntries = filteredEntries + 1
-                local category = data[2] or "Uncategorized"
-                categorizedData[category] = categorizedData[category] or {}
-                table.insert(categorizedData[category], { name = playerName, data = data })
+                includeEntry = false
             end
-        else
+        end
+
+        if includeEntry then
             filteredEntries = filteredEntries + 1
             local category = data[2] or "Uncategorized"
             categorizedData[category] = categorizedData[category] or {}
@@ -1157,8 +1245,17 @@ function iWR:PopulateDatabase()
                 iconTexture:SetTexture(iWR:GetIcon(data[2]) or "Interface\\Icons\\INV_Misc_QuestionMark")
                 col1Frame.iconTexture = iconTexture
 
+                -- Lock icon for personal notes
+                local lockIcon = col1Frame.lockIcon or col1Frame:CreateTexture(nil, "ARTWORK")
+                lockIcon:SetSize(12, 12)
+                lockIcon:SetPoint("LEFT", iconTexture, "RIGHT", 1, 0)
+                lockIcon:SetTexture("Interface\\Icons\\INV_Misc_Key_03")
+                lockIcon:SetShown(data[9] == true)
+                col1Frame.lockIcon = lockIcon
+
                 local playerNameText = col1Frame.playerNameText or col1Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                playerNameText:SetPoint("LEFT", iconTexture, "RIGHT", 10, 0)
+                playerNameText:ClearAllPoints()
+                playerNameText:SetPoint("LEFT", iconTexture, "RIGHT", data[9] and 14 or 10, 0)
                 local displayName = data[4]
                 local listdisplayName = displayName
                 if data[7] and data[7] ~= iWR.CurrentRealm then
@@ -1183,9 +1280,9 @@ function iWR:PopulateDatabase()
                 playerNameText:SetTextColor(1, 1, 1, 1)
                 col1Frame.playerNameText = playerNameText
 
-                -- Tooltip and Click for Name column
-                col1Frame:SetScript("OnEnter", function()
-                    GameTooltip:SetOwner(col1Frame, "ANCHOR_RIGHT")
+                -- Shared tooltip for all columns
+                local function ShowEntryTooltip(owner)
+                    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
                     GameTooltip:AddLine(listdisplayName, 1, 1, 1)
                     if data[7] then
                         GameTooltip:AddLine("Server: " .. iWR.Colors.Reset .. data[7], 1, 0.82, 0)
@@ -1205,10 +1302,18 @@ function iWR:PopulateDatabase()
                     if data[5] then
                         GameTooltip:AddLine("Date: " .. data[5], 1, 0.82, 0)
                     end
+                    if data[9] then
+                        GameTooltip:AddLine("Status: " .. iWR.Colors.Gray .. "Personal", 1, 0.82, 0)
+                    end
                     if canWhisper then
                         GameTooltip:AddLine("|cFF808080Right-click to whisper|r", 0.5, 0.5, 0.5)
                     end
                     GameTooltip:Show()
+                end
+
+                -- Tooltip and Click for Name column
+                col1Frame:SetScript("OnEnter", function()
+                    ShowEntryTooltip(col1Frame)
                 end)
                 col1Frame:SetScript("OnLeave", function()
                     GameTooltip:Hide()
@@ -1263,24 +1368,7 @@ function iWR:PopulateDatabase()
 
                 -- Tooltip and Click for Notes column
                 col2Frame:SetScript("OnEnter", function()
-                    GameTooltip:SetOwner(col2Frame, "ANCHOR_RIGHT")
-                    GameTooltip:AddLine(listdisplayName, 1, 1, 1)
-                    if data[7] then
-                        GameTooltip:AddLine("Server: " .. iWR.Colors.Reset .. data[7], 1, 0.82, 0)
-                    end
-                    local ttSign = data[2] > 0 and "+" or ""
-                    local ttColor = iWR.Colors[data[2]] or iWR.Colors.Default
-                    GameTooltip:AddLine("Type: " .. ttColor .. ttSign .. data[2] .. " — " .. iWR:GetTypeName(data[2]), 1, 0.82, 0)
-                    if data[1] then
-                        GameTooltip:AddLine("Note: " .. iWR.Colors[data[2]] .. data[1], 1, 0.82, 0)
-                    end
-                    if data[6] then
-                        GameTooltip:AddLine("Author: " .. data[6], 1, 0.82, 0)
-                    end
-                    if data[5] then
-                        GameTooltip:AddLine("Date: " .. data[5], 1, 0.82, 0)
-                    end
-                    GameTooltip:Show()
+                    ShowEntryTooltip(col2Frame)
                 end)
                 col2Frame:SetScript("OnLeave", function()
                     GameTooltip:Hide()
@@ -1346,10 +1434,13 @@ function iWR:PopulateDatabase()
                         button1 = "Yes",
                         button2 = "No",
                         OnAccept = function()
+                            local wasPersonal = iWRDatabase[databasekey] and iWRDatabase[databasekey][9]
                             print(L["CharNoteStart"] .. iWRDatabase[databasekey][4]  .. L["CharNoteRemoved"])
                             iWRDatabase[databasekey] = nil
                             iWR:PopulateDatabase()
-                            iWR:SendRemoveRequestToFriends(databasekey)
+                            if not wasPersonal then
+                                iWR:SendRemoveRequestToFriends(databasekey)
+                            end
                         end,
                         timeout = 0,
                         whileDead = true,
@@ -1386,8 +1477,14 @@ function iWR:PopulateDatabase()
                 end)
 
                 col1bFrame:EnableMouse(true)
-                col1bFrame:SetScript("OnEnter", function() ShowRowHighlight() end)
-                col1bFrame:SetScript("OnLeave", function() HideRowHighlight() end)
+                col1bFrame:SetScript("OnEnter", function()
+                    ShowRowHighlight()
+                    ShowEntryTooltip(col1bFrame)
+                end)
+                col1bFrame:SetScript("OnLeave", function()
+                    HideRowHighlight()
+                    GameTooltip:Hide()
+                end)
                 col1bFrame:SetScript("OnMouseDown", function(self, button)
                     if button == "RightButton" then
                         WhisperPlayer()
@@ -1408,8 +1505,14 @@ function iWR:PopulateDatabase()
                 end)
 
                 col3Frame:EnableMouse(true)
-                col3Frame:SetScript("OnEnter", function() ShowRowHighlight() end)
-                col3Frame:SetScript("OnLeave", function() HideRowHighlight() end)
+                col3Frame:SetScript("OnEnter", function()
+                    ShowRowHighlight()
+                    ShowEntryTooltip(col3Frame)
+                end)
+                col3Frame:SetScript("OnLeave", function()
+                    HideRowHighlight()
+                    GameTooltip:Hide()
+                end)
                 col3Frame:SetScript("OnMouseDown", function(self, button)
                     if button == "RightButton" then
                         WhisperPlayer()
@@ -1423,7 +1526,7 @@ function iWR:PopulateDatabase()
     dbContainer:SetHeight(math.abs(yOffset))
 
     -- Update entry count in sidebar
-    if dbSearchFilter ~= "" then
+    if dbSearchFilter ~= "" or dbNoteFilter ~= "all" then
         dbEntryCount:SetText("|cFF808080" .. filteredEntries .. " of " .. totalEntries .. " entries|r")
     else
         dbEntryCount:SetText("|cFF808080" .. totalEntries .. " entries|r")
@@ -1700,31 +1803,168 @@ gwInput:SetPoint("LEFT", gwInputLabel, "RIGHT", 8, 0)
 gwInput:SetAutoFocus(false)
 gwInput:SetMaxLetters(60)
 
--- Type cycling button
+-- Add button (same row as guild name input)
+local gwAddBtn = CreateFrame("Button", nil, guildWatchContainer, "UIPanelButtonTemplate")
+gwAddBtn:SetSize(60, 22)
+gwAddBtn:SetPoint("LEFT", gwInput, "RIGHT", 8, 0)
+
+-- ╭──────────────────────────────────────────────╮
+-- │      Guild Watchlist Relation Slider          │
+-- ╰──────────────────────────────────────────────╯
 local gwTypeValue = 1 -- default to Liked +1
-local gwTypeBtn = CreateFrame("Button", nil, guildWatchContainer, "UIPanelButtonTemplate")
-gwTypeBtn:SetSize(120, 22)
-gwTypeBtn:SetPoint("LEFT", gwInput, "RIGHT", 8, 0)
 
-local typeOrder = {-6, -1, 1, 6, 10}
-local typeOrderIndex = 3 -- starts at +1 (Liked)
+-- Type icon (left side)
+local gwSliderIcon = guildWatchContainer:CreateTexture(nil, "ARTWORK")
+gwSliderIcon:SetSize(20, 20)
+gwSliderIcon:SetPoint("TOPLEFT", gwInputLabel, "BOTTOMLEFT", 0, -10)
+gwSliderIcon:SetTexture(iWR:GetIcon(1))
 
-local function UpdateGWTypeButton()
-    gwTypeValue = typeOrder[typeOrderIndex]
-    local typeName = iWR:GetTypeName(gwTypeValue)
-    local typeColor = iWR.Colors[gwTypeValue] or iWR.Colors.Gray
-    gwTypeBtn:SetText(typeColor .. typeName .. "|r")
+-- Slider track
+local GW_SLIDER_WIDTH = 350
+local GW_SLIDER_HEIGHT = 10
+local gwCenterX = GW_SLIDER_WIDTH / 2
+local gwStepWidth = GW_SLIDER_WIDTH / 20
+
+local gwSliderTrack = CreateFrame("Frame", nil, guildWatchContainer, "BackdropTemplate")
+gwSliderTrack:SetSize(GW_SLIDER_WIDTH, GW_SLIDER_HEIGHT)
+gwSliderTrack:SetPoint("LEFT", gwSliderIcon, "RIGHT", 10, 0)
+gwSliderTrack:SetBackdrop({
+    bgFile = "Interface\\Buttons\\WHITE8x8",
+    edgeFile = "Interface\\Buttons\\WHITE8x8",
+    edgeSize = 1,
+    insets = {left = 1, right = 1, top = 1, bottom = 1},
+})
+gwSliderTrack:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
+gwSliderTrack:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+
+-- Fill bar
+local gwSliderFill = gwSliderTrack:CreateTexture(nil, "ARTWORK")
+gwSliderFill:SetHeight(GW_SLIDER_HEIGHT - 2)
+gwSliderFill:SetPoint("TOP", gwSliderTrack, "TOP", 0, -1)
+gwSliderFill:SetTexture("Interface\\Buttons\\WHITE8x8")
+
+-- Thumb
+local gwSliderThumb = CreateFrame("Frame", nil, gwSliderTrack)
+gwSliderThumb:SetSize(12, 16)
+gwSliderThumb:SetPoint("CENTER", gwSliderTrack, "LEFT", gwCenterX + gwStepWidth, 0)
+
+local gwThumbTex = gwSliderThumb:CreateTexture(nil, "OVERLAY")
+gwThumbTex:SetAllPoints()
+gwThumbTex:SetTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+
+-- Min/Max labels
+local gwSliderLow = guildWatchContainer:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+gwSliderLow:SetPoint("TOPLEFT", gwSliderTrack, "BOTTOMLEFT", 0, -1)
+gwSliderLow:SetText("|cFF999999-10|r")
+
+local gwSliderHigh = guildWatchContainer:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+gwSliderHigh:SetPoint("TOPRIGHT", gwSliderTrack, "BOTTOMRIGHT", 0, -1)
+gwSliderHigh:SetText("|cFF999999+10|r")
+
+-- Value label
+local gwSliderValueText = guildWatchContainer:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+gwSliderValueText:SetPoint("LEFT", gwSliderTrack, "RIGHT", 10, 0)
+
+-- Update slider display
+local function UpdateGWSlider(value)
+    value = math.floor(value + 0.5)
+    if value < -10 then value = -10 end
+    if value > 10 then value = 10 end
+    if value == 0 then value = 1 end -- skip Clear (0) for guild watchlist
+    gwTypeValue = value
+
+    local typeName = iWR:GetTypeName(value)
+    local typeColor = iWR.Colors[value] or iWR.Colors.Default
+
+    -- Icon
+    gwSliderIcon:SetTexture(iWR:GetIcon(value))
+
+    -- Value label
+    local sign = value > 0 and "+" or ""
+    gwSliderValueText:SetText(typeColor .. sign .. value .. " — " .. typeName)
+
+    -- Thumb position
+    local thumbX = gwCenterX + (value * gwStepWidth)
+    gwSliderThumb:ClearAllPoints()
+    gwSliderThumb:SetPoint("CENTER", gwSliderTrack, "LEFT", thumbX, 0)
+
+    -- Fill bar
+    local r, g, b = 0.5, 0.8, 0.3
+    if value < 0 then
+        if value <= -6 then
+            r, g, b = 1.0, 0.13, 0.13
+        else
+            r, g, b = 0.99, 0.44, 0.19
+        end
+    elseif value == 10 then
+        r, g, b = 0.30, 0.65, 1.0
+    elseif value > 0 then
+        r, g, b = 0.50, 0.96, 0.32
+    end
+
+    gwSliderFill:Show()
+    gwSliderFill:SetVertexColor(r, g, b, 0.7)
+    gwSliderFill:ClearAllPoints()
+    gwSliderFill:SetHeight(GW_SLIDER_HEIGHT - 2)
+    if value > 0 then
+        gwSliderFill:SetPoint("LEFT", gwSliderTrack, "LEFT", gwCenterX + 1, 0)
+        gwSliderFill:SetWidth(value * gwStepWidth)
+    else
+        local fillWidth = math.abs(value) * gwStepWidth
+        gwSliderFill:SetPoint("RIGHT", gwSliderTrack, "LEFT", gwCenterX - 1, 0)
+        gwSliderFill:SetWidth(fillWidth)
+    end
 end
-UpdateGWTypeButton()
+UpdateGWSlider(1) -- initialize to +1 Liked
 
-gwTypeBtn:SetScript("OnClick", function()
-    typeOrderIndex = (typeOrderIndex % #typeOrder) + 1
-    UpdateGWTypeButton()
+-- Click on track
+gwSliderTrack:EnableMouse(true)
+gwSliderTrack:SetScript("OnMouseDown", function(self, button)
+    if button == "LeftButton" then
+        local x = select(1, GetCursorPosition()) / self:GetEffectiveScale()
+        local left = self:GetLeft()
+        local fraction = (x - left) / GW_SLIDER_WIDTH
+        local value = math.floor((-10 + fraction * 20) + 0.5)
+        if value == 0 then value = 1 end
+        UpdateGWSlider(value)
+    end
+end)
+
+-- Drag thumb
+gwSliderThumb:EnableMouse(true)
+gwSliderThumb:SetScript("OnMouseDown", function(self, button)
+    if button == "LeftButton" then self.dragging = true end
+end)
+gwSliderThumb:SetScript("OnMouseUp", function(self, button)
+    if button == "LeftButton" then self.dragging = false end
+end)
+
+gwSliderTrack:SetScript("OnUpdate", function(self)
+    if gwSliderThumb.dragging then
+        local x = select(1, GetCursorPosition()) / self:GetEffectiveScale()
+        local left = self:GetLeft()
+        local fraction = (x - left) / GW_SLIDER_WIDTH
+        local value = math.floor((-10 + fraction * 20) + 0.5)
+        if value < -10 then value = -10 end
+        if value > 10 then value = 10 end
+        if value == 0 then value = 1 end
+        UpdateGWSlider(value)
+    end
+end)
+
+-- Scroll wheel
+gwSliderTrack:EnableMouseWheel(true)
+gwSliderTrack:SetScript("OnMouseWheel", function(self, delta)
+    local newValue = gwTypeValue + delta
+    if newValue == 0 then newValue = newValue + delta end -- skip 0
+    if newValue < -10 then newValue = -10 end
+    if newValue > 10 then newValue = 10 end
+    UpdateGWSlider(newValue)
 end)
 
 -- Default note input
 local gwNoteLabel = guildWatchContainer:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-gwNoteLabel:SetPoint("TOPLEFT", gwInputLabel, "BOTTOMLEFT", 0, -8)
+gwNoteLabel:SetPoint("TOPLEFT", gwSliderIcon, "BOTTOMLEFT", 0, -12)
 gwNoteLabel:SetText(L["GuildNoteLabel"] or "Default Note:")
 
 local gwNoteInput = CreateFrame("EditBox", nil, guildWatchContainer, "InputBoxTemplate")
@@ -1732,11 +1972,6 @@ gwNoteInput:SetSize(250, 20)
 gwNoteInput:SetPoint("LEFT", gwNoteLabel, "RIGHT", 8, 0)
 gwNoteInput:SetAutoFocus(false)
 gwNoteInput:SetMaxLetters(120)
-
--- Add button
-local gwAddBtn = CreateFrame("Button", nil, guildWatchContainer, "UIPanelButtonTemplate")
-gwAddBtn:SetSize(60, 22)
-gwAddBtn:SetPoint("LEFT", gwNoteInput, "RIGHT", 8, 0)
 gwAddBtn:SetText(L["GuildWatchlistAdd"] or "Add")
 
 gwAddBtn:SetScript("OnClick", function()

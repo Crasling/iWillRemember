@@ -2,6 +2,56 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.20.4
+--------------------------------------------------------------------------------
+
+ [NEW] Personal Notes
+  - New "Personal" checkbox when creating or editing a note
+  - Personal notes are never synced to friends and cannot be overwritten by sync
+  - Key icon displayed next to personal entries in the database
+  - Detail popup shows "Status: Personal" or "Status: Shared"
+
+ [NEW] Database Filters (All / Mine / Friends)
+  - Filter buttons at the top of the Notes tab
+  - "Mine" shows notes authored by you (including all your alts)
+  - "Friends" shows notes authored by other players
+  - "All" shows everything (default)
+  - Entry count updates to reflect active filter
+
+ [NEW] Alt Character Tracking
+  - Account-wide tracking of all your character names (auto-registered on login)
+  - "My Characters" section in Settings > General to view and manage the list
+  - Used by the Mine/Friends filter to correctly identify your alts
+
+ [NEW] Version Check
+  - Version check now broadcasts to guild and General channel on login
+  - Reaches more iWR users for out-of-date notifications
+
+ [NEW] Guild Watchlist Slider
+  - Guild watchlist entries now use the relation slider
+
+ [FIX] Retail Tooltip
+  - Fixed tooltip hook error on Retail/TWW (OnTooltipSetUnit removed)
+  - Uses TooltipDataProcessor on Retail, classic fallback preserved
+
+ [FIX] Database Tooltips
+  - All columns (Name, Level, Notes, Buttons) now show the same full tooltip
+  - Includes server, faction, type, note, author, date, personal status, and whisper hint
+
+ [FIX] Filter Button Separators
+  - Fixed color reset code leaking as visible "|r" text between filter buttons
+  - Added spacing between filter buttons for readability
+
+ Alpha Build History
+ ~~~~~~~~~~~~~~~~~~~
+  0.20.3.5 - Version check via guild and General channel, sync debug messages
+  0.20.3.4 - Retail tooltip fix (TooltipDataProcessor)
+  0.20.3.3 - Personal notes feature, database filters, alt character tracking
+  0.20.3.2 - Personal notes checkbox, sync protection, lock icon, filter buttons
+  0.20.3.1 - Guild watchlist slider
+  0.20.2.1 - Menu auto-fill on target change
+  0.20.2   - Faction backfill messages, friends list fix, chat icon guard
+
 v0.20.3
 --------------------------------------------------------------------------------
 
@@ -12,11 +62,6 @@ v0.20.3
   - Clear button (X) and ESC key to reset the filter
   - Entry count shows "X of Y entries" when filtered
   - Search filter resets automatically when opening the database
-
- Alpha Build History
- ~~~~~~~~~~~~~~~~~~~
-  0.20.2.1 - Menu auto-fill on target change
-  0.20.2   - Faction backfill messages, friends list fix, chat icon guard
 
 v0.20.0
 --------------------------------------------------------------------------------
