@@ -7,6 +7,8 @@
 -- ╚═╝  ╚══╝╚══╝  ╚══════╝
 -- ═════════════════════════
 
+local L = iWR.L
+local print = function(...) iWR:PrintToChat(...) end
 
 ----------------------------------------------------------------
 -- COMBAT STATE HANDLING

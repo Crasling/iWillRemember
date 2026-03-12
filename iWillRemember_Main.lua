@@ -26,7 +26,8 @@ iWR = LibStub("AceAddon-3.0"):NewAddon(
     "AceTimer-3.0",
     "AceHook-3.0"
 )
-L = LibStub("AceLocale-3.0"):GetLocale("iWR")
+local L = LibStub("AceLocale-3.0"):GetLocale("iWR")
+iWR.L = L
 LDBroker = LibStub("LibDataBroker-1.1")
 LDBIcon = LibStub("LibDBIcon-1.0")
 
@@ -134,6 +135,7 @@ iWR.SettingsDefault = {
     GoodLevels = 3,
     BadLevels = 2,
     GuildWatchlist = {},
+    ChatFrames = {},
 }
 
 -- Database entry template

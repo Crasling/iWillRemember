@@ -11,6 +11,9 @@
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                  Minimap button                                │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
+
+local L = iWR.L
+
 local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
     type = "data source",
     text = "iWillRemember",

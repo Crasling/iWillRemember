@@ -11,6 +11,8 @@
 -- │                              iWR Backup System                                │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 
+local L = iWR.L
+
 function iWR:BackupDatabase()
     -- Make a copy of the database for backup
     iWRDatabaseBackup = CopyTable(iWRDatabase)

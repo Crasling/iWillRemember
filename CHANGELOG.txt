@@ -2,6 +2,18 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.20.5 - Release
+--------------------------------------------------------------------------------
+
+ [NEW] Chat Output Routing
+  - Route addon messages to custom chat tabs (General always on)
+  - Chat Output settings section in General tab
+
+ [NEW] iCommunityChat Integration
+  - iCC promo tab added to settings panel
+
+ [CHANGED] Localization scoped to local variable (L no longer global)
+
 v0.20.4
 --------------------------------------------------------------------------------
 

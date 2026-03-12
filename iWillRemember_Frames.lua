@@ -10,6 +10,10 @@
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                      Frames                                    │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
+
+local L = iWR.L
+local print = function(...) iWR:PrintToChat(...) end
+
 -- Main Panel
 iWRPanel = iWR:CreateiWRStyleFrame(UIParent, 350, 284, {"CENTER", UIParent, "CENTER"})
 iWRPanel:Hide()
@@ -1262,7 +1266,7 @@ function iWR:PopulateDatabase()
                     listdisplayName = displayName .. " (*)"
                     displayName = displayName .. "-" .. data[7]
                 end
-                local databasekey = StripColorCodes(data[4]) .. "-" .. data[7]
+                local databasekey = playerName
 
                 -- Whisper helper for this row
                 local playerFaction = UnitFactionGroup("player")

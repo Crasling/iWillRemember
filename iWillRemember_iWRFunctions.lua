@@ -11,6 +11,26 @@
 -- │                                  iWR Functions                                 │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 
+local L = iWR.L
+
+-- ╭────────────────────────────────────────────────────────────────────────────────╮
+-- │                          Chat Frame Output Routing                            │
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
+
+function iWR:PrintToChat(...)
+    local msg = table.concat({tostringall(...)}, " ")
+    if ChatFrame1 then ChatFrame1:AddMessage(msg) end
+    local frames = iWRSettings and iWRSettings.ChatFrames or {}
+    for i = 2, NUM_CHAT_WINDOWS do
+        if frames[i] then
+            local cf = _G["ChatFrame" .. i]
+            if cf then cf:AddMessage(msg) end
+        end
+    end
+end
+
+local print = function(...) iWR:PrintToChat(...) end
+
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                              UTF-8 Safe Helpers                                │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
@@ -721,7 +741,7 @@ function iWR:SetTargetFrameDragonFlightUI()
     local dragonflight = true;
     if dragonflight then
         iWR:DebugMsg("Using Portrait Parent: " .. portraitParent:GetName(), 3)
-        
+
         -- Get the target's name and realm for database lookup
         local targetNameWithRealm = GetUnitName("target", true)
         local targetName = GetUnitName("target", false)

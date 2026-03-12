@@ -171,6 +171,15 @@ L["ISPPromoDesc"] = Colors.iWR .. "iSoundPlayer" .. Colors.Reset .. " is a custo
 L["ISPPromoLink"] = "Available on the CurseForge App and at curseforge.com/wow/addons/isoundplayer"
 L["TabINIFPromo"] = "iNeedIfYouNeed"
 L["TabISPPromo"] = "iSoundPlayer"
+L["TabICC"] = "iCC Settings"
+L["TabICCPromo"] = "iCommunityChat"
+L["ICCSettingsHeader"] = Colors.iWR .. "iCommunityChat Settings"
+L["ICCInstalledDesc1"] = Colors.iWR .. "iCommunityChat" .. Colors.Reset .. " is installed! You can access iCC settings from here."
+L["ICCInstalledDesc2"] = "|cFF808080Note: These settings are managed by iCC and will affect the iCC addon.|r"
+L["ICCOpenSettingsButton"] = "Open iCC Settings"
+L["ICCPromoHeader"] = Colors.iWR .. "iCommunityChat"
+L["ICCPromoDesc"] = Colors.iWR .. "iCommunityChat" .. Colors.Reset .. " is a cross-guild community addon. Create and manage custom communities with shared chat, roster, and ranks — beyond guild boundaries.\n\n" .. Colors.Reset .. "Your community, your chat."
+L["ICCPromoLink"] = "Available on the CurseForge App and at curseforge.com/wow/addons/icommunitychat"
 L["SidebarHeaderiWR"] = Colors.iWR .. "iWillRemember|r"
 L["SidebarHeaderOtherAddons"] = Colors.iWR .. "Other Addons|r"
 L["SetButton"] = "Set"
@@ -242,3 +251,9 @@ L["GuildWatchlistDefaultNote"] = "Auto-imported from guild: %s"
 -- │                                  Menu Slider                                   │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 L["SaveNote"] = "Save Note"
+
+-- ╭────────────────────────────────────────────────────────────────────────────────╮
+-- │                                Chat Output                                    │
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
+L["SectionChatOutput"] = "Chat Output"
+L["ChatFrameAlwaysOn"] = "(always on)"
