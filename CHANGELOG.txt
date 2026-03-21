@@ -2,6 +2,18 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.20.6 - Release
+--------------------------------------------------------------------------------
+
+ [FIX] Retail 12.0 secret string crash in right-click menu
+  - issecretvalue() guards added to MenuOpen and ModifyMenuForContext
+  - Prevents "attempt to compare a secret string value" error
+
+ [FIX] Cyrillic (Russian) character names now work for creating notes
+  - Increased name byte-length limit to support multi-byte UTF-8 names
+
+ [CHANGED] TBC version detection boundary updated (20500 split)
+
 v0.20.5 - Release
 --------------------------------------------------------------------------------
 

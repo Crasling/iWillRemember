@@ -203,7 +203,7 @@ function iWR:VerifyInputName(Name)
         and not string.find(verifyName, "%d")
         and not string.find(verifyName, " ")
         and #verifyName >= 3
-        and #verifyName <= 40
+        and #verifyName <= 80
     then
         return true
     end
@@ -1540,7 +1540,20 @@ function iWR:MenuOpen(menuName, classToken)
         iWRPanel:Show()
         local lookupName, lookupRealm
 
-        if menuName ~= "" and menuName and menuName ~= UnitName("target") then
+        -- Retail 12.0+: contextData values can be secret strings — treat as empty
+        local issv = _G.issecretvalue
+        if issv and menuName and issv(menuName) then
+            menuName = nil
+        end
+
+        local targetName = UnitName("target")
+        local targetIsSecret = issv and targetName and issv(targetName)
+        local namesMatch = false
+        if menuName and not targetIsSecret then
+            namesMatch = (menuName == targetName)
+        end
+
+        if menuName and menuName ~= "" and not namesMatch then
             if classToken then
                 iWRNameInput:SetText(iWR:ColorizePlayerNameByClass(menuName, classToken))
             else
@@ -1561,15 +1574,23 @@ function iWR:MenuOpen(menuName, classToken)
             iWRNoteInput:SetText(L["DefaultNoteInput"])
             if UnitExists("target") and UnitIsPlayer("target") then
                 local playerName = UnitName("target")
-                local _, class = UnitClass("target")
-                if class then
-                    iWRNameInput:SetText(iWR:ColorizePlayerNameByClass(playerName, class))
-                else
-                    iWRNameInput:SetText(playerName)
+                local nameIsSecret = issv and playerName and issv(playerName)
+                if not nameIsSecret then
+                    local _, class = UnitClass("target")
+                    if class then
+                        iWRNameInput:SetText(iWR:ColorizePlayerNameByClass(playerName, class))
+                    else
+                        iWRNameInput:SetText(playerName)
+                    end
+                    lookupName = playerName
+                    local targetRealm = select(2, UnitName("target"))
+                    local realmIsSecret = issv and targetRealm and issv(targetRealm)
+                    if not realmIsSecret then
+                        lookupRealm = (targetRealm and targetRealm ~= "") and targetRealm or iWR.CurrentRealm
+                    else
+                        lookupRealm = iWR.CurrentRealm
+                    end
                 end
-                lookupName = playerName
-                local targetRealm = select(2, UnitName("target"))
-                lookupRealm = (targetRealm and targetRealm ~= "") and targetRealm or iWR.CurrentRealm
             end
         end
 
@@ -1639,11 +1660,14 @@ function iWR:DatabaseOpen()
         iWRNoteInput:SetText(L["DefaultNoteInput"])
         if UnitExists("target") and UnitIsPlayer("target") then
             local playerName = UnitName("target")
-            local _, class = UnitClass("target")
-            if class then
-                iWRNameInput:SetText(iWR:ColorizePlayerNameByClass(playerName, class))
-            else
-                iWRNameInput:SetText(playerName)
+            local issv = _G.issecretvalue
+            if not (issv and playerName and issv(playerName)) then
+                local _, class = UnitClass("target")
+                if class then
+                    iWRNameInput:SetText(iWR:ColorizePlayerNameByClass(playerName, class))
+                else
+                    iWRNameInput:SetText(playerName)
+                end
             end
         end
     else
@@ -1887,6 +1911,17 @@ function iWR:ModifyMenuForContext(menuType)
         local playerName = contextData and contextData.name
         local playerRealm = contextData and contextData.realm
         local playerClass = nil
+
+        -- Retail 12.0+: contextData values can be secret strings — skip iWR menu entry
+        local issv = _G.issecretvalue
+        if issv then
+            if (playerName and issv(playerName)) or (playerRealm and issv(playerRealm)) then
+                return
+            end
+            if contextData and contextData.fullName and issv(contextData.fullName) then
+                return
+            end
+        end
 
         -- Try extracting realm from fullName (e.g., "Player-Realm")
         if not playerRealm and contextData and contextData.fullName then

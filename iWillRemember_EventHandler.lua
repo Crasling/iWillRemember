@@ -99,9 +99,9 @@ function iWR:OnEnable()
 
     print(
         L["iWRLoaded"] .. " " ..
-        iWR.GameVersionName ..
+        iWR.Colors.iWR .. iWR.GameVersionName ..
         iWR.Colors.Green .. " v" .. iWR.Version ..
-        iWR.Colors.iWR .. " Loaded."
+        iWR.Colors.Reset .. " Loaded."
     )
 
     ----------------------------------------------------------------

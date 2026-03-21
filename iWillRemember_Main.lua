@@ -462,7 +462,9 @@ elseif gameTocNumber > 40000 and gameTocNumber < 49999 then
     iWR.GameVersionName = "Classic Cata"
 elseif gameTocNumber > 30000 and gameTocNumber < 39999 then
     iWR.GameVersionName = "Classic WotLK"
-elseif gameTocNumber > 20000 and gameTocNumber < 29999 then
+elseif gameTocNumber >= 20500 and gameTocNumber < 30000 then
+    iWR.GameVersionName = "Anniversary TBC"
+elseif gameTocNumber >= 20000 and gameTocNumber < 20500 then
     iWR.GameVersionName = "Classic TBC"
 elseif gameTocNumber > 10000 and gameTocNumber < 19999 then
     iWR.GameVersionName = "Classic Era"
