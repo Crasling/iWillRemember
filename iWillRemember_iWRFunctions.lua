@@ -1107,7 +1107,11 @@ local function AddRelationshipIconToChat(self, event, message, author, flags, ..
         -- Check the database using the constructed key
         if iWRDatabase[databaseKey] and not message:find("|Haddon:iWR:") then
             -- Get the font size from the current chat frame
-            local font, fontSize = self:GetFont()
+            local fontSize = 14
+            if self and self.GetFont then
+                local _, fs = self:GetFont()
+                if fs then fontSize = fs end
+            end
             local iconSize = math.floor(fontSize * 1.2)
             local iconPath = iWR:GetChatIcon(iWRDatabase[databaseKey][2])
 
