@@ -563,6 +563,18 @@ function iWR:CreateOptionsPanel()
     -- ╰───────────────────────────────────────────────────────────────╯
     local y = -10
 
+    -- Language Settings (always in English so non-English users can find it)
+    if GetLocale() ~= "enUS" then
+        _, y = CreateSectionHeader(generalContent, iWR.Colors.iWR .. "Language Settings", y)
+
+        local cbForceEnglish
+        cbForceEnglish, y = CreateSettingsCheckbox(generalContent, "Force English",
+            "|cFF808080Forces the addon to use English text regardless of your game client language. Requires /reload to apply.|r",
+            y, "ForceEnglish")
+        checkboxRefs.ForceEnglish = cbForceEnglish
+        y = y - 4
+    end
+
     -- Display Settings
     _, y = CreateSectionHeader(generalContent, L["DisplaySettings"], y)
 
@@ -719,7 +731,7 @@ function iWR:CreateOptionsPanel()
     -- Remove dropdown
     local mcRemoveLabel = generalContent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     mcRemoveLabel:SetPoint("TOPLEFT", mcPanel, "TOPRIGHT", 20, -4)
-    mcRemoveLabel:SetText("Remove")
+    mcRemoveLabel:SetText(L["MyCharsRemove"])
 
     local mcRemoveDropdown = CreateFrame("Frame", "iWRDropdown_RemoveMyChar", generalContent, "UIDropDownMenuTemplate")
     mcRemoveDropdown:SetPoint("TOPLEFT", mcRemoveLabel, "BOTTOMLEFT", -20, -2)
@@ -1030,8 +1042,8 @@ function iWR:CreateOptionsPanel()
             for _ in pairs(iWRDatabaseBackup) do backupCount = backupCount + 1 end
         end
         dbStatsText:SetText(
-            iWR.Colors.iWR .. "Database Entries:|r " .. dbCount ..
-            "\n" .. iWR.Colors.iWR .. "Backup Entries:|r " .. backupCount
+            iWR.Colors.iWR .. L["DatabaseEntriesLabel"] .. "|r " .. dbCount ..
+            "\n" .. iWR.Colors.iWR .. L["BackupEntriesLabel"] .. "|r " .. backupCount
         )
     end
     UpdateDatabaseStats()
@@ -1555,6 +1567,11 @@ function iWR:CreateOptionsPanel()
     local translatorText = aboutContent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     translatorText:SetPoint("TOPLEFT", aboutContent, "TOPLEFT", 25, y)
     translatorText:SetText("|T" .. iWR.AddonPath .. "Images\\Locale\\ruRU.blp:16|t |cFFFFFF00ZamestoTV|r - " .. L["Russian"])
+    y = y - 18
+
+    local aiNote = aboutContent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    aiNote:SetPoint("TOPLEFT", aboutContent, "TOPLEFT", 25, y)
+    aiNote:SetText("|cFF808080" .. L["AITranslationNote"] .. "|r")
     y = y - 22
 
     -- Developer Section

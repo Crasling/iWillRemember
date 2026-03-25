@@ -251,9 +251,72 @@ L["GuildWatchlistDefaultNote"] = "Auto-imported from guild: %s"
 -- │                                  Menu Slider                                   │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 L["SaveNote"] = "Save Note"
+L["ClearButton"] = "Clear"
+L["EditButton"] = "Edit"
+L["RemoveButton"] = "Remove"
+L["PlayerNameHeader"] = "Player Name"
+L["NoteHeader"] = "Note"
+L["RelationLevelHeader"] = "Relation Level"
+L["PersonalCheckbox"] = "Personal (not shared)"
+L["PersonalDatabaseTitle"] = "iWillRemember Personal Database"
+L["CreateNote"] = "Create Note"
+L["OpenDatabase"] = "Open Database"
+L["FilterAll"] = "All"
+L["FilterMine"] = "Mine"
+L["FilterFriends"] = "Friends"
+L["EntriesCount"] = "%d entries"
+L["EntriesFiltered"] = "%d of %d entries"
+L["SearchPlaceholder"] = "Search..."
+L["HelpTooltipTitle"] = "How do I use iWillRemember"
+L["RightClickWhisper"] = "Right-click to whisper"
+
+-- Detail labels
+L["DetailName"] = "Name:"
+L["DetailType"] = "Type:"
+L["DetailNote"] = "Note:"
+L["DetailAuthor"] = "Author:"
+L["DetailDate"] = "Date:"
+L["DetailStatus"] = "Status:"
+L["DetailFaction"] = "Faction:"
+L["DetailServer"] = "Server:"
+L["DetailZone"] = "Zone:"
+L["DetailInstanceType"] = "Instance Type:"
+L["DetailPlayerDetails"] = "iWR: Player Details"
+L["DatabaseEntriesLabel"] = "Database Entries:"
+L["BackupEntriesLabel"] = "Backup Entries:"
+L["AITranslationNote"] = "Some texts have been AI translated and may not be fully accurate."
+L["MyCharsRemove"] = "Remove"
+L["StatusPersonal"] = "Personal"
+L["StatusShared"] = "Shared"
+
+-- Buttons
+L["ClearAllButton"] = "Clear All"
+L["ShareFullDBButton"] = "Share Full DB"
+
+-- Popups
+L["ClearDBConfirm"] = "Are you sure you want to clear the current iWR Database?|nThis is non-reversible."
+L["ClearDBSuccess"] = "[iWR]: Database cleared."
+L["ShareDBConfirm"] = "Are you sure you want to share the entire database?"
+L["ShareDBEmpty"] = "[iWR]: The database is empty. Nothing to share."
+L["ShareDBInitiated"] = "[iWR]: Full database sync process initiated. This can take up to a few minutes."
+L["RemoveConfirmCrossRealm"] = "Are you sure you want to remove |n|n[%s-%s" .. Colors.iWR .. "] |n|n from the iWR database?"
+L["RemoveConfirmSameRealm"] = "Are you sure you want to remove |n|n[%s" .. Colors.iWR .. "] |n|n from the iWR database?"
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                Chat Output                                    │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 L["SectionChatOutput"] = "Chat Output"
 L["ChatFrameAlwaysOn"] = "(always on)"
+L["LanguageSettings"] = Colors.iWR .. "Language Settings"
+L["ForceEnglish"] = "Force English"
+L["DescForceEnglish"] = "|cFF808080Forces the addon to use English text regardless of your game client language. Requires /reload to apply.|r"
+
+-- ╭────────────────────────────────────────────────────────────────────────────────╮
+-- │                          Save English Locale Copy                             │
+-- ╰────────────────────────────────────────────────────────────────────────────────╯
+-- Stored so ForceEnglish setting can restore English strings after ruRU overwrites them
+local EnglishLocale = {}
+for k, v in pairs(L) do
+    EnglishLocale[k] = v
+end
+_G.iWR_EnglishLocale = EnglishLocale

@@ -107,16 +107,16 @@ function iWR:OnEnable()
     ----------------------------------------------------------------
     -- TOOLTIP HOOK (SAFE AT ENABLE)
     ----------------------------------------------------------------
-    if TooltipDataProcessor then
-        -- Retail: OnTooltipSetUnit removed, use TooltipDataProcessor instead
+    local gameTocNumber = tonumber(iWR.GameTocVersion) or 0
+    if TooltipDataProcessor and gameTocNumber >= 100000 then
+        -- Retail 10.0+: OnTooltipSetUnit removed, use TooltipDataProcessor
         TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, function(tooltip, ...)
             if tooltip == GameTooltip then
                 iWR:AddNoteToGameTooltip(tooltip, ...)
             end
         end)
-        iWR:DebugMsg("Retail tooltip hook used (TooltipDataProcessor).", 3)
     else
-        -- Classic: use SecureHookScript with HookScript fallback
+        -- Classic / TBC / Wrath / Cata / MoP: use OnTooltipSetUnit
         local ok = pcall(function()
             self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
         end)
@@ -126,7 +126,6 @@ function iWR:OnEnable()
                     iWR:AddNoteToGameTooltip(tooltip, ...)
                 end)
             end)
-            iWR:DebugMsg("Fallback tooltip hook used.", 3)
         end
     end
 
@@ -143,6 +142,15 @@ function iWR:OnEnable()
     iWRSettings.MyCharacters[UnitName("player")] = true
 
     iWR:InitializeSettings()
+
+    -- Force English: restore English locale strings over any localized overrides
+    if iWRSettings.ForceEnglish and _G.iWR_EnglishLocale then
+        local L = iWR.L
+        for k, v in pairs(_G.iWR_EnglishLocale) do
+            L[k] = v
+        end
+    end
+
     iWR:InitializeDatabase()
     iWR:CreateOptionsPanel()
 

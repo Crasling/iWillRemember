@@ -266,16 +266,16 @@ function iWR:AddNoteToGameTooltip(self, ...)
 
     if note and note ~= "" then
         if #note <= 30 then
-            GameTooltip:AddLine("Note: " .. iWR.Colors[data[2]] .. note, 1, 0.82, 0) -- Add note in tooltip
+            GameTooltip:AddLine(L["DetailNote"] .. " " .. iWR.Colors[data[2]] .. note, 1, 0.82, 0) -- Add note in tooltip
         else
             local firstLine, secondLine = iWR:splitOnSpace(note, 30) -- Split text on the nearest space
-            GameTooltip:AddLine("Note: " .. iWR.Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
+            GameTooltip:AddLine(L["DetailNote"] .. " " .. iWR.Colors[data[2]] .. firstLine, 1, 0.82, 0) -- Add first line
             GameTooltip:AddLine(iWR.Colors[data[2]] .. secondLine, 1, 0.82, 0) -- Add second line
         end
     end
 
     if author and date and iWRSettings.TooltipShowAuthor then
-        GameTooltip:AddLine(iWR.Colors.Default .. "Author: " .. iWR.Colors[typeIndex] .. author .. iWR.Colors.Default .. " (" .. date .. ")")
+        GameTooltip:AddLine(iWR.Colors.Default .. L["DetailAuthor"] .. " " .. iWR.Colors[typeIndex] .. author .. iWR.Colors.Default .. " (" .. date .. ")")
     end
 end
 
@@ -343,7 +343,7 @@ function iWR:ShowNotificationPopup(matches)
             -- Add note text
             local noteText = notificationFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             noteText:SetPoint("TOP", playerInfo, "BOTTOM", 0, -5)
-            noteText:SetText("Note: " .. iWR.Colors.Yellow .. match.note .. "|r")
+            noteText:SetText(L["DetailNote"] .. " " .. iWR.Colors.Yellow .. match.note .. "|r")
             noteText:SetFont("Fonts\\FRIZQT__.TTF", 14, "OUTLINE")
 
             lastElement = noteText
@@ -1197,7 +1197,7 @@ function iWR:ShowDetailWindow(playerName)
         -- Add a title text
         local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
         titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
-        titleText:SetText(iWR.Colors.iWR .. "iWR: Player Details")
+        titleText:SetText(iWR.Colors.iWR .. L["DetailPlayerDetails"])
         titleText:SetTextColor(0.9, 0.9, 1, 1)
 
         -- Add a content frame for labels
@@ -1217,24 +1217,24 @@ function iWR:ShowDetailWindow(playerName)
     local detailsContent = {}
     local detailSign = data[2] > 0 and "+" or ""
     local detailTypeValue = detailSign .. data[2] .. " — " .. iWR:GetTypeName(data[2])
-    local statusValue = data[9] and (iWR.Colors.Gray .. "Personal") or (iWR.Colors.Green .. "Shared")
+    local statusValue = data[9] and (iWR.Colors.Gray .. L["StatusPersonal"]) or (iWR.Colors.Green .. L["StatusShared"])
     if data[7] and data[7] ~= iWR.CurrentRealm then
         detailsContent = {
-            {label = iWR.Colors.Default .. "Name:" .. iWR.Colors.Reset, value = data[4]..iWR.Colors.Reset.."-"..data[7]},
-            {label = iWR.Colors.Default .. "Type:" .. iWR.Colors[data[2]], value = detailTypeValue},
-            {label = iWR.Colors.Default .. "Note:" .. iWR.Colors[data[2]], value = data[1], isNote = true},
-            {label = iWR.Colors.Default .. "Author:" .. iWR.Colors.Reset, value = data[6]},
-            {label = iWR.Colors.Default .. "Date:", value = data[5]},
-            {label = iWR.Colors.Default .. "Status:", value = statusValue},
+            {label = iWR.Colors.Default .. L["DetailName"] .. iWR.Colors.Reset, value = data[4]..iWR.Colors.Reset.."-"..data[7]},
+            {label = iWR.Colors.Default .. L["DetailType"] .. iWR.Colors[data[2]], value = detailTypeValue},
+            {label = iWR.Colors.Default .. L["DetailNote"] .. iWR.Colors[data[2]], value = data[1], isNote = true},
+            {label = iWR.Colors.Default .. L["DetailAuthor"] .. iWR.Colors.Reset, value = data[6]},
+            {label = iWR.Colors.Default .. L["DetailDate"], value = data[5]},
+            {label = iWR.Colors.Default .. L["DetailStatus"], value = statusValue},
         }
     else
         detailsContent = {
-            {label = iWR.Colors.Default .. "Name:" .. iWR.Colors.Reset, value = data[4]},
-            {label = iWR.Colors.Default .. "Type:" .. iWR.Colors[data[2]], value = detailTypeValue},
-            {label = iWR.Colors.Default .. "Note:" .. iWR.Colors[data[2]], value = data[1], isNote = true},
-            {label = iWR.Colors.Default .. "Author:" .. iWR.Colors.Reset, value = data[6]},
-            {label = iWR.Colors.Default .. "Date:", value = data[5]},
-            {label = iWR.Colors.Default .. "Status:", value = statusValue},
+            {label = iWR.Colors.Default .. L["DetailName"] .. iWR.Colors.Reset, value = data[4]},
+            {label = iWR.Colors.Default .. L["DetailType"] .. iWR.Colors[data[2]], value = detailTypeValue},
+            {label = iWR.Colors.Default .. L["DetailNote"] .. iWR.Colors[data[2]], value = data[1], isNote = true},
+            {label = iWR.Colors.Default .. L["DetailAuthor"] .. iWR.Colors.Reset, value = data[6]},
+            {label = iWR.Colors.Default .. L["DetailDate"], value = data[5]},
+            {label = iWR.Colors.Default .. L["DetailStatus"], value = statusValue},
         }
     end
     for _, item in ipairs(detailsContent) do
@@ -1946,7 +1946,7 @@ function iWR:ModifyMenuForContext(menuType)
         -- Create UI elements
         rootDescription:CreateDivider()
         rootDescription:CreateTitle("iWillRemember")
-        rootDescription:CreateButton("Create Note", function()
+        rootDescription:CreateButton(L["CreateNote"], function()
             local fullEntryName = (playerRealm ~= iWR.CurrentRealm and playerRealm ~= "") and fullPlayerName or playerName
             iWR:MenuOpen(fullEntryName)
             iWR:DatabaseClose()

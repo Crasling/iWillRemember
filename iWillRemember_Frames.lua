@@ -83,7 +83,7 @@ menuContent:SetBackdropColor(0.08, 0.08, 0.1, 0.95)
 -- ╰───────────────────────────────────────────╯
 local playerNameTitle = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 playerNameTitle:SetPoint("TOP", menuContent, "TOP", 0, -10)
-playerNameTitle:SetText("|cFFCCCCCCPlayer Name|r")
+playerNameTitle:SetText("|cFFCCCCCC" .. L["PlayerNameHeader"] .. "|r")
 
 iWRNameInput = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
 iWRNameInput:SetSize(200, 25)
@@ -110,7 +110,7 @@ end)
 -- ╰───────────────────────────────────────────╯
 local noteTitle = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 noteTitle:SetPoint("TOP", iWRNameInput, "BOTTOM", 0, -8)
-noteTitle:SetText("|cFFCCCCCCNote|r")
+noteTitle:SetText("|cFFCCCCCC" .. L["NoteHeader"] .. "|r")
 
 iWRNoteInput = CreateFrame("EditBox", nil, menuContent, "InputBoxTemplate")
 iWRNoteInput:SetSize(280, 25)
@@ -132,7 +132,7 @@ helpIcon:SetNormalTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 
 helpIcon:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText("How do I use iWillRemember", 1, 0.85, 0.1)
+    GameTooltip:SetText(L["HelpTooltipTitle"], 1, 0.85, 0.1)
     GameTooltip:AddLine(L["HelpUse"], 1, 0.82, 0, true)
     GameTooltip:AddLine(L["HelpSync"], 1, 0.82, 0, true)
     GameTooltip:AddLine(L["HelpClear"], 1, 0.82, 0, true)
@@ -195,7 +195,7 @@ sliderSeparator:SetColorTexture(0.4, 0.4, 0.5, 0.4)
 -- "Relation Level" section header
 local sliderHeader = menuContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 sliderHeader:SetPoint("TOP", sliderSeparator, "BOTTOM", 0, -4)
-sliderHeader:SetText("|cFFCCCCCCRelation Level|r")
+sliderHeader:SetText("|cFFCCCCCC" .. L["RelationLevelHeader"] .. "|r")
 
 -- Type icon (left side, shows current relation level icon)
 local sliderIcon = menuContent:CreateTexture(nil, "ARTWORK")
@@ -413,7 +413,7 @@ end)
 
 local personalLabel = menuContent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 personalLabel:SetPoint("LEFT", personalCheckbox, "RIGHT", 0, 0)
-personalLabel:SetText("|cFF999999Personal (not shared)|r")
+personalLabel:SetText("|cFF999999" .. L["PersonalCheckbox"] .. "|r")
 
 function iWR:SetPersonalCheckbox(state)
     isPersonalNote = state and true or false
@@ -424,9 +424,9 @@ end
 -- │      Save Note Button                     │
 -- ╰──────────────────────────────────────────╯
 local saveNoteButton = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
-saveNoteButton:SetSize(100, 24)
-saveNoteButton:SetPoint("TOP", personalCheckbox, "BOTTOM", -26, -2)
 saveNoteButton:SetText(L["SaveNote"] or "Save Note")
+saveNoteButton:SetSize(math.max(100, saveNoteButton:GetTextWidth() + 24), 24)
+saveNoteButton:SetPoint("TOP", personalCheckbox, "BOTTOM", -26, -2)
 saveNoteButton:SetScript("OnClick", function()
     if currentSliderValue == 0 then
         iWR:ClearNote(iWRNameInput:GetText())
@@ -436,9 +436,9 @@ saveNoteButton:SetScript("OnClick", function()
 end)
 
 local clearNoteButton = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
-clearNoteButton:SetSize(100, 24)
+clearNoteButton:SetText(L["ClearButton"])
+clearNoteButton:SetSize(math.max(100, clearNoteButton:GetTextWidth() + 24), 24)
 clearNoteButton:SetPoint("LEFT", saveNoteButton, "RIGHT", 4, 0)
-clearNoteButton:SetText("Clear")
 clearNoteButton:SetScript("OnClick", function()
     iWR:ClearNote(iWRNameInput:GetText())
 end)
@@ -536,7 +536,7 @@ local function BuildSimpleMenu()
 
         local labelText
         if value == 0 then
-            labelText = iWR:GetTypeName(0) ~= "" and iWR:GetTypeName(0) or "Clear"
+            labelText = iWR:GetTypeName(0) ~= "" and iWR:GetTypeName(0) or L["ClearButton"]
         elseif value > 0 then
             labelText = "+" .. value
         else
@@ -600,7 +600,7 @@ iconTextureDB:SetTexture(iWR.Icons.Database)
 
 openDatabaseButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText("Open Database", 1, 0.82, 0)
+    GameTooltip:SetText(L["OpenDatabase"], 1, 0.82, 0)
     GameTooltip:Show()
 end)
 openDatabaseButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -733,7 +733,7 @@ dbTitleBar:SetBackdropColor(0.07, 0.07, 0.12, 1)
 -- Add title text
 local dbTitleText = dbTitleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 dbTitleText:SetPoint("CENTER", dbTitleBar, "CENTER", 0, 0)
-dbTitleText:SetText(iWR.Colors.iWR .. "iWillRemember Personal Database")
+dbTitleText:SetText(iWR.Colors.iWR .. L["PersonalDatabaseTitle"])
 dbTitleText:SetTextColor(0.9, 0.9, 1, 1)
 
 -- Create a close button for the database frame
@@ -814,7 +814,7 @@ dbSidebarButtons[1] = dbNotesBtn
 -- Entry count text (under Notes button)
 local dbEntryCount = dbSidebar:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 dbEntryCount:SetPoint("TOPLEFT", dbNotesBtn, "BOTTOMLEFT", 14, -2)
-dbEntryCount:SetText("|cFF8080800 entries|r")
+dbEntryCount:SetText("|cFF808080" .. string.format(L["EntriesCount"], 0) .. "|r")
 
 local dbGroupLogBtn = CreateSidebarButton(dbSidebar, L["GroupLogTab"] or "Group Log", 2, -52)
 dbSidebarButtons[2] = dbGroupLogBtn
@@ -837,7 +837,7 @@ local dbNoteFilter = "all" -- "all", "mine", "friends"
 -- Filter buttons (left side): All | Mine | Friends
 local filterButtons = {}
 local filterValues = {"all", "mine", "friends"}
-local filterLabels = {"All", "Mine", "Friends"}
+local filterLabels = {L["FilterAll"], L["FilterMine"], L["FilterFriends"]}
 
 local function UpdateFilterButtons()
     for i, btn in ipairs(filterButtons) do
@@ -896,7 +896,7 @@ dbSearchBox:SetFontObject(GameFontHighlight)
 
 local dbSearchPlaceholder = dbSearchBox:CreateFontString(nil, "ARTWORK", "GameFontDisable")
 dbSearchPlaceholder:SetPoint("LEFT", dbSearchBox, "LEFT", 8, 0)
-dbSearchPlaceholder:SetText("Search...")
+dbSearchPlaceholder:SetText(L["SearchPlaceholder"])
 
 -- Clear button (X) — appears when search has text
 local dbSearchClearBtn = CreateFrame("Button", nil, notesContainer)
@@ -1001,18 +1001,18 @@ dbScrollFrame:SetScrollChild(dbContainer)
 -- │      Create the "Clear All" Database Button      │
 -- ╰──────────────────────────────────────────────────╯
 local clearDatabaseButton = CreateFrame("Button", nil, notesContainer, "UIPanelButtonTemplate")
-clearDatabaseButton:SetSize(100, 30)
+clearDatabaseButton:SetText(L["ClearAllButton"])
+clearDatabaseButton:SetSize(math.max(100, clearDatabaseButton:GetTextWidth() + 24), 30)
 clearDatabaseButton:SetPoint("BOTTOM", notesContainer, "BOTTOM", -60, 10)
-clearDatabaseButton:SetText("Clear All")
 clearDatabaseButton:SetScript("OnClick", function()
     -- Confirm before clearing the database
     StaticPopupDialogs["CLEAR_DATABASE_CONFIRM"] = {
-        text = iWR.Colors.Red .. "Are you sure you want to clear the current iWR Database?|nThis is non-reversible.",
-        button1 = "Yes",
-        button2 = "No",
+        text = iWR.Colors.Red .. L["ClearDBConfirm"],
+        button1 = L["Yes"],
+        button2 = L["No"],
         OnAccept = function()
             iWRDatabase = {}
-            print(iWR.Colors.iWR .. "[iWR]: Database cleared.")
+            print(iWR.Colors.iWR .. L["ClearDBSuccess"])
             iWR:PopulateDatabase()
         end,
         timeout = 0,
@@ -1027,25 +1027,25 @@ end)
 -- │      Create the "Share Full DB" Button      │
 -- ╰─────────────────────────────────────────────╯
 local shareDatabaseButton = CreateFrame("Button", nil, notesContainer, "UIPanelButtonTemplate")
-shareDatabaseButton:SetSize(100, 30)
+shareDatabaseButton:SetText(L["ShareFullDBButton"])
+shareDatabaseButton:SetSize(math.max(100, shareDatabaseButton:GetTextWidth() + 24), 30)
 shareDatabaseButton:SetPoint("BOTTOM", notesContainer, "BOTTOM", 60, 10)
-shareDatabaseButton:SetText("Share Full DB")
 shareDatabaseButton:SetScript("OnClick", function()
     -- Check if the database is empty
     if not next(iWRDatabase) then
-        print(iWR.Colors.iWR .. "[iWR]: The database is empty. Nothing to share.")
+        print(iWR.Colors.iWR .. L["ShareDBEmpty"])
         return
     end
 
     -- Confirm before sharing the database
     StaticPopupDialogs["SHARE_DATABASE_CONFIRM"] = {
-        text = "Are you sure you want to share the entire database?",
-        button1 = "Yes",
-        button2 = "No",
+        text = L["ShareDBConfirm"],
+        button1 = L["Yes"],
+        button2 = L["No"],
         OnAccept = function()
             -- Function to share the full database
             iWR:SendFullDBUpdateToFriends()
-            print(iWR.Colors.iWR .. "[iWR]: Full database sync process initiated. This can take up to a few minutes.")
+            print(iWR.Colors.iWR .. L["ShareDBInitiated"])
         end,
         timeout = 0,
         whileDead = true,
@@ -1074,13 +1074,13 @@ function iWR:PopulateDatabase()
 
     if not dbContainer.col2 then
         dbContainer.col2 = CreateFrame("Frame", nil, dbContainer)
-        dbContainer.col2:SetSize(dbContainer:GetWidth() * 0.40, dbContainer:GetHeight())
+        dbContainer.col2:SetSize(dbContainer:GetWidth() * 0.35, dbContainer:GetHeight())
         dbContainer.col2:SetPoint("TOPLEFT", dbContainer.col1b, "TOPRIGHT", 0, 0)
     end
 
     if not dbContainer.col3 then
         dbContainer.col3 = CreateFrame("Frame", nil, dbContainer)
-        dbContainer.col3:SetSize(dbContainer:GetWidth() * 0.25, dbContainer:GetHeight())
+        dbContainer.col3:SetSize(dbContainer:GetWidth() * 0.30, dbContainer:GetHeight())
         dbContainer.col3:SetPoint("TOPLEFT", dbContainer.col2, "TOPRIGHT", 0, 0)
     end
 
@@ -1289,28 +1289,28 @@ function iWR:PopulateDatabase()
                     GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
                     GameTooltip:AddLine(listdisplayName, 1, 1, 1)
                     if data[7] then
-                        GameTooltip:AddLine("Server: " .. iWR.Colors.Reset .. data[7], 1, 0.82, 0)
+                        GameTooltip:AddLine(L["DetailServer"] .. " " .. iWR.Colors.Reset .. data[7], 1, 0.82, 0)
                     end
                     if data[8] and data[8] ~= "" then
-                        GameTooltip:AddLine("Faction: " .. iWR.Colors.Reset .. data[8], 1, 0.82, 0)
+                        GameTooltip:AddLine(L["DetailFaction"] .. " " .. iWR.Colors.Reset .. data[8], 1, 0.82, 0)
                     end
                     local ttSign = data[2] > 0 and "+" or ""
                     local ttColor = iWR.Colors[data[2]] or iWR.Colors.Default
-                    GameTooltip:AddLine("Type: " .. ttColor .. ttSign .. data[2] .. " — " .. iWR:GetTypeName(data[2]), 1, 0.82, 0)
+                    GameTooltip:AddLine(L["DetailType"] .. " " .. ttColor .. ttSign .. data[2] .. " — " .. iWR:GetTypeName(data[2]), 1, 0.82, 0)
                     if data[1] then
-                        GameTooltip:AddLine("Note: " .. iWR.Colors[data[2]] .. data[1], 1, 0.82, 0)
+                        GameTooltip:AddLine(L["DetailNote"] .. " " .. iWR.Colors[data[2]] .. data[1], 1, 0.82, 0)
                     end
                     if data[6] then
-                        GameTooltip:AddLine("Author: " .. data[6], 1, 0.82, 0)
+                        GameTooltip:AddLine(L["DetailAuthor"] .. " " .. data[6], 1, 0.82, 0)
                     end
                     if data[5] then
-                        GameTooltip:AddLine("Date: " .. data[5], 1, 0.82, 0)
+                        GameTooltip:AddLine(L["DetailDate"] .. " " .. data[5], 1, 0.82, 0)
                     end
                     if data[9] then
-                        GameTooltip:AddLine("Status: " .. iWR.Colors.Gray .. "Personal", 1, 0.82, 0)
+                        GameTooltip:AddLine(L["DetailStatus"] .. " " .. iWR.Colors.Gray .. L["StatusPersonal"], 1, 0.82, 0)
                     end
                     if canWhisper then
-                        GameTooltip:AddLine("|cFF808080Right-click to whisper|r", 0.5, 0.5, 0.5)
+                        GameTooltip:AddLine("|cFF808080" .. L["RightClickWhisper"] .. "|r", 0.5, 0.5, 0.5)
                     end
                     GameTooltip:Show()
                 end
@@ -1399,9 +1399,9 @@ function iWR:PopulateDatabase()
                 col3Frame.highlight = col3Highlight
 
                 local editButton = col3Frame.editButton or CreateFrame("Button", nil, col3Frame, "UIPanelButtonTemplate")
-                editButton:SetSize(50, 24)
+                editButton:SetText(L["EditButton"])
+                editButton:SetSize(math.max(50, editButton:GetTextWidth() + 20), 24)
                 editButton:SetPoint("LEFT", col3Frame, "LEFT", 10, 0)
-                editButton:SetText("Edit")
                 editButton:SetScript("OnClick", function()
                     -- Check if databaseKey[7] matches the current realm
                     if data[7] == iWR.CurrentRealm then
@@ -1423,20 +1423,20 @@ function iWR:PopulateDatabase()
                 col3Frame.editButton = editButton
 
                 local removeButton = col3Frame.removeButton or CreateFrame("Button", nil, col3Frame, "UIPanelButtonTemplate")
-                removeButton:SetSize(60, 24)
+                removeButton:SetText(L["RemoveButton"])
+                removeButton:SetSize(math.max(60, removeButton:GetTextWidth() + 20), 24)
                 removeButton:SetPoint("LEFT", editButton, "RIGHT", 10, 0)
-                removeButton:SetText("Remove")
                 removeButton:SetScript("OnClick", function()
                     local removeText
                     if iWRDatabase[databasekey][7] ~= iWR.CurrentRealm then
-                        removeText = iWR.Colors.iWR .. "Are you sure you want to remove" .. iWR.Colors.iWR .. " |n|n[" .. iWRDatabase[databasekey][4] .. "-" .. iWRDatabase[databasekey][7] .. iWR.Colors.iWR .. "]|n|n from the iWR database?"
+                        removeText = iWR.Colors.iWR .. string.format(L["RemoveConfirmCrossRealm"], iWRDatabase[databasekey][4], iWRDatabase[databasekey][7])
                     else
-                        removeText = iWR.Colors.iWR .. "Are you sure you want to remove" .. iWR.Colors.iWR .. " |n|n[" .. iWRDatabase[databasekey][4] .. iWR.Colors.iWR .. "]|n|n from the iWR database?"
+                        removeText = iWR.Colors.iWR .. string.format(L["RemoveConfirmSameRealm"], iWRDatabase[databasekey][4])
                     end
                     StaticPopupDialogs["REMOVE_PLAYER_CONFIRM"] = {
                         text = removeText,
-                        button1 = "Yes",
-                        button2 = "No",
+                        button1 = L["Yes"],
+                        button2 = L["No"],
                         OnAccept = function()
                             local wasPersonal = iWRDatabase[databasekey] and iWRDatabase[databasekey][9]
                             print(L["CharNoteStart"] .. iWRDatabase[databasekey][4]  .. L["CharNoteRemoved"])
@@ -1531,9 +1531,9 @@ function iWR:PopulateDatabase()
 
     -- Update entry count in sidebar
     if dbSearchFilter ~= "" or dbNoteFilter ~= "all" then
-        dbEntryCount:SetText("|cFF808080" .. filteredEntries .. " of " .. totalEntries .. " entries|r")
+        dbEntryCount:SetText("|cFF808080" .. string.format(L["EntriesFiltered"], filteredEntries, totalEntries) .. "|r")
     else
-        dbEntryCount:SetText("|cFF808080" .. totalEntries .. " entries|r")
+        dbEntryCount:SetText("|cFF808080" .. string.format(L["EntriesCount"], totalEntries) .. "|r")
     end
 end
 
@@ -1667,16 +1667,18 @@ function iWR:PopulateGroupLog()
 
             -- Add Note button
             local editBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-            editBtn:SetSize(75, 22)
-            editBtn:SetPoint("RIGHT", row, "RIGHT", -70, 0)
             editBtn:SetText(L["GroupLogAddNote"] or "Add Note")
+            editBtn:SetSize(math.max(75, editBtn:GetTextWidth() + 20), 22)
             row.editBtn = editBtn
 
             -- Dismiss button
             local dismissBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-            dismissBtn:SetSize(55, 22)
-            dismissBtn:SetPoint("RIGHT", row, "RIGHT", -10, 0)
             dismissBtn:SetText(L["GroupLogDismiss"] or "Dismiss")
+            dismissBtn:SetSize(math.max(55, dismissBtn:GetTextWidth() + 20), 22)
+
+            -- Anchor from the right: dismiss first, then editBtn to its left
+            dismissBtn:SetPoint("RIGHT", row, "RIGHT", -10, 0)
+            editBtn:SetPoint("RIGHT", dismissBtn, "LEFT", -4, 0)
             row.dismissBtn = dismissBtn
 
             glRowCache[displayIndex] = row
@@ -1733,11 +1735,11 @@ function iWR:PopulateGroupLog()
         row:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:AddLine(nameColor .. capturedEntry.name .. "-" .. capturedEntry.realm, 1, 1, 1)
-            GameTooltip:AddLine("Zone: " .. (capturedEntry.zone or "Unknown"), 1, 0.82, 0)
+            GameTooltip:AddLine(L["DetailZone"] .. " " .. (capturedEntry.zone or L["UnknownDate"]), 1, 0.82, 0)
             if capturedEntry.isInstance then
-                GameTooltip:AddLine("Instance Type: " .. (capturedEntry.instanceType or "none"), 1, 0.82, 0)
+                GameTooltip:AddLine(L["DetailInstanceType"] .. " " .. (capturedEntry.instanceType or "none"), 1, 0.82, 0)
             end
-            GameTooltip:AddLine("Date: " .. (capturedEntry.date or ""), 1, 0.82, 0)
+            GameTooltip:AddLine(L["DetailDate"] .. " " .. (capturedEntry.date or ""), 1, 0.82, 0)
             GameTooltip:Show()
         end)
         row:SetScript("OnLeave", function()

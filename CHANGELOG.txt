@@ -2,6 +2,28 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.21.0 - Release
+--------------------------------------------------------------------------------
+
+ [FIX] Whitelist sync bypass — new notes were sent to ALL online friends
+  regardless of sync mode. Now respects "Whitelist" / "All Friends" setting.
+
+ [FIX] Tooltip hook not working on Anniversary TBC
+  - TooltipDataProcessor gated to retail 10.0+ only
+  - Classic/TBC/Wrath/Cata/MoP use OnTooltipSetUnit as intended
+
+ [NEW] Russian localization complete (ruRU)
+  - AceLocale registration fix — Russian strings now load correctly
+  - All UI strings localized: menu, database, tooltips, popups, buttons
+  - AI-translated lines marked with "ИИ перевод" comment
+
+ [NEW] Force English option (non-English clients only)
+  - Checkbox at top of General settings tab
+  - Forces addon to display English text regardless of game language
+  - Requires /reload to apply
+
+ [CHANGED] TBC version detection boundary updated (20500 split)
+
 v0.20.7 - Release
 --------------------------------------------------------------------------------
 

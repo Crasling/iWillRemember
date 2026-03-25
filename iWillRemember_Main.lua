@@ -136,6 +136,7 @@ iWR.SettingsDefault = {
     BadLevels = 2,
     GuildWatchlist = {},
     ChatFrames = {},
+    ForceEnglish = false,
 }
 
 -- Database entry template

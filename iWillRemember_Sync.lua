@@ -177,28 +177,34 @@ end
 -- ╰────────────────────────────────────────────────────────╯
 function iWR:SendNewDBUpdateToFriends()
     if iWRSettings.DataSharing ~= false then
-        -- Initialize a table to track friends the data is sent to
         local friendsSentTo = {}
 
-        -- Loop through all friends in the friend list
-        for i = 1, C_FriendList.GetNumFriends() do
-            -- Get friend's info (which includes friendName and online status)
-            local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-            local friendName = friendInfo and friendInfo.name
-            local isOnline = friendInfo and friendInfo.connected
+        if iWRSettings.SyncType == "All Friends" then
+            -- Send to all online friends
+            for i = 1, C_FriendList.GetNumFriends() do
+                local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
+                local friendName = friendInfo and friendInfo.name
+                local isOnline = friendInfo and friendInfo.connected
 
-            -- Ensure friendName is valid and the friend is online before sending
-            if friendName and isOnline then
-                iWR:SendCommMessage("iWRNewDBUpdate", iWR.Cache.Data, "WHISPER", friendName)
-                table.insert(friendsSentTo, friendName)
-            elseif friendName and not isOnline then
-                -- Nothing
-            else
-                iWR:DebugMsg("No valid friend found at index " .. i .. ".", 1)
+                if friendName and isOnline then
+                    iWR:SendCommMessage("iWRNewDBUpdate", iWR.Cache.Data, "WHISPER", friendName)
+                    table.insert(friendsSentTo, friendName)
+                end
+            end
+        elseif iWRSettings.SyncType == "Whitelist" then
+            -- Send only to online whitelisted players
+            for _, syncEntry in ipairs(iWRSettings.SyncList or {}) do
+                if syncEntry.name then
+                    local friendInfo = C_FriendList.GetFriendInfo(syncEntry.name)
+                    local isOnline = friendInfo and friendInfo.connected
+                    if isOnline then
+                        iWR:SendCommMessage("iWRNewDBUpdate", iWR.Cache.Data, "WHISPER", syncEntry.name)
+                        table.insert(friendsSentTo, syncEntry.name)
+                    end
+                end
             end
         end
 
-        -- Generate a single debug message with all recipients
         if #friendsSentTo > 0 then
             local friendListString = table.concat(friendsSentTo, ", ")
             iWR:DebugMsg("Successfully shared new note to: " .. friendListString .. ".", 3)
