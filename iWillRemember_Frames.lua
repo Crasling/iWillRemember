@@ -429,7 +429,18 @@ saveNoteButton:SetSize(math.max(100, saveNoteButton:GetTextWidth() + 24), 24)
 saveNoteButton:SetPoint("TOP", personalCheckbox, "BOTTOM", -26, -2)
 saveNoteButton:SetScript("OnClick", function()
     if currentSliderValue == 0 then
-        iWR:ClearNote(iWRNameInput:GetText())
+        -- Only clear if the entry already exists; level 0 with no entry does nothing
+        local checkName = StripColorCodes(iWRNameInput:GetText() or "")
+        local checkRealm = iWR.CurrentRealm
+        if string.find(checkName, "-") then
+            checkName, checkRealm = strsplit("-", checkName)
+        end
+        if checkName and checkName ~= "" then
+            local cName, cRealm = iWR:FormatNameAndRealm(checkName, checkRealm)
+            if iWRDatabase[cName .. "-" .. cRealm] then
+                iWR:ClearNote(iWRNameInput:GetText())
+            end
+        end
     else
         iWR:AddNewNote(iWRNameInput:GetText(), iWRNoteInput:GetText(), currentSliderValue, isPersonalNote)
     end
@@ -1309,6 +1320,9 @@ function iWR:PopulateDatabase()
                     if data[9] then
                         GameTooltip:AddLine(L["DetailStatus"] .. " " .. iWR.Colors.Gray .. L["StatusPersonal"], 1, 0.82, 0)
                     end
+                    if data[10] and #data[10] > 0 then
+                        GameTooltip:AddLine("|cFF808080" .. L["LeftClickNotes"] .. "|r", 0.5, 0.5, 0.5)
+                    end
                     if canWhisper then
                         GameTooltip:AddLine("|cFF808080" .. L["RightClickWhisper"] .. "|r", 0.5, 0.5, 0.5)
                     end
@@ -1325,6 +1339,9 @@ function iWR:PopulateDatabase()
                 col1Frame:SetScript("OnMouseDown", function(self, button)
                     if button == "RightButton" then
                         WhisperPlayer()
+                    elseif historyCount > 0 then
+                        iWR.ExpandedEntries[databasekey] = not iWR.ExpandedEntries[databasekey]
+                        iWR:PopulateDatabase()
                     else
                         iWR:ShowDetailWindow(databasekey)
                     end
@@ -1366,8 +1383,11 @@ function iWR:PopulateDatabase()
                 local noteText = col2Frame.noteText or col2Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 noteText:SetPoint("LEFT", col2Frame, "LEFT", 10, 0)
                 local noteColor = iWR.Colors[data[2]] or iWR.Colors.Default
-                local truncatedNote = data[1] and #data[1] > 30 and data[1]:sub(1, 27) .. "..." or data[1] or ""
-                noteText:SetText(noteColor .. truncatedNote)
+                local historyCount = data[10] and #data[10] or 0
+                local maxNoteLen = historyCount > 0 and 20 or 30
+                local truncatedNote = data[1] and #data[1] > maxNoteLen and data[1]:sub(1, maxNoteLen - 3) .. "..." or data[1] or ""
+                local noteCountSuffix = historyCount > 0 and (iWR.Colors.Gray .. " " .. string.format(L["NotesCount"], historyCount + 1)) or ""
+                noteText:SetText(noteColor .. truncatedNote .. noteCountSuffix)
                 col2Frame.noteText = noteText
 
                 -- Tooltip and Click for Notes column
@@ -1380,6 +1400,10 @@ function iWR:PopulateDatabase()
                 col2Frame:SetScript("OnMouseDown", function(self, button)
                     if button == "RightButton" then
                         WhisperPlayer()
+                    elseif historyCount > 0 then
+                        -- Toggle expand/collapse for entries with note history
+                        iWR.ExpandedEntries[databasekey] = not iWR.ExpandedEntries[databasekey]
+                        iWR:PopulateDatabase()
                     else
                         iWR:ShowDetailWindow(databasekey)
                     end
@@ -1438,9 +1462,15 @@ function iWR:PopulateDatabase()
                         button1 = L["Yes"],
                         button2 = L["No"],
                         OnAccept = function()
-                            local wasPersonal = iWRDatabase[databasekey] and iWRDatabase[databasekey][9]
-                            print(L["CharNoteStart"] .. iWRDatabase[databasekey][4]  .. L["CharNoteRemoved"])
+                            local entry = iWRDatabase[databasekey]
+                            local wasPersonal = entry and entry[9]
+                            -- Tombstone all note timestamps so they don't return via sync
+                            if entry then
+                                iWR:TombstoneEntireEntry(databasekey, entry)
+                            end
+                            print(L["CharNoteStart"] .. entry[4] .. L["CharNoteRemoved"])
                             iWRDatabase[databasekey] = nil
+                            iWR.ExpandedEntries[databasekey] = nil
                             iWR:PopulateDatabase()
                             if not wasPersonal then
                                 iWR:SendRemoveRequestToFriends(databasekey)
@@ -1492,6 +1522,9 @@ function iWR:PopulateDatabase()
                 col1bFrame:SetScript("OnMouseDown", function(self, button)
                     if button == "RightButton" then
                         WhisperPlayer()
+                    elseif historyCount > 0 then
+                        iWR.ExpandedEntries[databasekey] = not iWR.ExpandedEntries[databasekey]
+                        iWR:PopulateDatabase()
                     else
                         iWR:ShowDetailWindow(databasekey)
                     end
@@ -1523,7 +1556,207 @@ function iWR:PopulateDatabase()
                     end
                 end)
 
+                -- Persistent expanded highlight on main row
+                local isExpanded = historyCount > 0 and iWR.ExpandedEntries[databasekey]
+                if not col1Frame.expandBg then
+                    col1Frame.expandBg = col1Frame:CreateTexture(nil, "BACKGROUND")
+                    col1Frame.expandBg:SetAllPoints()
+                end
+                if not col1bFrame.expandBg then
+                    col1bFrame.expandBg = col1bFrame:CreateTexture(nil, "BACKGROUND")
+                    col1bFrame.expandBg:SetAllPoints()
+                end
+                if not col2Frame.expandBg then
+                    col2Frame.expandBg = col2Frame:CreateTexture(nil, "BACKGROUND")
+                    col2Frame.expandBg:SetAllPoints()
+                end
+                if not col3Frame.expandBg then
+                    col3Frame.expandBg = col3Frame:CreateTexture(nil, "BACKGROUND")
+                    col3Frame.expandBg:SetAllPoints()
+                end
+                if isExpanded then
+                    col1Frame.expandBg:SetColorTexture(1, 0.59, 0.09, 0.12)
+                    col1Frame.expandBg:Show()
+                    col1bFrame.expandBg:SetColorTexture(1, 0.59, 0.09, 0.12)
+                    col1bFrame.expandBg:Show()
+                    col2Frame.expandBg:SetColorTexture(1, 0.59, 0.09, 0.12)
+                    col2Frame.expandBg:Show()
+                    col3Frame.expandBg:SetColorTexture(1, 0.59, 0.09, 0.12)
+                    col3Frame.expandBg:Show()
+                else
+                    col1Frame.expandBg:Hide()
+                    col1bFrame.expandBg:Hide()
+                    col2Frame.expandBg:Hide()
+                    col3Frame.expandBg:Hide()
+                end
+
                 yOffset = yOffset - 30
+
+                -- Expand/collapse sub-rows for note history
+                if historyCount > 0 and iWR.ExpandedEntries[databasekey] then
+                    local fullWidth = dbContainer.col1:GetWidth() + dbContainer.col1b:GetWidth() + dbContainer.col2:GetWidth() + dbContainer.col3:GetWidth()
+                    local capturedDbKey = databasekey
+
+                    -- Helper to create a history sub-row
+                    local function CreateHistoryRow(noteText, noteLevel, noteDate, noteAuthor, removeFunc)
+                        local subRow = CreateFrame("Frame", nil, dbContainer.col1)
+                        subRow:SetSize(fullWidth, 24)
+                        subRow:SetPoint("TOPLEFT", dbContainer.col1, "TOPLEFT", 0, yOffset)
+                        subRow:Show()
+                        table.insert(reusedFrames.col1, subRow)
+
+                        -- Background
+                        local subBg = subRow:CreateTexture(nil, "BACKGROUND")
+                        subBg:SetAllPoints()
+                        subBg:SetColorTexture(0.08, 0.08, 0.12, 0.7)
+
+                        -- Accent bar
+                        local accentBar = subRow:CreateTexture(nil, "ARTWORK")
+                        accentBar:SetSize(2, 18)
+                        accentBar:SetPoint("LEFT", subRow, "LEFT", 15, 0)
+                        local ar, ag, ab = 0.5, 0.5, 0.5
+                        if noteLevel > 0 then ar, ag, ab = 0, 0.8, 0
+                        elseif noteLevel < 0 then ar, ag, ab = 0.8, 0, 0 end
+                        accentBar:SetColorTexture(ar, ag, ab, 0.6)
+
+                        -- Author
+                        local authorFs = subRow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                        authorFs:SetPoint("LEFT", accentBar, "RIGHT", 6, 0)
+                        authorFs:SetText(noteAuthor or "")
+
+                        -- Level
+                        local lvlSign = noteLevel > 0 and "+" or ""
+                        local lvlColor = iWR.Colors[noteLevel] or iWR.Colors.Default
+                        local levelFs = subRow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                        levelFs:SetPoint("LEFT", subRow, "LEFT", dbContainer.col1:GetWidth(), 0)
+                        levelFs:SetText(lvlColor .. lvlSign .. noteLevel)
+
+                        -- Note
+                        local truncNote = noteText ~= "" and (#noteText > 35 and noteText:sub(1, 32) .. "..." or noteText) or ""
+                        local noteFs = subRow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                        noteFs:SetPoint("LEFT", subRow, "LEFT", dbContainer.col1:GetWidth() + dbContainer.col1b:GetWidth() + 10, 0)
+                        noteFs:SetWidth(dbContainer.col2:GetWidth() - 15)
+                        noteFs:SetJustifyH("LEFT")
+                        noteFs:SetText(lvlColor .. truncNote)
+
+                        -- Date
+                        local dateFs = subRow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                        dateFs:SetPoint("RIGHT", subRow, "RIGHT", -30, 0)
+                        dateFs:SetJustifyH("RIGHT")
+                        dateFs:SetText(iWR.Colors.Gray .. (noteDate or ""))
+
+                        -- Hover tooltip showing full note
+                        subRow:EnableMouse(true)
+                        subRow:SetScript("OnEnter", function(self)
+                            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                            local typeName = iWR:GetTypeName(noteLevel) or ""
+                            GameTooltip:AddLine(lvlColor .. lvlSign .. noteLevel .. " - " .. typeName, 1, 1, 1)
+                            if noteText ~= "" then
+                                GameTooltip:AddLine(lvlColor .. noteText, 1, 0.82, 0, true)
+                            end
+                            if noteAuthor and noteAuthor ~= "" then
+                                GameTooltip:AddLine(L["DetailAuthor"] .. " " .. noteAuthor, 0.5, 0.5, 0.5)
+                            end
+                            if noteDate and noteDate ~= "" then
+                                GameTooltip:AddLine(L["DetailDate"] .. " " .. noteDate, 0.5, 0.5, 0.5)
+                            end
+                            GameTooltip:Show()
+                        end)
+                        subRow:SetScript("OnLeave", function()
+                            GameTooltip:Hide()
+                        end)
+
+                        -- Remove "x" button (far right)
+                        local xBtn = CreateFrame("Button", nil, subRow)
+                        xBtn:SetSize(16, 16)
+                        xBtn:SetPoint("RIGHT", subRow, "RIGHT", -8, 0)
+                        local xFs = xBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                        xFs:SetPoint("CENTER")
+                        xFs:SetText(iWR.Colors.Gray .. "x")
+                        xBtn:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight")
+                        xBtn:SetScript("OnEnter", function() xFs:SetText("|cFFFF4444x") end)
+                        xBtn:SetScript("OnLeave", function() xFs:SetText(iWR.Colors.Gray .. "x") end)
+                        xBtn:SetScript("OnClick", function()
+                            StaticPopupDialogs["IWR_REMOVE_HISTORY_NOTE"] = {
+                                text = iWR.Colors.iWR .. L["RemoveNoteConfirm"],
+                                button1 = L["Yes"],
+                                button2 = L["No"],
+                                OnAccept = removeFunc,
+                                timeout = 0,
+                                whileDead = true,
+                                hideOnEscape = true,
+                                preferredIndex = 3,
+                            }
+                            StaticPopup_Show("IWR_REMOVE_HISTORY_NOTE")
+                        end)
+
+                        yOffset = yOffset - 24
+                    end
+
+                    -- Header row: "Notes for [PlayerName]"
+                    local headerRow = CreateFrame("Frame", nil, dbContainer.col1)
+                    headerRow:SetSize(fullWidth, 20)
+                    headerRow:SetPoint("TOPLEFT", dbContainer.col1, "TOPLEFT", 0, yOffset)
+                    headerRow:Show()
+                    table.insert(reusedFrames.col1, headerRow)
+
+                    local headerBg = headerRow:CreateTexture(nil, "BACKGROUND")
+                    headerBg:SetAllPoints()
+                    headerBg:SetColorTexture(0.12, 0.1, 0.05, 0.8)
+
+                    local headerText = headerRow:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                    headerText:SetPoint("LEFT", headerRow, "LEFT", 18, 0)
+                    headerText:SetText(iWR.Colors.iWR .. "--- " .. L["NotesHistory"] .. ": " .. (data[4] or "") .. iWR.Colors.iWR .. " " .. iWR.Colors.Gray .. string.format(L["NotesCount"], historyCount + 1) .. iWR.Colors.iWR .. " ---")
+                    yOffset = yOffset - 20
+
+                    -- Latest note (current, from fields [1]-[6]) — with remove that promotes next
+                    CreateHistoryRow(data[1] or "", data[2] or 0, data[5] or "", data[6] or "", function()
+                        local entry = iWRDatabase[capturedDbKey]
+                        if entry then
+                            -- Tombstone the deleted note's timestamp
+                            if entry[3] then
+                                entry[11] = entry[11] or {}
+                                entry[11][entry[3]] = true
+                            end
+                            if entry[10] and #entry[10] > 0 then
+                                -- Promote the most recent history entry to current
+                                local promoted = table.remove(entry[10], #entry[10])
+                                entry[1] = promoted[1] -- note
+                                entry[2] = promoted[2] -- level
+                                entry[3] = promoted[3] -- timestamp
+                                entry[5] = promoted[4] -- date
+                                entry[6] = promoted[5] -- author
+                                if #entry[10] == 0 then entry[10] = nil end
+                            else
+                                -- Only one note left, remove entire entry
+                                iWRDatabase[capturedDbKey] = nil
+                                iWR.ExpandedEntries[capturedDbKey] = nil
+                            end
+                            iWR:PopulateDatabase()
+                            iWR:UpdateTargetFrame()
+                        end
+                    end)
+
+                    -- History entries (oldest to newest = bottom to top)
+                    for hi = #data[10], 1, -1 do
+                        local h = data[10][hi]
+                        local capturedHi = hi
+                        local capturedTimestamp = h[3]
+                        CreateHistoryRow(h[1] or "", h[2] or 0, h[4] or "", h[5] or "", function()
+                            local entry = iWRDatabase[capturedDbKey]
+                            if entry and entry[10] then
+                                -- Tombstone the deleted note's timestamp
+                                if capturedTimestamp then
+                                    entry[11] = entry[11] or {}
+                                    entry[11][capturedTimestamp] = true
+                                end
+                                table.remove(entry[10], capturedHi)
+                                if #entry[10] == 0 then entry[10] = nil end
+                            end
+                            iWR:PopulateDatabase()
+                        end)
+                    end
+                end
             end
         end
     end

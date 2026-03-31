@@ -277,6 +277,12 @@ function iWR:AddNoteToGameTooltip(self, ...)
     if author and date and iWRSettings.TooltipShowAuthor then
         GameTooltip:AddLine(iWR.Colors.Default .. L["DetailAuthor"] .. " " .. iWR.Colors[typeIndex] .. author .. iWR.Colors.Default .. " (" .. date .. ")")
     end
+
+    -- Show note count if there is history
+    local historyCount = data[10] and #data[10] or 0
+    if historyCount > 0 then
+        GameTooltip:AddLine(iWR.Colors.Gray .. string.format(L["NotesCount"], historyCount + 1) .. "|r")
+    end
 end
 
 -- ╭─────────────────────────────────────╮
@@ -1253,6 +1259,54 @@ function iWR:ShowDetailWindow(playerName)
         end
     end
 
+    -- Note History section
+    if data[10] and #data[10] > 0 then
+        yOffset = yOffset - 5
+        -- Separator line
+        local separator = self.detailContent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        separator:SetPoint("TOPLEFT", self.detailContent, "TOPLEFT", 10, yOffset)
+        separator:SetWidth(270)
+        separator:SetText(iWR.Colors.iWR .. "--- " .. L["NotesHistory"] .. " " .. iWR.Colors.Gray .. string.format(L["NotesCount"], #data[10] + 1) .. iWR.Colors.iWR .. " ---")
+        separator:Show()
+        table.insert(self.detailRows, separator)
+        yOffset = yOffset - 18
+
+        -- Iterate history from newest to oldest
+        for i = #data[10], 1, -1 do
+            local h = data[10][i]
+            local hNote = h[1] or ""
+            local hLevel = h[2] or 0
+            local hDate = h[4] or ""
+            local hAuthor = h[5] or ""
+            local hSign = hLevel > 0 and "+" or ""
+            local hTypeName = iWR:GetTypeName(hLevel)
+
+            -- Date + relation level header
+            local headerRow = self.detailContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            headerRow:SetPoint("TOPLEFT", self.detailContent, "TOPLEFT", 15, yOffset)
+            headerRow:SetWidth(260)
+            headerRow:SetText(iWR.Colors.Gray .. hDate .. "  " .. iWR.Colors[hLevel] .. hSign .. hLevel .. " — " .. hTypeName .. "  " .. iWR.Colors.Gray .. hAuthor)
+            headerRow:Show()
+            table.insert(self.detailRows, headerRow)
+            yOffset = yOffset - 14
+
+            -- Note text
+            if hNote ~= "" then
+                local noteRow = self.detailContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                noteRow:SetPoint("TOPLEFT", self.detailContent, "TOPLEFT", 20, yOffset)
+                noteRow:SetWidth(250)
+                noteRow:SetWordWrap(true)
+                noteRow:SetText(iWR.Colors[hLevel] .. hNote)
+                noteRow:Show()
+                table.insert(self.detailRows, noteRow)
+                local noteHeight = noteRow:GetStringHeight()
+                yOffset = yOffset - noteHeight - 6
+            else
+                yOffset = yOffset - 4
+            end
+        end
+    end
+
     -- Edit & Remove buttons
     if not self.detailEditBtn then
         self.detailEditBtn = CreateFrame("Button", nil, self.detailContent, "UIPanelButtonTemplate")
@@ -1284,7 +1338,12 @@ function iWR:ShowDetailWindow(playerName)
             button1 = "Yes",
             button2 = "No",
             OnAccept = function()
+                local entry = iWRDatabase[capturedKey]
+                if entry then
+                    iWR:TombstoneEntireEntry(capturedKey, entry)
+                end
                 iWRDatabase[capturedKey] = nil
+                iWR.ExpandedEntries[capturedKey] = nil
                 self.detailFrame:Hide()
                 iWR:PopulateDatabase()
                 iWR:UpdateTargetFrame()
@@ -1758,9 +1817,13 @@ function iWR:ClearNote(Name)
         -- Capture personal flag before deletion
         local wasPersonal = iWRDatabase[databaseKey][9]
 
+        -- Tombstone all note timestamps so they don't return via sync
+        iWR:TombstoneEntireEntry(databaseKey, iWRDatabase[databaseKey])
+
         -- Remove the entry from the iWR database
         print(L["CharNoteStart"] .. iWRDatabase[databaseKey][4] .. L["CharNoteRemoved"])
         iWRDatabase[databaseKey] = nil
+        iWR.ExpandedEntries[databaseKey] = nil
 
         -- Repopulate and update the target frame
         iWR:PopulateDatabase()
@@ -1774,6 +1837,222 @@ function iWR:ClearNote(Name)
         -- Notify that the name was not found in the database
         print(L["DBNameNotFound1"] .. databaseKey .. L["DBNameNotFound2"])
         iWR:DebugMsg("Deletion failed, key not found: " .. databaseKey, 1)
+    end
+end
+
+-- ╭──────────────────────────────────────╮
+-- │   Function: Tombstone Entire Entry  │
+-- ╰──────────────────────────────────────╯
+-- When a player is fully removed, tombstone all their note timestamps
+-- in iWRSettings.DeletedEntries so sync doesn't resurrect them.
+function iWR:TombstoneEntireEntry(databaseKey, entry)
+    if not entry then return end
+    iWRSettings.DeletedEntries = iWRSettings.DeletedEntries or {}
+
+    local deletedAt = iWR:GetCurrentTimeByHours()
+    local timestamps = {}
+
+    -- Tombstone the current note
+    if entry[3] then
+        timestamps[entry[3]] = true
+    end
+
+    -- Tombstone all history notes
+    if entry[10] then
+        for _, h in ipairs(entry[10]) do
+            if h[3] then timestamps[h[3]] = true end
+        end
+    end
+
+    -- Also include any existing per-entry tombstones
+    if entry[11] then
+        for ts in pairs(entry[11]) do
+            timestamps[ts] = true
+        end
+    end
+
+    if next(timestamps) then
+        iWRSettings.DeletedEntries[databaseKey] = {
+            timestamps = timestamps,
+            deletedAt = deletedAt,
+        }
+    end
+end
+
+-- Check if an incoming sync entry has all notes tombstoned (fully deleted locally)
+function iWR:IsEntryFullyTombstoned(databaseKey, entry)
+    if not iWRSettings.DeletedEntries or not iWRSettings.DeletedEntries[databaseKey] then
+        return false
+    end
+    local tombData = iWRSettings.DeletedEntries[databaseKey]
+    local deletedAt = tombData.deletedAt or 0
+    local timestamps = tombData.timestamps or {}
+
+    -- If any note in the incoming entry is NEWER than our deletion, accept it entirely
+    if entry[3] and entry[3] > deletedAt then
+        -- Sender created a note after we deleted — clear tombstones and accept
+        iWRSettings.DeletedEntries[databaseKey] = nil
+        return false
+    end
+    if entry[10] then
+        for _, h in ipairs(entry[10]) do
+            if h[3] and h[3] > deletedAt then
+                iWRSettings.DeletedEntries[databaseKey] = nil
+                return false
+            end
+        end
+    end
+
+    -- All notes are older than our deletion — check if they're tombstoned
+    if entry[3] and not timestamps[entry[3]] then
+        return false -- has a note we haven't specifically tombstoned
+    end
+    if entry[10] then
+        for _, h in ipairs(entry[10]) do
+            if h[3] and not timestamps[h[3]] then
+                return false
+            end
+        end
+    end
+
+    return true -- all notes are tombstoned or older than deletion
+end
+
+-- Apply global tombstones to an incoming entry, removing tombstoned notes
+function iWR:ApplyGlobalTombstones(databaseKey, entry)
+    if not iWRSettings.DeletedEntries or not iWRSettings.DeletedEntries[databaseKey] then
+        return entry
+    end
+    local tombData = iWRSettings.DeletedEntries[databaseKey]
+    local deletedAt = tombData.deletedAt or 0
+    local timestamps = tombData.timestamps or {}
+
+    -- If any note is newer than our deletion time, clear tombstones and accept fully
+    local hasNewerNote = false
+    if entry[3] and entry[3] > deletedAt then hasNewerNote = true end
+    if not hasNewerNote and entry[10] then
+        for _, h in ipairs(entry[10]) do
+            if h[3] and h[3] > deletedAt then hasNewerNote = true; break end
+        end
+    end
+    if hasNewerNote then
+        iWRSettings.DeletedEntries[databaseKey] = nil
+        return entry
+    end
+
+    -- Merge global tombstones into the entry's [11]
+    entry[11] = entry[11] or {}
+    for ts in pairs(timestamps) do
+        entry[11][ts] = true
+    end
+
+    -- Filter out tombstoned history notes
+    if entry[10] then
+        local filtered = {}
+        for _, h in ipairs(entry[10]) do
+            if not (h[3] and timestamps[h[3]]) then
+                table.insert(filtered, h)
+            end
+        end
+        entry[10] = #filtered > 0 and filtered or nil
+    end
+
+    -- If the current note is tombstoned, promote from history or return nil
+    if entry[3] and timestamps[entry[3]] then
+        if entry[10] and #entry[10] > 0 then
+            local promoted = table.remove(entry[10], #entry[10])
+            entry[1] = promoted[1]
+            entry[2] = promoted[2]
+            entry[3] = promoted[3]
+            entry[5] = promoted[4]
+            entry[6] = promoted[5]
+            if #entry[10] == 0 then entry[10] = nil end
+        else
+            return nil -- all notes tombstoned, don't add to DB
+        end
+    end
+
+    return entry
+end
+
+-- ╭──────────────────────────────────────╮
+-- │   Function: Merge Note History      │
+-- ╰──────────────────────────────────────╯
+-- Merges note histories from two entries for the same player (used in sync).
+-- The newerEntry's [1]-[6] and [10] are updated in-place with the merged result.
+function iWR:MergeNoteHistory(olderEntry, newerEntry)
+    if not olderEntry or not newerEntry then return end
+
+    -- Merge tombstones from both entries: [11] = { [timestamp] = true }
+    local tombstones = {}
+    if olderEntry[11] then
+        for ts in pairs(olderEntry[11]) do tombstones[ts] = true end
+    end
+    if newerEntry[11] then
+        for ts in pairs(newerEntry[11]) do tombstones[ts] = true end
+    end
+
+    -- Collect all notes from both entries: {note, relation, timestamp, date, author}
+    local allNotes = {}
+    local seen = {} -- deduplicate by timestamp
+
+    -- Helper to add a note if not duplicate and not tombstoned
+    local function addNote(note, relation, timestamp, date, author)
+        if not timestamp then return end
+        local key = tostring(timestamp)
+        if not seen[key] and not tombstones[timestamp] then
+            seen[key] = true
+            table.insert(allNotes, { note or "", relation or 0, timestamp, date or "", author or "" })
+        end
+    end
+
+    -- Add current notes from both entries
+    addNote(olderEntry[1], olderEntry[2], olderEntry[3], olderEntry[5], olderEntry[6])
+    addNote(newerEntry[1], newerEntry[2], newerEntry[3], newerEntry[5], newerEntry[6])
+
+    -- Add history from both entries
+    if olderEntry[10] then
+        for _, h in ipairs(olderEntry[10]) do
+            addNote(h[1], h[2], h[3], h[4], h[5])
+        end
+    end
+    if newerEntry[10] then
+        for _, h in ipairs(newerEntry[10]) do
+            addNote(h[1], h[2], h[3], h[4], h[5])
+        end
+    end
+
+    -- Sort by timestamp ascending (oldest first)
+    table.sort(allNotes, function(a, b) return a[3] < b[3] end)
+
+    -- Cap at MAX_NOTES_PER_PLAYER
+    local maxNotes = iWR.CONSTANTS.MAX_NOTES_PER_PLAYER
+    while #allNotes > maxNotes do
+        table.remove(allNotes, 1) -- remove oldest
+    end
+
+    -- Latest note goes into [1]-[6], rest into [10]
+    local latest = table.remove(allNotes) -- pop the newest
+    if latest then
+        newerEntry[1] = latest[1]
+        newerEntry[2] = latest[2]
+        newerEntry[3] = latest[3]
+        newerEntry[5] = latest[4]
+        newerEntry[6] = latest[5]
+    end
+
+    -- Remaining notes become history
+    if #allNotes > 0 then
+        newerEntry[10] = allNotes
+    else
+        newerEntry[10] = nil
+    end
+
+    -- Store merged tombstones, clean up stale ones (only keep tombstones for timestamps that matter)
+    if next(tombstones) then
+        newerEntry[11] = tombstones
+    else
+        newerEntry[11] = nil
     end
 end
 
@@ -1828,6 +2107,12 @@ function iWR:CreateNote(Name, Note, Type, personal)
     local databaseKey = capitalizedName .. "-" .. capitalizedRealm
     iWR:DebugMsg("Formatted database key: " .. databaseKey, 3)
 
+    -- Clear global tombstones if user is intentionally creating a note for this player
+    if iWRSettings.DeletedEntries and iWRSettings.DeletedEntries[databaseKey] then
+        iWRSettings.DeletedEntries[databaseKey] = nil
+        iWR:DebugMsg("Cleared tombstones for " .. databaseKey .. " (user created new note).", 3)
+    end
+
     -- Determine display name with color
     local dbName = ""
     local noClass = false
@@ -1867,6 +2152,26 @@ function iWR:CreateNote(Name, Note, Type, personal)
         personalFlag = existingData[9]
     end
 
+    -- Archive existing note into history before overwriting
+    local history = nil
+    if playerUpdate and existingData[1] then
+        history = existingData[10] or {}
+        -- Push current note into history: {note, relation, timestamp, date, author}
+        table.insert(history, {
+            existingData[1],  -- note text
+            existingData[2],  -- relation level at that time
+            existingData[3],  -- timestamp
+            existingData[5],  -- date
+            existingData[6],  -- author
+        })
+        -- Enforce max history size (MAX_NOTES_PER_PLAYER - 1, since current note is separate)
+        local maxHistory = iWR.CONSTANTS.MAX_NOTES_PER_PLAYER - 1
+        while #history > maxHistory do
+            table.remove(history, 1) -- remove oldest
+        end
+        if #history == 0 then history = nil end
+    end
+
     -- Save to the database
     iWRDatabase[databaseKey] = {
         Note,               -- [1]: Note text
@@ -1876,8 +2181,10 @@ function iWR:CreateNote(Name, Note, Type, personal)
         currentDate,        -- [5]: Date
         noteAuthor,         -- [6]: Author
         capitalizedRealm,   -- [7]: Realm
-        noteFaction,        -- [8]: Faction
-        personalFlag or nil -- [9]: Personal flag (true = not shared)
+        noteFaction ~= "" and noteFaction or (existingData[8] or ""), -- [8]: Faction (preserve existing)
+        personalFlag or nil, -- [9]: Personal flag (true = not shared)
+        history,            -- [10]: Notes history (nil if single note)
+        existingData[11] or nil, -- [11]: Tombstones (preserved from existing entry)
     }
 
     -- Update target frame
@@ -1892,7 +2199,14 @@ function iWR:CreateNote(Name, Note, Type, personal)
     end
 
     -- Print confirmation message
-    local updateMessage = playerUpdate and L["CharNoteUpdated"] or L["CharNoteCreated"]
+    local updateMessage
+    if playerUpdate and history then
+        updateMessage = L["CharNoteAppended"]
+    elseif playerUpdate then
+        updateMessage = L["CharNoteUpdated"]
+    else
+        updateMessage = L["CharNoteCreated"]
+    end
     local missingInfo = ""
     if noClass then missingInfo = missingInfo .. iWR.Colors.iWR .. L["CharNoteClassMissing"] end
     if noFaction then missingInfo = missingInfo .. iWR.Colors.iWR .. L["CharNoteFactionMissing"] end

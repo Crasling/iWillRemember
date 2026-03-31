@@ -172,6 +172,15 @@ function iWR:SendRemoveRequestToFriends(name)
     end
 end
 
+-- Send a remove request to a specific player (used during sync when tombstoned entries are detected)
+function iWR:SendRemoveRequestToPlayer(databaseKey, targetName)
+    if iWRSettings.DataSharing == false then return end
+    if not targetName then return end
+    local data = iWR:Serialize(databaseKey)
+    iWR:SendCommMessage("iWRRemDBUpdate", data, "WHISPER", targetName)
+    iWR:DebugMsg("Sent tombstone remove request for " .. databaseKey .. " to " .. targetName, 3)
+end
+
 -- ╭────────────────────────────────────────────────────────╮
 -- │      Function: Sending Latest Note to Friendslist      │
 -- ╰────────────────────────────────────────────────────────╯
@@ -374,12 +383,23 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
                     for k, v in pairs(FullNotesTable) do
                         if iWRDatabase[k] and iWRDatabase[k][9] then
                             iWR:DebugMsg("Skipped full sync for " .. k .. " (personal note protected).", 3)
+                        elseif iWR:IsEntryFullyTombstoned(k, v) then
+                            iWR:DebugMsg("Skipped full sync for " .. k .. " (all notes tombstoned). Sending remove request back to " .. sender, 3)
+                            iWR:SendRemoveRequestToPlayer(k, sender)
                         elseif iWRDatabase[k] then
+                            -- Merge note histories from both sides
                             if iWR:IsNeedToUpdate(iWRDatabase[k][3], v[3]) then
+                                iWR:MergeNoteHistory(iWRDatabase[k], v)
                                 iWRDatabase[k] = v
+                            else
+                                iWR:MergeNoteHistory(v, iWRDatabase[k])
                             end
                         else
-                            iWRDatabase[k] = v
+                            -- New entry from sync — check global tombstones
+                            v = iWR:ApplyGlobalTombstones(k, v)
+                            if v then
+                                iWRDatabase[k] = v
+                            end
                         end
                     end
                     iWR:UpdateTargetFrame()
@@ -422,8 +442,25 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
                 -- Don't overwrite personal notes with incoming sync data
                 if iWRDatabase[k] and iWRDatabase[k][9] then
                     iWR:DebugMsg("Skipped sync for " .. k .. " (personal note protected).", 3)
+                elseif iWR:IsEntryFullyTombstoned(k, v) then
+                    iWR:DebugMsg("Skipped sync for " .. k .. " (all notes tombstoned). Sending remove request back to " .. sender, 3)
+                    iWR:SendRemoveRequestToPlayer(k, sender)
+                elseif iWRDatabase[k] then
+                    -- Merge note histories
+                    if iWR:IsNeedToUpdate(iWRDatabase[k][3], v[3]) then
+                        iWR:MergeNoteHistory(iWRDatabase[k], v)
+                        iWRDatabase[k] = v
+                    else
+                        iWR:MergeNoteHistory(v, iWRDatabase[k])
+                    end
                 else
-                    iWRDatabase[k] = v
+                    -- New entry from sync — check global tombstones
+                    v = iWR:ApplyGlobalTombstones(k, v)
+                    if not v then
+                        iWR:DebugMsg("Skipped sync for " .. k .. " (notes filtered by tombstones).", 3)
+                    else
+                        iWRDatabase[k] = v
+                    end
                 end
             end
 

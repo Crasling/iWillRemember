@@ -51,6 +51,9 @@ iWR.CONSTANTS = {
     -- UI
     TOOLTIP_MAX_LINE_LENGTH = 30,
 
+    -- Notes
+    MAX_NOTES_PER_PLAYER = 10,
+
     -- Group Log
     MAX_GROUP_LOG_ENTRIES = 200,
     GROUP_LOG_ZONE_UPDATE_WINDOW = 600, -- 10 minutes: update zone on recent entries when zone changes
@@ -99,6 +102,9 @@ iWR.WarnedPlayers = {}
 
 -- Group Log session tracking (runtime only, not saved)
 iWR.LoggedThisSession = {}
+
+-- Database view expanded entries (runtime only)
+iWR.ExpandedEntries = {}
 
 -- Active timer tracking
 iWR.ActiveTimers = {}

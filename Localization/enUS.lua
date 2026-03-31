@@ -62,6 +62,7 @@ L["MinimapButtonShiftLeftClick"] = (Colors.Yellow .. "Shift-Left Click: " .. Col
 L["MinimapButtonRightClick"] = (Colors.Yellow .. "Right Click: " .. Colors.Orange .. "Open Settings")
 L["CharNoteCreated"] = Colors.iWR .."] added to the iWR Database.|r"
 L["CharNoteUpdated"] = Colors.iWR .."] was updated in the iWR Database.|r"
+L["CharNoteAppended"] = Colors.iWR .."] new note appended in the iWR Database.|r"
 L["CharNoteRemoved"] = Colors.iWR .."] was removed from the iWR Database.|r"
 L["CharNoteClassMissing"] = " Class information is missing, will be added the next time player is targeted."
 L["CharNoteColorUpdate"] = Colors.iWR .."] was found with missing class information in the iWR Database. Class color was added to the iWR Database."
@@ -269,6 +270,7 @@ L["EntriesFiltered"] = "%d of %d entries"
 L["SearchPlaceholder"] = "Search..."
 L["HelpTooltipTitle"] = "How do I use iWillRemember"
 L["RightClickWhisper"] = "Right-click to whisper"
+L["LeftClickNotes"] = "Left-click note to expand history"
 
 -- Detail labels
 L["DetailName"] = "Name:"
@@ -288,6 +290,9 @@ L["AITranslationNote"] = "Some texts have been AI translated and may not be full
 L["MyCharsRemove"] = "Remove"
 L["StatusPersonal"] = "Personal"
 L["StatusShared"] = "Shared"
+L["NotesHistory"] = "Note History"
+L["NotesCount"] = "(%d notes)"
+L["RemoveNoteConfirm"] = "Remove this note from history?"
 
 -- Buttons
 L["ClearAllButton"] = "Clear All"

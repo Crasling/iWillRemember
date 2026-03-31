@@ -2,6 +2,35 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.21.1 - Release
+--------------------------------------------------------------------------------
+
+ [NEW] Multi-Note History
+  - Multiple notes per player — each "Save Note" appends instead of overwriting
+  - Up to 10 notes per player, oldest auto-removed when limit reached
+  - Tooltip shows "(X notes)" count indicator
+  - Detail window shows full note history with date, level, and author
+  - Database view: click note column to expand/collapse note history
+  - Remove individual history notes or the latest note (promotes next)
+  - Localized in English and Russian
+
+ [NEW] Sync — Note History Merge
+  - Synced entries merge note histories from both sides
+  - Deduplication by timestamp prevents duplicate notes
+  - Per-note tombstones: deleted history notes stay deleted across sync
+  - Global tombstones: fully removed players don't return via sync
+  - Newer timestamps win — if a friend creates a note after your deletion,
+    tombstones are cleared and the entry is accepted
+  - Offline deletion propagation: when a friend syncs a tombstoned entry,
+    a remove request is sent back so they can clean it up too
+
+ [FIX] Cyrillic (Russian) character names now work for creating notes
+  - Increased name byte-length limit to support multi-byte UTF-8 names
+
+ [FIX] Retail 12.0 secret string crash in right-click menu
+  - issecretvalue() guards added to MenuOpen and ModifyMenuForContext
+  - Prevents "attempt to compare a secret string value" error
+
 v0.21.0 - Release
 --------------------------------------------------------------------------------
 

@@ -71,6 +71,7 @@ L["MinimapButtonShiftLeftClick"] = (Colors.Yellow .. "Shift-ЛКМ: " .. Colors.
 L["MinimapButtonRightClick"] = (Colors.Yellow .. "ПКМ: " .. Colors.Orange .. "Открыть настройки")
 L["CharNoteCreated"] = Colors.iWR .."] добавлен в базу данных iWR.|r"
 L["CharNoteUpdated"] = Colors.iWR .."] обновлен в базе данных iWR.|r"
+L["CharNoteAppended"] = Colors.iWR .."] новая заметка добавлена в базу данных iWR.|r" -- ИИ перевод
 L["CharNoteRemoved"] = Colors.iWR .."] удален из базы данных iWR.|r"
 L["CharNoteClassMissing"] = " Информация о классе отсутствует, будет добавлена при следующем выборе игрока."
 L["CharNoteColorUpdate"] = Colors.iWR .."] найден с отсутствующей информацией о классе в базе данных iWR. Цвет класса был добавлен в базу данных iWR."
@@ -289,6 +290,7 @@ L["EntriesFiltered"] = "%d из %d записей" -- ИИ перевод
 L["SearchPlaceholder"] = "Поиск..." -- ИИ перевод
 L["HelpTooltipTitle"] = "Как использовать iWillRemember" -- ИИ перевод
 L["RightClickWhisper"] = "ПКМ — написать в шёпот" -- ИИ перевод
+L["LeftClickNotes"] = "ЛКМ по заметке — развернуть историю" -- ИИ перевод
 
 -- Подписи деталей -- ИИ перевод
 L["DetailName"] = "Имя:"
@@ -300,6 +302,9 @@ L["DetailStatus"] = "Статус:"
 L["DetailFaction"] = "Фракция:"
 L["StatusPersonal"] = "Личная"
 L["StatusShared"] = "Общая"
+L["NotesHistory"] = "История заметок" -- ИИ перевод
+L["NotesCount"] = "(%d заметок)" -- ИИ перевод
+L["RemoveNoteConfirm"] = "Удалить эту заметку из истории?" -- ИИ перевод
 L["DetailServer"] = "Сервер:" -- ИИ перевод
 L["DetailZone"] = "Зона:" -- ИИ перевод
 L["DetailInstanceType"] = "Тип подземелья:" -- ИИ перевод
