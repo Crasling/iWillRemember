@@ -230,6 +230,10 @@ end
 function iWR:AddNoteToGameTooltip(self, ...)
     local name, unit = self:GetUnit()
 
+    -- Secret value guard for retail 12.0+
+    local issv = _G.issecretvalue
+    if issv and unit and issv(unit) then return end
+
     -- Check if the unit is valid and is a player
     if not unit or not UnitIsPlayer(unit) then
         return
@@ -238,6 +242,10 @@ function iWR:AddNoteToGameTooltip(self, ...)
     -- Get the player's realm and format the database key
     local targetNameWithRealm = GetUnitName(unit, true)
     local targetName = GetUnitName(unit, false)
+
+    -- Secret value guard for name/realm
+    if issv and ((targetNameWithRealm and issv(targetNameWithRealm)) or (targetName and issv(targetName))) then return end
+
     local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWR.CurrentRealm
     targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
     
@@ -922,6 +930,11 @@ function iWR:SetTargetingFrame()
     -- Get target name and realm
     local targetNameWithRealm = GetUnitName("target", true)
     local targetName = GetUnitName("target", false)
+
+    -- Secret value guard for retail 12.0+
+    local issv = _G.issecretvalue
+    if issv and ((targetNameWithRealm and issv(targetNameWithRealm)) or (targetName and issv(targetName))) then return end
+
     local targetRealm = select(2, strsplit("-", targetNameWithRealm or ""))
     targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
 

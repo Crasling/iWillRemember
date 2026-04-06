@@ -2,6 +2,20 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.21.3 - Release
+--------------------------------------------------------------------------------
+
+ [NEW] iSealTwist promo/settings tab in Other Addons sidebar
+ [CHANGED] Opening settings now closes other addon settings panels
+
+v0.21.2 - Release
+--------------------------------------------------------------------------------
+
+ [FIX] Retail 12.0 secret value crash in tooltip (UnitIsPlayer)
+  - issecretvalue() guard added to AddNoteToGameTooltip
+ [FIX] Retail 12.0 secret string crash in target frame
+  - issecretvalue() guard added to SetTargetingFrame
+
 v0.21.1 - Release
 --------------------------------------------------------------------------------
 
