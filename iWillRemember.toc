@@ -2,6 +2,7 @@
 ## Title: |cffff9716iWillRemember |cFF00FF00v0.21.3|r
 ## Version: 0.21.3
 ## Notes: |cffff9716Personalized Player Notes Addon|n|cFFFF0000Never forget again.|r
+## Notes-zhCN: |cffff9716自定义玩家备忘录|n|cFFFF0000记住 ta 是谁|r
 ## Author: Crasling
 ## IconTexture: Interface\AddOns\iWillRemember\Images\Logo_iWR.blp
 ## Category: Social
