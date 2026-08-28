@@ -6,6 +6,7 @@ v0.21.4 - Release
 --------------------------------------------------------------------------------
 
  [CHANGED] Added Anniversary TBC client interface 20506 support
+ [CHANGED] Removed deprecated iCommunityChat from the Other Addons panel
 
 v0.21.3 - Release
 --------------------------------------------------------------------------------
@@ -102,7 +103,7 @@ v0.20.5 - Release
 
  [CHANGED] Localization scoped to local variable (L no longer global)
 
-v0.20.4
+v0.20.4 - Release
 --------------------------------------------------------------------------------
 
  [NEW] Personal Notes
@@ -142,8 +143,7 @@ v0.20.4
   - Fixed color reset code leaking as visible "|r" text between filter buttons
   - Added spacing between filter buttons for readability
 
- Alpha Build History
- ~~~~~~~~~~~~~~~~~~~
+ [CHANGED] Alpha Build History
   0.20.3.5 - Version check via guild and General channel, sync debug messages
   0.20.3.4 - Retail tooltip fix (TooltipDataProcessor)
   0.20.3.3 - Personal notes feature, database filters, alt character tracking
@@ -152,10 +152,10 @@ v0.20.4
   0.20.2.1 - Menu auto-fill on target change
   0.20.2   - Faction backfill messages, friends list fix, chat icon guard
 
-v0.20.3
+v0.20.3 - Release
 --------------------------------------------------------------------------------
 
- [REWORK] Database Search
+ [CHANGED] Database Search
   - Replaced side-panel search popup with inline search filter
   - Search box at the top of the Notes tab filters entries in real-time
   - Matches player name and note text (case-insensitive)
@@ -163,7 +163,7 @@ v0.20.3
   - Entry count shows "X of Y entries" when filtered
   - Search filter resets automatically when opening the database
 
-v0.20.0
+v0.20.0 - Release
 --------------------------------------------------------------------------------
 
  [NEW] Faction Flags
@@ -200,7 +200,7 @@ v0.20.0
   - No longer auto-imports yourself
   - Defensive migration for old integer-only watchlist entries
 
-v0.20.1
+v0.20.1 - Release
 --------------------------------------------------------------------------------
 
  [NEW] Relation Level Propagation
@@ -209,7 +209,7 @@ v0.20.1
     -2 inherits Disliked, -4/-5 inherit Hated, -7 to -10 inherit KoS
   - Works for both positive and negative sides
 
- [UPDATED] Negative Relation Levels
+ [CHANGED] Negative Relation Levels
   - Negative key map now mirrors the positive side
   - Third negative level is now pinned to -10 (matching +10 on positive)
 
@@ -225,7 +225,7 @@ v0.20.1
  [FIX] Database Search
   - Search no longer breaks on names containing special pattern characters
 
-v0.20.2
+v0.20.2 - Release
 --------------------------------------------------------------------------------
 
  [NEW] Faction Backfill Messages
@@ -242,7 +242,7 @@ v0.20.2
  [FIX] Chat Icon Duplication
   - Added guard preventing double icons on chat messages
 
-v0.19.2
+v0.19.2 - Release
 --------------------------------------------------------------------------------
 
  [FIX] Target Frame on Classic
@@ -260,7 +260,7 @@ v0.19.2
   - Simple Menu now uses icon-based buttons matching the old pre-slider design
   - 53x53 buttons with icon textures and labels below
 
-v0.19.0
+v0.19.0 - Release
 --------------------------------------------------------------------------------
 
  [NEW] Slider System (-10 to +10)
@@ -281,7 +281,7 @@ v0.19.0
   - Added dedicated "Clear" button next to "Save Note" in the menu
   - Removes a player's note without having to set slider to 0
 
- [REWORK] Database Frame
+ [CHANGED] Database Frame
   - Replaced tab system with sidebar navigation (matching Options Panel style)
   - Sidebar with Notes and Group Log buttons, active tab highlighted in orange
   - Content area with styled backdrop and border
@@ -291,7 +291,7 @@ v0.19.0
   - Entry count displayed under Notes button in sidebar
   - Increased frame width from 700 to 800 for better note readability
 
- [REWORK] Menu Panel
+ [CHANGED] Menu Panel
   - Moved Open Database button to top-left corner of menu
   - Reduced menu height (removed excess empty space)
 
@@ -299,13 +299,12 @@ v0.19.0
   - Fixed label names showing wrong type due to old boundary keys
   - One-time migration resets labels to match new group boundaries
 
- Alpha Build History
- ~~~~~~~~~~~~~~~~~~~
+ [CHANGED] Alpha Build History
   0.18.0.1  - Slider system, Superior blue color, DB level column, sidebar DB frame,
               online status, whisper, row highlights, button labels migration,
               clear button, menu layout adjustments
 
-v0.18.0
+v0.18.0 - Release
 --------------------------------------------------------------------------------
 
  [NEW] Group Log
@@ -321,47 +320,45 @@ v0.18.0
   - Auto-prune: max 200 entries, oldest removed on login
   - Enable/disable in Settings > General > "Enable Group Log"
 
- [REWORK] Database Frame
+ [CHANGED] Database Frame
   - Added tab system: "Notes" (existing database) and "Group Log" (new)
   - Increased frame height from 400 to 450 to accommodate tabs
   - Notes-specific buttons (Clear All, Share, Search) now scoped to Notes tab
 
-v0.17.1
+v0.17.1 - Release
 --------------------------------------------------------------------------------
 
- Version bump
+ [CHANGED] Version bump
 
-v0.16.9
+v0.16.9 - Release
 --------------------------------------------------------------------------------
 
- Localization
+ [CHANGED] Localization
   - Moved all hardcoded UI strings in options panel to locale tags (L["key"])
   - Added ~20 new locale keys for settings headers, button labels, and descriptions
 
-v0.16.8
+v0.16.8 - Release
 --------------------------------------------------------------------------------
 
- Settings Panel
+ [CHANGED] Settings Panel
   - Opening iWR settings now auto-closes iNIF/iSP settings panels if open
 
 v0.16.7 (Release)
---------------------------------------------------------------------------------
 
- Target Frame
+ [CHANGED] Target Frame
   - Fixed target frame overlay sticking on all targets (Anniversary/TBC)
   - Anniversary (20505) added to TargetFrame_Update exclusion list
   - Target frame now uses overlay on all clients, preserving elite/rare frames
 
- Other Addons Integration
+ [NEW] Other Addons Integration
   - Added iSoundPlayer (iSP) settings tab alongside iNIF
   - Addon detection deferred to OnShow so all addons have time to load
 
- Code Structure
+ [CHANGED] Code Structure
   - Split iWRFunctions.lua into Sync.lua and Backup.lua
   - Fixed sync timing warning ("No recipients found" false positive)
 
- Alpha Build History
- ~~~~~~~~~~~~~~~~~~~
+ [CHANGED] Alpha Build History
   0.16.7    - Anniversary TargetFrame_Update exclusion, overlay-only target frames
   0.16.6    - Target frame now uses overlay on all clients, never overwrites original texture (fixes elite/rare)
   0.16.5.2  - Reworked target frame reset: only restore when iWR modified it, use TargetFrame_Update for correct elite/rare redraw
@@ -378,42 +375,39 @@ v0.16.7 (Release)
   0.16.3.1  - Added iNIF tab in sidebar when iNeedIfYouNeed is installed
 
 v0.16.3 (Release)
---------------------------------------------------------------------------------
 
- Customize Page
+ [CHANGED] Customize Page
   - Rating type colors now show on icon and label settings for easy identification
   - Added info text explaining that all customizations are local and visual only
   - Custom label names now refresh correctly on the Customize page when reset
 
- Button Labels
+ [CHANGED] Button Labels
   - Fixed long custom labels overflowing and overlapping on the main panel
   - Labels now use a smaller font with max width and auto-truncation
 
- Target Frame
+ [CHANGED] Target Frame
   - Fixed target frame not updating when creating a new note on Classic Era and MoP
 
- Alpha Build History
- ~~~~~~~~~~~~~~~~~~~
+ [CHANGED] Alpha Build History
   0.16.2.4  - Added info text explaining local-only changes on Customize page
   0.16.2.3  - Added rating colors to icon and label settings on Customize page
   0.16.2.2  - Fixed button label overflow and custom label refresh on Customize page
   0.16.2.1  - Fixed target frame update on Classic Era (11508) and MoP (50501)
 
 v0.16.2 (Release)
---------------------------------------------------------------------------------
 
- Options Panel - Sidebar Navigation
+ [CHANGED] Options Panel - Sidebar Navigation
   - Replaced horizontal tabs with a vertical sidebar menu
   - Fixed empty options menu bug
   - All settings tabs now scroll when content overflows
 
- Customizable Button Labels
+ [CHANGED] Customizable Button Labels
   - Rating names (Respected, Liked, Disliked, Hated) can now be renamed
   - Custom names show everywhere: buttons, tooltips, warnings, database
   - Added edit boxes and a reset button in the new Customize page
   - Custom names are per-user only and do not affect sync
 
- Custom Icon Selection
+ [CHANGED] Custom Icon Selection
   - New "Customize" page in the settings sidebar for icons and labels
   - Pick custom icons for each rating type from a visual grid
   - Custom icons show on buttons, tooltips, and the database list
@@ -422,14 +416,13 @@ v0.16.2 (Release)
   - Manual icon path input for any WoW icon with help text
   - Each rating has Change and Reset buttons with a live preview
 
- Target Frame
+ [CHANGED] Target Frame
   - Fixed target frame not updating on Classic Era and Classic MoP
 
- Localization
+ [CHANGED] Localization
   - Added Russian translations for all new settings and UI text
 
- Alpha Build History
- ~~~~~~~~~~~~~~~~~~~
+ [CHANGED] Alpha Build History
   0.16.2.4  - Added info text explaining local-only changes on Customize page
   0.16.2.3  - Added rating colors to icon and label settings on Customize page
   0.16.2.2  - Fixed button label overflow and custom label refresh on Customize page
@@ -440,9 +433,8 @@ v0.16.2 (Release)
   0.16.1.6  - Fixed sidebar anchor bug causing empty options menu
 
 v0.16.1 (Release)
---------------------------------------------------------------------------------
 
- Options Panel
+ [CHANGED] Options Panel
   - Replaced custom options panel with AceConfig-3.0
   - Added four tabs: General, Sync, Backup, About
   - General: Target frame toggle, chat icons toggle, sound warnings toggle
@@ -450,7 +442,7 @@ v0.16.1 (Release)
   - Backup: Hourly backup toggle, backup info display, database restore
   - About: Debug mode toggle, addon info, Discord link, credits
 
- Options Panel (Custom Standalone Frame)
+ [CHANGED] Options Panel (Custom Standalone Frame)
   - Replaced AceConfig with a fully custom standalone settings frame
   - Styled section headers with tinted backgrounds and orange accents
   - Added description text under every toggle
@@ -463,30 +455,29 @@ v0.16.1 (Release)
   - Settings frame hides automatically on combat entry
   - All dynamic content refreshes when the panel opens
 
- Minimap Button
+ [CHANGED] Minimap Button
   - Right-click now opens the settings panel
 
- Target Frame (Cross-Version Compatibility)
+ [CHANGED] Target Frame (Cross-Version Compatibility)
   - Fixed target frame not updating on TBC / WotLK / MoP
   - Added fallback event listener for clients without the default update hook
   - Added overlay frame fallback for clients missing the target frame texture
   - Added safety checks to prevent crashes before the addon panel is opened
   - Target frame now resets properly when clearing a note or changing target
 
- Chat Icons
+ [CHANGED] Chat Icons
   - Fixed clickable chat icons not working on TBC / WotLK / MoP
   - Chat icon click hook now works reliably across all client versions
   - Fixed errors on system messages and channel notices
 
- Group Warnings
+ [CHANGED] Group Warnings
   - Fixed group scanning error when checking the 5th party member
   - Fixed group check running repeatedly for players not in the database
 
- Localization
+ [CHANGED] Localization
   - Added ~15 locale strings for settings descriptions and UI elements
 
- Alpha Build History
- ~~~~~~~~~~~~~~~~~~~
+ [CHANGED] Alpha Build History
   0.16.1.9  - Custom icon selection with picker popup and Customize page
   0.16.1.8  - Scroll areas for all settings tabs
   0.16.1.7  - Customizable button labels

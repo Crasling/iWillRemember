@@ -179,15 +179,6 @@ L["ISPOpenSettingsButton"] = "Открыть настройки iSP"
 L["ISPPromoDesc"] = Colors.iWR .. "iSoundPlayer" .. Colors.Reset .. " — аддон для воспроизведения звуков. Проигрывайте свои MP3-файлы при событиях в игре: убийства, повышение уровня, встречи с боссами и многое другое.\n\n" .. Colors.Reset .. "Добавьте звуковые файлы и назначьте триггеры — полностью настраиваемый."
 L["ISPPromoLink"] = "Доступно в CurseForge App и на curseforge.com/wow/addons/isoundplayer"
 
-L["TabICC"] = "Настройки iCC" -- ИИ перевод
-L["TabICCPromo"] = "iCommunityChat"
-L["ICCSettingsHeader"] = Colors.iWR .. "Настройки iCommunityChat" -- ИИ перевод
-L["ICCInstalledDesc1"] = Colors.iWR .. "iCommunityChat" .. Colors.Reset .. " установлен! Вы можете открыть настройки iCC отсюда." -- ИИ перевод
-L["ICCInstalledDesc2"] = "|cFF808080Примечание: Эти настройки управляются iCC и влияют на аддон iCC.|r" -- ИИ перевод
-L["ICCOpenSettingsButton"] = "Открыть настройки iCC" -- ИИ перевод
-L["ICCPromoHeader"] = Colors.iWR .. "iCommunityChat"
-L["ICCPromoDesc"] = Colors.iWR .. "iCommunityChat" .. Colors.Reset .. " — аддон для межгильдейских сообществ. Создавайте и управляйте сообществами с общим чатом, составом и рангами — за пределами гильдий.\n\n" .. Colors.Reset .. "Ваше сообщество, ваш чат." -- ИИ перевод
-L["ICCPromoLink"] = "Доступно в CurseForge App и на curseforge.com/wow/addons/icommunitychat" -- ИИ перевод
 
 -- Guild Watchlist
 L["GuildsTab"] = "Гильдии"

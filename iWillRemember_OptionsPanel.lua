@@ -474,13 +474,12 @@ function iWR:CreateOptionsPanel()
 
     local aboutContainer, aboutContent = CreateTabContent()
 
-    -- iNIF, iSP, iCC, and iST tabs (detection deferred to OnShow)
+    -- Other addon tabs (detection deferred to OnShow)
     local iNIFContainer, iNIFContent = CreateTabContent()
     local iSPContainer, iSPContent = CreateTabContent()
-    local iCCContainer, iCCContent = CreateTabContent()
     local iSTContainer, iSTContent = CreateTabContent()
 
-    local tabContents = {generalContainer, syncContainer, backupContainer, customizeContainer, aboutContainer, iNIFContainer, iSPContainer, iCCContainer, iSTContainer}
+    local tabContents = {generalContainer, syncContainer, backupContainer, customizeContainer, aboutContainer, iNIFContainer, iSPContainer, iSTContainer}
 
     local sidebarButtons = {}
     local activeIndex = 1
@@ -515,8 +514,7 @@ function iWR:CreateOptionsPanel()
     table.insert(sidebarItems, {type = "header", label = L["SidebarHeaderOtherAddons"]})
     table.insert(sidebarItems, {type = "tab", label = L["TabINIFPromo"], index = 6})
     table.insert(sidebarItems, {type = "tab", label = L["TabISPPromo"], index = 7})
-    table.insert(sidebarItems, {type = "tab", label = L["TabICCPromo"], index = 8})
-    table.insert(sidebarItems, {type = "tab", label = L["TabISTPromo"], index = 9})
+    table.insert(sidebarItems, {type = "tab", label = L["TabISTPromo"], index = 8})
 
     local sidebarY = -6
     for _, item in ipairs(sidebarItems) do
@@ -1439,65 +1437,6 @@ function iWR:CreateOptionsPanel()
     scrollChildren[7]:SetHeight(400)
 
     -- ╭───────────────────────────────────────────────────────────────╮
-    -- │                     iCC Settings Tab                          │
-    -- │              (both variants built, toggled OnShow)             │
-    -- ╰───────────────────────────────────────────────────────────────╯
-
-    -- iCC installed variant
-    local iCCInstalledFrame = CreateFrame("Frame", nil, iCCContent)
-    iCCInstalledFrame:SetAllPoints(iCCContent)
-    iCCInstalledFrame:Hide()
-    do
-        y = -10
-        _, y = CreateSectionHeader(iCCInstalledFrame, L["ICCSettingsHeader"], y)
-
-        local iCCDesc
-        iCCDesc, y = CreateInfoText(iCCInstalledFrame,
-            L["ICCInstalledDesc1"] .. "\n\n" .. L["ICCInstalledDesc2"],
-            y, "GameFontHighlight")
-
-        y = y - 10
-
-        local iCCButton = CreateFrame("Button", nil, iCCInstalledFrame, "UIPanelButtonTemplate")
-        iCCButton:SetSize(180, 28)
-        iCCButton:SetPoint("TOPLEFT", iCCInstalledFrame, "TOPLEFT", 25, y)
-        iCCButton:SetText(L["ICCOpenSettingsButton"])
-        iCCButton:SetScript("OnClick", function()
-            local iCCFrame = _G.iCC and _G.iCC.SettingsFrame
-            if iCCFrame then
-                local point, _, relPoint, xOfs, yOfs = settingsFrame:GetPoint()
-                iCCFrame:ClearAllPoints()
-                iCCFrame:SetPoint(point, UIParent, relPoint, xOfs, yOfs)
-                settingsFrame:Hide()
-                iCCFrame:Show()
-            end
-        end)
-    end
-
-    -- iCC promo variant
-    local iCCPromoFrame = CreateFrame("Frame", nil, iCCContent)
-    iCCPromoFrame:SetAllPoints(iCCContent)
-    iCCPromoFrame:Hide()
-    do
-        y = -10
-        _, y = CreateSectionHeader(iCCPromoFrame, L["ICCPromoHeader"], y)
-
-        local iCCPromo
-        iCCPromo, y = CreateInfoText(iCCPromoFrame,
-            L["ICCPromoDesc"],
-            y, "GameFontHighlight")
-
-        y = y - 4
-
-        local iCCPromoLink
-        iCCPromoLink, y = CreateInfoText(iCCPromoFrame,
-            L["ICCPromoLink"],
-            y, "GameFontDisableSmall")
-    end
-
-    scrollChildren[8]:SetHeight(400)
-
-    -- ╭───────────────────────────────────────────────────────────────╮
     -- │                      iST Settings Tab                         │
     -- ╰───────────────────────────────────────────────────────────────╯
     local iSTInstalledFrame = CreateFrame("Frame", nil, iSTContent)
@@ -1550,7 +1489,7 @@ function iWR:CreateOptionsPanel()
             y, "GameFontDisableSmall")
     end
 
-    scrollChildren[9]:SetHeight(400)
+    scrollChildren[8]:SetHeight(400)
 
     -- ╭───────────────────────────────────────────────────────────────╮
     -- │                       About Tab Content                       │
@@ -1750,18 +1689,11 @@ function iWR:CreateOptionsPanel()
             sidebarButtons[7].text:SetText(iSPLoaded and L["TabISP"] or L["TabISPPromo"])
         end
 
-        local iCCLoaded = C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("iCommunityChat")
-        iCCInstalledFrame:SetShown(iCCLoaded)
-        iCCPromoFrame:SetShown(not iCCLoaded)
-        if sidebarButtons[8] then
-            sidebarButtons[8].text:SetText(iCCLoaded and L["TabICC"] or L["TabICCPromo"])
-        end
-
         local iSTLoaded = C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("iSealTwist")
         iSTInstalledFrame:SetShown(iSTLoaded)
         iSTPromoFrame:SetShown(not iSTLoaded)
-        if sidebarButtons[9] then
-            sidebarButtons[9].text:SetText(iSTLoaded and L["TabIST"] or L["TabISTPromo"])
+        if sidebarButtons[8] then
+            sidebarButtons[8].text:SetText(iSTLoaded and L["TabIST"] or L["TabISTPromo"])
         end
 
     end)
@@ -1828,9 +1760,6 @@ local function CloseOtherAddonSettings()
 
     local iSPFrame = _G["iSPSettingsFrame"]
     if iSPFrame and iSPFrame:IsShown() then iSPFrame:Hide() end
-
-    local iCCFrame = _G.iCC and _G.iCC.SettingsFrame
-    if iCCFrame and iCCFrame:IsShown() then iCCFrame:Hide() end
 
     local iSTFrame = _G["iSTSettingsFrame"]
     if iSTFrame and iSTFrame:IsShown() then iSTFrame:Hide() end
