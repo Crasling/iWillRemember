@@ -21,7 +21,7 @@ function iWR:VerifyFriend(friendName)
     local numFriends = C_FriendList.GetNumFriends()
     for i = 1, numFriends do
         local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-        if friendInfo and friendInfo.name == friendName then
+        if friendInfo and iWR:IsSamePlayerName(friendInfo.name, friendName) then
             return true
         end
     end
@@ -49,7 +49,7 @@ function iWR:OnVersionCheck(prefix, message, distribution, sender)
     iWR:DebugMsg("Version information successfully received by " .. sender .. ".", 3)
 
     -- Check if the sender is the player itself
-    if GetUnitName("player", false) == sender then return end
+    if iWR:IsSamePlayerName(iWR:GetUnitPlayerIdentity("player"), sender) then return end
 
     -- Convert the version string into a number and check if it's an alpha version
     local versionNumber, isAlphaVersion = iWR:ConvertVersionToNumber(iWR.Version)
@@ -333,7 +333,7 @@ end
 -- ╰────────────────────────────────────────────╯
 function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
     if iWRSettings.DataSharing ~= false then
-        if GetUnitName("player", false) == sender then return end
+        if iWR:IsSamePlayerName(iWR:GetUnitPlayerIdentity("player"), sender) then return end
 
         -- Verify the sender
         local isValidSender = false
@@ -341,7 +341,7 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
             isValidSender = iWR:VerifyFriend(sender)
         elseif iWRSettings.SyncType == "Whitelist" then
             for _, entry in ipairs(iWRSettings.SyncList or {}) do
-                if entry.name == sender and entry.type == "wow" then
+                if iWR:IsSamePlayerName(entry.name, sender) and entry.type == "wow" then
                     isValidSender = true
                     break
                 end
@@ -380,7 +380,8 @@ function iWR:OnFullDBUpdate(prefix, message, distribution, sender)
                 local success, FullNotesTable = iWR:Deserialize(fullData)
 
                 if success then
-                    for k, v in pairs(FullNotesTable) do
+                    for receivedKey, v in pairs(FullNotesTable) do
+                        local k = iWR:NormalizePlayerDatabaseKey(receivedKey, v)
                         if iWRDatabase[k] and iWRDatabase[k][9] then
                             iWR:DebugMsg("Skipped full sync for " .. k .. " (personal note protected).", 3)
                         elseif iWR:IsEntryFullyTombstoned(k, v) then
@@ -422,7 +423,7 @@ end
 function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
     if iWRSettings.DataSharing ~= false then
         -- Check if the sender is the player itself
-        if GetUnitName("player", false) == sender then return end
+        if iWR:IsSamePlayerName(iWR:GetUnitPlayerIdentity("player"), sender) then return end
 
         iWR:DebugMsg("Database update request successfully received by " .. sender .. ".",3)
 
@@ -438,7 +439,8 @@ function iWR:OnNewDBUpdate(prefix, message, distribution, sender)
             iWR:DebugMsg("OnNewDBUpdate Deserialization failed. Invalid data received from " .. sender .. ".", 1)
             iWR:DebugMsg("ErrorCode: " .. tostring(iWR.Cache.TempTable), 1)
         else
-            for k, v in pairs(iWR.Cache.TempTable) do
+            for receivedKey, v in pairs(iWR.Cache.TempTable) do
+                local k = iWR:NormalizePlayerDatabaseKey(receivedKey, v)
                 -- Don't overwrite personal notes with incoming sync data
                 if iWRDatabase[k] and iWRDatabase[k][9] then
                     iWR:DebugMsg("Skipped sync for " .. k .. " (personal note protected).", 3)
@@ -481,7 +483,7 @@ end
 -- ╰──────────────────────────────────────────╯
 function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     -- Check if the sender is the player itself
-    if GetUnitName("player", false) == sender then return end
+    if iWR:IsSamePlayerName(iWR:GetUnitPlayerIdentity("player"), sender) then return end
 
     iWR:DebugMsg("Remove request successfully received from " .. sender .. ".",3)
 
@@ -499,6 +501,7 @@ function iWR:OnRemDBUpdate(prefix, message, distribution, sender)
     end
 
     -- Ensure NoteName is valid and exists in the database
+    noteName = noteName and iWR:NormalizePlayerDatabaseKey(noteName)
     if not noteName or not iWRDatabase[noteName] then
         iWR:DebugMsg("Received remove request for a non-existent player: " .. (noteName or "nil") .. ".",3)
         return -- Exit if the player does not exist in the database
@@ -626,7 +629,7 @@ function iWR:EnsureWhitelistedPlayersInFriends()
     end
 
     iWR:EnsureWhitelistHasRealm()
-    local currentRealm = GetRealmName()
+    local currentRealm = iWR.CurrentRealm
     iWR:DebugMsg("Checking if whitelisted players from realm [" .. currentRealm .. "] are in the friends list...", 3)
 
     -- Get current friends list
@@ -634,7 +637,8 @@ function iWR:EnsureWhitelistedPlayersInFriends()
     for i = 1, C_FriendList.GetNumFriends() do
         local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
         if friendInfo and friendInfo.name then
-            friends[friendInfo.name] = true
+            local friendKey = iWR:GetPlayerDatabaseKey(friendInfo.name)
+            if friendKey then friends[friendKey] = true end
         end
     end
 
@@ -643,7 +647,8 @@ function iWR:EnsureWhitelistedPlayersInFriends()
 
     -- Loop through the whitelist and add players if they're missing & from the same realm
     for _, entry in ipairs(iWRSettings.SyncList) do
-        if entry.name and entry.realm == currentRealm and not friends[entry.name] then
+        local entryKey = entry.name and iWR:GetPlayerDatabaseKey(entry.name, entry.realm)
+        if entry.name and entry.realm == currentRealm and not friends[entryKey] then
             C_FriendList.AddFriend(entry.name)
             table.insert(addedFriends, entry.name)
             iWR:DebugMsg("Added " .. entry.name .. " to the friends list (whitelisted, same realm).", 3)
@@ -662,7 +667,7 @@ function iWR:EnsureWhitelistHasRealm()
         return
     end
 
-    local currentRealm = GetRealmName()
+    local currentRealm = iWR.CurrentRealm
     local updatedEntries = 0
 
     for _, entry in ipairs(iWRSettings.SyncList) do

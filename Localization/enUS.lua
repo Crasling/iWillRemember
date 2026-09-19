@@ -55,6 +55,9 @@ end
 -- │                                 Text Templates                                 │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 L["NoteToolTip"] = Colors.iWR .. "[iWR]: "
+L["ChatIconTooltipTitle"] = "iWR: %s"
+L["ChatIconTooltipPlayer"] = "Player: %s"
+L["ChatIconTooltipClick"] = "Click the icon to open the complete iWR note."
 L["DefaultNameInput"] = "Enter player name..."
 L["DefaultNoteInput"] = "Enter note..."
 L["MinimapButtonLeftClick"] = (Colors.Yellow .. "Left Click: " .. Colors.Orange .. "Open iWR Menu")

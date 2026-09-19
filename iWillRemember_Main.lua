@@ -63,9 +63,9 @@ iWR.CONSTANTS = {
 -- │                                     Variables                                  │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯
 -- Store all addon data in the iWR namespace
-iWR.CurrentRealm = GetRealmName()
+iWR.CurrentRealm = "Forever"
 iWR.AddonPath = "Interface\\AddOns\\iWillRemember\\"
-iWR.ImagePath = "Classic"
+iWR.ImagePath = "Forever"
 
 -- Addon metadata (exposed for UI display)
 iWR.Title = Title
@@ -321,19 +321,13 @@ end
 -- ├──────────────────────────┬─────────────────────────────────────────────────────╯
 -- │      Check what UI       │
 -- ╰──────────────────────────╯
-C_Timer.After(2, function()
-    if C_AddOns.IsAddOnLoaded("EasyFrames") or C_AddOns.IsAddOnLoaded("Easy Frames") then
-        iWR.ImagePath = "EasyFrames"
-    elseif C_AddOns.IsAddOnLoaded("DragonFlightUI") then
-        iWR.ImagePath = "DragonFlightUI"
-    elseif C_AddOns.IsAddOnLoaded("Shadowed Unit Frames") or C_AddOns.IsAddOnLoaded("ShadowedUnitFrames") then
-        iWR.ImagePath = "ShadowedUnitFrames"
-    end
-end)
+-- Forever's native target frame is the supported default. Classic-style unit-frame
+-- addons can receive explicit adapters later instead of replacing this path.
 
 -- ╭───────────────────────────────────╮
 -- │      List of Targeting Frames     │
 -- ╰───────────────────────────────────╯
+
 iWR.TargetFrames = {
     -- Hated: -10 to -6
     [-10] = iWR.AddonPath .. "Images\\TargetFrames\\" .. iWR.ImagePath .. "\\Hated.blp",
@@ -473,6 +467,8 @@ elseif gameTocNumber >= 20500 and gameTocNumber < 30000 then
     iWR.GameVersionName = "Anniversary TBC"
 elseif gameTocNumber >= 20000 and gameTocNumber < 20500 then
     iWR.GameVersionName = "Classic TBC"
+elseif gameTocNumber > 16000 and gameTocNumber < 19999 then
+    iWR.GameVersionName = "Forever"
 elseif gameTocNumber > 10000 and gameTocNumber < 19999 then
     iWR.GameVersionName = "Classic Era"
 else

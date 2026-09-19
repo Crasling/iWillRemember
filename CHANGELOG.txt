@@ -2,6 +2,33 @@
  iWillRemember - Changelog
 ================================================================================
 
+v0.22.1 - Forever Release
+--------------------------------------------------------------------------------
+
+ [CHANGED] Updated iWillRemember exclusively for the new Forever client (16001)
+  - Player data is temporarily stored per character while account-wide storage
+    remains unavailable in the beta
+
+ [ADDED] Full Forever character-name support
+  - First and last names are retained when targeting, using portrait menus,
+    editing notes, importing group-log entries, checking groups, and syncing
+  - Space and hyphen versions of the same name resolve to one player
+  - Existing split-name records are normalized and duplicate notes are merged
+
+ [ADDED] Native Forever target-frame dragons
+  - Relationship dragons attach directly to Blizzard's default target portrait
+  - The bundled texture works without DragonFlightUI or another frame addon
+  - Large and small dragon variants are aligned independently around the level ring
+
+ [ADDED] Chat-icon hover information
+  - Icons scale automatically with each chat window's font size
+  - Hovering shows relationship, player, note, author, date, and click instructions
+
+ [FIX] Character hover tooltips show saved iWR notes through Forever's modern
+ tooltip API
+ [FIX] Class colors are updated only when genuinely missing or incorrect
+ [FIX] Note creation and editing consistently use the complete Forever name
+
 v0.21.5 - Release
 --------------------------------------------------------------------------------
 

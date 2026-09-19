@@ -70,17 +70,78 @@ function iWR:DebugMsg(message,level)
     end
 end
 
-function iWR:VerifyRealm(playerName)
-    if not playerName:find("-") then
-        return playerName .. "-" .. iWR.CurrentRealm
-    else
-        return playerName
+function iWR:IsForeverClient()
+    local toc = tonumber(iWR.GameTocVersion) or 0
+    return toc >= 16000 and toc < 20000
+end
+
+local function TrimPlayerName(value)
+    if type(value) ~= "string" then return "" end
+    return value:gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
+end
+
+-- Forever has no realms. Blizzard may expose the same two-part character as
+-- "Firstname Lastname" through unit APIs and "Firstname-Lastname" in chat/comms.
+function iWR:ResolvePlayerIdentity(name, realm)
+    name = TrimPlayerName(name)
+    realm = TrimPlayerName(realm)
+
+    if self:IsForeverClient() then
+        if realm ~= "" and realm ~= "Forever" and name ~= "" and not name:find("[%s%-]") then
+            name = name .. " " .. realm
+        end
+        name = TrimPlayerName(name:gsub("%-", " "))
+        name = name:gsub("(%S+)", UTF8UcFirst)
+        return name, "Forever"
     end
+
+    return UTF8UcFirst(name), UTF8UcFirst(realm ~= "" and realm or self.CurrentRealm)
+end
+
+function iWR:GetPlayerDatabaseKey(name, realm)
+    local resolvedName, resolvedRealm = self:ResolvePlayerIdentity(name, realm)
+    if resolvedName == "" then return nil end
+    return resolvedName .. "-" .. resolvedRealm, resolvedName, resolvedRealm
+end
+
+function iWR:GetUnitPlayerIdentity(unit)
+    local name, secondName = UnitName(unit)
+    if not name then return nil, "Forever" end
+    return self:ResolvePlayerIdentity(name, secondName)
+end
+
+function iWR:NormalizePlayerDatabaseKey(databaseKey, data)
+    if type(databaseKey) ~= "string" then return databaseKey end
+    if self:IsForeverClient() then
+        local displayName = type(data) == "table" and StripColorCodes(data[4] or "") or ""
+        local savedSecondName = type(data) == "table" and TrimPlayerName(data[7]) or ""
+        if displayName ~= "" and not displayName:find("[%s%-]")
+            and savedSecondName ~= "" and savedSecondName ~= "Forever" then
+            return self:GetPlayerDatabaseKey(displayName, savedSecondName)
+        end
+        if displayName == "" then
+            displayName = databaseKey:gsub("%-Forever$", ""):gsub("%-", " ")
+        end
+        return self:GetPlayerDatabaseKey(displayName)
+    end
+    local name, realm = databaseKey:match("^([^-]+)%-(.+)$")
+    return self:GetPlayerDatabaseKey(name or databaseKey, realm)
+end
+
+function iWR:IsSamePlayerName(left, right)
+    local leftKey = self:GetPlayerDatabaseKey(left)
+    local rightKey = self:GetPlayerDatabaseKey(right)
+    return leftKey ~= nil and leftKey == rightKey
+end
+
+function iWR:VerifyRealm(playerName)
+    return self:GetPlayerDatabaseKey(playerName)
 end
 
 -- Get player data
 function iWR:GetDatabaseEntry(databaseKey)
-    return iWRDatabase[databaseKey] or {}
+    databaseKey = self:NormalizePlayerDatabaseKey(databaseKey)
+    return (databaseKey and iWRDatabase[databaseKey]) or {}
 end
 
 function iWR:VerifyInputNote(Note)
@@ -201,7 +262,6 @@ function iWR:VerifyInputName(Name)
         and verifyName ~= nil
         and not string.find(verifyName, "^%s+$")
         and not string.find(verifyName, "%d")
-        and not string.find(verifyName, " ")
         and #verifyName >= 3
         and #verifyName <= 80
     then
@@ -258,6 +318,10 @@ function iWR:AddNoteToGameTooltip(self, ...)
     if not data or next(data) == nil then
         return
     end
+
+    -- Modern tooltip post-calls may run more than once for the same unit.
+    if self.iWRNoteDatabaseKey == databaseKey then return end
+    self.iWRNoteDatabaseKey = databaseKey
 
     local typeIndex = tonumber(data[2])
     local note = data[1]
@@ -391,7 +455,7 @@ function iWR:CheckGuildWatchlist(databaseKey, guildName, playerName, playerRealm
     if not iWRSettings.GuildWatchlist or not next(iWRSettings.GuildWatchlist) then return end
     if not guildName or guildName == "" then return end
     if iWRDatabase[databaseKey] then return end
-    if playerName == UnitName("player") then return end
+    if iWR:IsSamePlayerName(playerName, iWR:GetUnitPlayerIdentity("player")) then return end
 
     local watchEntry = iWRSettings.GuildWatchlist[guildName]
     if not watchEntry then return end
@@ -408,7 +472,7 @@ function iWR:CheckGuildWatchlist(databaseKey, guildName, playerName, playerRealm
     end
 
     local currentTime, currentDate = iWR:GetCurrentTimeByHours()
-    local noteAuthor = (noteAuthorOverride and noteAuthorOverride ~= "") and noteAuthorOverride or iWR:ColorizePlayerNameByClass(UnitName("player"), select(2, UnitClass("player")))
+    local noteAuthor = (noteAuthorOverride and noteAuthorOverride ~= "") and noteAuthorOverride or iWR:ColorizePlayerNameByClass(iWR:GetUnitPlayerIdentity("player"), select(2, UnitClass("player")))
     local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(playerName, playerRealm)
     local dbName = classToken and iWR.Colors.Classes[classToken] and (iWR.Colors.Classes[classToken] .. capitalizedName) or (iWR.Colors.Gray .. capitalizedName)
 
@@ -450,18 +514,19 @@ function iWR:CheckGroupMembersAgainstDatabase()
     local numGroupMembers = GetNumGroupMembers()
     local isInRaid = IsInRaid()
     local matches = {}
-    local playerName = UnitName("player") -- Current player's name for comparison
+    local playerName = iWR:GetUnitPlayerIdentity("player") -- Current player's full Forever name
 
     local maxPartyIndex = isInRaid and numGroupMembers or (numGroupMembers - 1)
 
     for i = 1, maxPartyIndex do
         local unitID = isInRaid and "raid" .. i or "party" .. i
         local targetName, targetRealm = UnitName(unitID)
+        local targetIdentity = targetName and iWR:GetPlayerDatabaseKey(targetName, targetRealm)
 
         if not targetName then
             iWR:DebugMsg("Could not retrieve name for unitID: " .. unitID, 2)
-        elseif not iWR.WarnedPlayers[targetName] then
-            iWR.WarnedPlayers[targetName] = true
+        elseif targetIdentity and not iWR.WarnedPlayers[targetIdentity] then
+            iWR.WarnedPlayers[targetIdentity] = true
 
             if targetRealm == "" or targetRealm == nil then
                 targetRealm = iWR.CurrentRealm
@@ -470,7 +535,7 @@ function iWR:CheckGroupMembersAgainstDatabase()
             local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
             local databaseKey = capitalizedName .. "-" .. capitalizedRealm
 
-            if playerName ~= targetName then
+            if not iWR:IsSamePlayerName(playerName, targetName) then
                 if iWRDatabase[databaseKey] then
                     local data = iWR:GetDatabaseEntry(databaseKey)
                     if data and next(data) ~= nil then
@@ -529,7 +594,7 @@ function iWR:LogGroupMembers()
     if numGroupMembers <= 1 then return end
 
     local isInRaid = IsInRaid()
-    local playerName = UnitName("player")
+    local playerName = iWR:GetUnitPlayerIdentity("player")
     local maxPartyIndex = isInRaid and numGroupMembers or (numGroupMembers - 1)
 
     -- Get current zone and instance info
@@ -669,9 +734,7 @@ function iWR:FormatNameAndRealm(name, realm)
         iWR:DebugMsg("Format realm not string: " .. realm or nil,3)
         realm = ""
     end
-    local formattedName = UTF8UcFirst(name)
-    local formattedRealm = UTF8UcFirst(realm)
-    return formattedName, formattedRealm
+    return self:ResolvePlayerIdentity(name, realm)
 end
 
 function iWR:SetTargetFrameShadowedUnitFrames()
@@ -748,12 +811,20 @@ function iWR:SetTargetFrameShadowedUnitFrames()
     end
 end
 
-function iWR:SetTargetFrameDragonFlightUI()
+function iWR:SetTargetFrameForeverDragon()
     local portraitParent = _G["TargetFrame"]
-    -- local portrait = _G["TargetFramePortrait"]
-    -- TODO: check if dragonflight target unitframe module active
-    local dragonflight = true;
-    if dragonflight then
+    if portraitParent then
+        local dragonOffsetX, dragonOffsetY = 6, 0
+        local largeDragonOffsetX = 15
+        local container = portraitParent.TargetFrameContainer
+        local content = portraitParent.TargetFrameContent
+        local contentMain = content and content.TargetFrameContentMain
+        local portraitAnchor = _G["TargetFramePortrait"]
+            or (container and (container.Portrait or container.TargetFramePortrait))
+            or (contentMain and (contentMain.Portrait or contentMain.TargetFramePortrait))
+            or portraitParent.Portrait
+            or portraitParent.portrait
+            or portraitParent
         iWR:DebugMsg("Using Portrait Parent: " .. portraitParent:GetName(), 3)
 
         -- Get the target's name and realm for database lookup
@@ -768,7 +839,7 @@ function iWR:SetTargetFrameDragonFlightUI()
 
         -- Ensure the database entry exists
         if not iWRDatabase[databaseKey] then
-            iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database. [SetTargetFrameDragonFlightUI]", 1)
+            iWR:DebugMsg("Target [" .. databaseKey .. "] not found in the database. [SetTargetFrameForeverDragon]", 1)
             return
         end
 
@@ -779,13 +850,15 @@ function iWR:SetTargetFrameDragonFlightUI()
         end
 
         local dragonFrame = iWR.customFrame
-        dragonFrame:SetFrameLevel(1)
+        dragonFrame:SetParent(portraitParent)
+        dragonFrame:SetFrameLevel(portraitParent:GetFrameLevel() + 2)
         dragonFrame:Show()
 
         local dragonTexture = dragonFrame.texture
-        -- Steal Classification dragons texture from DragonFlightUI (thanks KarlHeinzSchneider)
-        dragonTexture:SetTexture('Interface\\Addons\\DragonflightUI\\Textures\\uiunitframeboss2x')
+        -- Bundled Dragonflight-style atlas; DragonFlightUI is not required.
+        dragonTexture:SetTexture(iWR.AddonPath .. "Images\\TargetFrames\\Forever\\uiunitframeboss2x.blp")
         dragonTexture:SetDrawLayer('ARTWORK', 3)
+        dragonTexture:ClearAllPoints()
 
         local targetRelation = iWRDatabase[databaseKey][2]
         local typeName = iWR.Types[targetRelation]
@@ -793,36 +866,36 @@ function iWR:SetTargetFrameDragonFlightUI()
         if typeName == "Superior" then
             dragonTexture:SetTexCoord(0.001953125, 0.388671875, 0.001953125, 0.31835937)
             dragonTexture:SetSize(99, 81)
-            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 54.5, 8)
+            dragonTexture:SetPoint('CENTER', portraitAnchor, 'CENTER', largeDragonOffsetX, dragonOffsetY)
             dragonTexture:SetVertexColor(0.3, 0.65, 1, 1)
         elseif typeName == "Respected" then
             dragonTexture:SetTexCoord(0.001953125, 0.388671875, 0.001953125, 0.31835937)
             dragonTexture:SetSize(99, 81)
-            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 54.5, 8)
+            dragonTexture:SetPoint('CENTER', portraitAnchor, 'CENTER', largeDragonOffsetX, dragonOffsetY)
             dragonTexture:SetVertexColor(0, 0.9, 0, 1)
         elseif typeName == "Liked" then
             dragonTexture:SetTexCoord(0.001953125, 0.314453125, 0.322265625, 0.630859375)
             dragonTexture:SetSize(80, 79)
-            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 45, 8)
+            dragonTexture:SetPoint('CENTER', portraitAnchor, 'CENTER', dragonOffsetX, dragonOffsetY)
             dragonTexture:SetVertexColor(0, 0.7, 0, 1)
         elseif typeName == "Disliked" then
             dragonTexture:SetTexCoord(0.001953125, 0.314453125, 0.322265625, 0.630859375)
             dragonTexture:SetSize(80, 79)
-            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 45, 8)
+            dragonTexture:SetPoint('CENTER', portraitAnchor, 'CENTER', dragonOffsetX, dragonOffsetY)
             dragonTexture:SetVertexColor(0.7, 0, 0, 1)
         elseif typeName == "Hated" then
             dragonTexture:SetTexCoord(0.001953125, 0.388671875, 0.001953125, 0.31835937)
             dragonTexture:SetSize(99, 81)
-            dragonTexture:SetPoint('CENTER', portraitParent, 'CENTER', 54.5, 8)
+            dragonTexture:SetPoint('CENTER', portraitAnchor, 'CENTER', largeDragonOffsetX, dragonOffsetY)
             dragonTexture:SetVertexColor(0.9, 0, 0, 1)
         else
-            iWR:DebugMsg("Relationship type is missing. [SetTargetFrameDragonFlightUI]", 1)
+            iWR:DebugMsg("Relationship type is missing. [SetTargetFrameForeverDragon]", 1)
             dragonFrame:Hide()
         end
 
         iWR:DebugMsg("Custom frame successfully anchored to:" .. portraitParent:GetName() .. ".", 3)
     else
-        iWR:DebugMsg("DragonFlightUI portrait frame not found.", 1)
+        iWR:DebugMsg("Default TargetFrame was not found for the dragon overlay.", 1)
     end
 end
 
@@ -980,7 +1053,8 @@ function iWR:SetTargetingFrame()
     end
 
     -- Format the database key as "Name-Realm"
-    local databaseKey = targetName .. "-" .. targetRealm
+    local databaseKey, resolvedTargetName, resolvedTargetRealm = iWR:GetPlayerDatabaseKey(targetName, targetRealm)
+    targetName, targetRealm = resolvedTargetName, resolvedTargetRealm
 
     -- Check if the target is in the database
     if not iWRDatabase[databaseKey] then
@@ -1067,13 +1141,7 @@ function iWR:SetTargetingFrame()
         -- Update the target frame based on settings
         if iWRSettings.UpdateTargetFrame then
             iWR:DebugMsg("TargetFrameType = " .. (iWR.ImagePath or "nil"), 3)
-            if iWR.ImagePath == "DragonFlightUI" then
-                iWR:SetTargetFrameDragonFlightUI()
-            elseif iWR.ImagePath == "ShadowedUnitFrames" then
-                iWR:SetTargetFrameShadowedUnitFrames()
-            else
-                iWR:SetTargetFrameDefault()
-            end
+            iWR:SetTargetFrameForeverDragon()
         end
 
         if targetRealm == iWR.CurrentRealm then
@@ -1106,6 +1174,65 @@ local function NormalizeRealmName(realm)
     return formattedRealm
 end
 
+local hookedChatIconFrames = {}
+local activeChatIconTooltipFrame
+local chatIconTooltipMouseWasEnabled
+
+local function HideChatIconTooltip(chatFrame)
+    if activeChatIconTooltipFrame ~= chatFrame then return end
+    activeChatIconTooltipFrame = nil
+    if GameTooltip and GameTooltip.iWRChatIconOwner == chatFrame then
+        GameTooltip.iWRChatIconOwner = nil
+        GameTooltip:Hide()
+        if chatIconTooltipMouseWasEnabled ~= nil then
+            GameTooltip:EnableMouse(chatIconTooltipMouseWasEnabled)
+        end
+    end
+    chatIconTooltipMouseWasEnabled = nil
+end
+
+local function HookChatIconTooltip(chatFrame)
+    if not chatFrame or not chatFrame.HookScript or hookedChatIconFrames[chatFrame] then return end
+    hookedChatIconFrames[chatFrame] = true
+
+    chatFrame:HookScript("OnHyperlinkEnter", function(self, link)
+        local databaseKey = type(link) == "string" and link:match("^addon:iWR:(.+)$")
+        databaseKey = databaseKey and iWR:NormalizePlayerDatabaseKey(databaseKey)
+        local data = databaseKey and iWRDatabase[databaseKey]
+        if not data or not GameTooltip then
+            HideChatIconTooltip(self)
+            return
+        end
+
+        activeChatIconTooltipFrame = self
+        GameTooltip.iWRChatIconOwner = self
+        if chatIconTooltipMouseWasEnabled == nil and GameTooltip.IsMouseEnabled then
+            chatIconTooltipMouseWasEnabled = GameTooltip:IsMouseEnabled()
+        end
+        GameTooltip:EnableMouse(false)
+        GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
+
+        local typeIndex = tonumber(data[2]) or 0
+        local typeName = iWR:GetTypeName(typeIndex)
+        local displayName = StripColorCodes(data[4] or databaseKey)
+        GameTooltip:SetText(string.format(L["ChatIconTooltipTitle"], typeName or "iWR"), 1, 0.59, 0.09)
+        GameTooltip:AddLine(string.format(L["ChatIconTooltipPlayer"], displayName), 1, 1, 1)
+        if data[1] and data[1] ~= "" then
+            GameTooltip:AddLine(data[1], 1, 1, 1, true)
+        end
+        if iWRSettings.TooltipShowAuthor and data[6] and data[6] ~= "" then
+            local author = StripColorCodes(data[6])
+            local savedDate = data[5] and data[5] ~= "" and (" (" .. data[5] .. ")") or ""
+            GameTooltip:AddLine((L["DetailAuthor"] or "Author:") .. " " .. author .. savedDate, 0.75, 0.75, 0.75, true)
+        end
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(L["ChatIconTooltipClick"], 1, 0.82, 0, true)
+        GameTooltip:Show()
+    end)
+
+    chatFrame:HookScript("OnHyperlinkLeave", HideChatIconTooltip)
+end
+
 -- Function to add relationship icons to chat messages
 local function AddRelationshipIconToChat(self, event, message, author, flags, ...)
     if iWRSettings.ShowChatIcons then
@@ -1113,29 +1240,25 @@ local function AddRelationshipIconToChat(self, event, message, author, flags, ..
             return false, message, author, flags, ...
         end
 
-        local authorName, authorRealm = string.match(author, "^([^-]+)-?(.*)$")
-        authorRealm = NormalizeRealmName(authorRealm)
+        local databaseKey, authorName, authorRealm = iWR:GetPlayerDatabaseKey(author)
+        if not iWR:IsForeverClient() then
+            local parsedName, parsedRealm = string.match(author, "^([^-]+)-?(.*)$")
+            authorName = parsedName
+            authorRealm = NormalizeRealmName(parsedRealm)
+            databaseKey = authorName and (authorName .. "-" .. authorRealm) or nil
+        end
 
-        if not authorName or authorName == "" then
+        if not authorName or authorName == "" or not databaseKey then
             return false, message, author, flags, ...
         end
 
-        -- Construct the key as name-realm
-        local databaseKey = authorName .. "-" .. authorRealm
-
         -- Check the database using the constructed key
         if iWRDatabase[databaseKey] and not message:find("|Haddon:iWR:") then
-            -- Get the font size from the current chat frame
-            local fontSize = 14
-            if self and self.GetFont then
-                local _, fs = self:GetFont()
-                if fs then fontSize = fs end
-            end
-            local iconSize = math.floor(fontSize * 1.2)
+            HookChatIconTooltip(self)
             local iconPath = iWR:GetChatIcon(iWRDatabase[databaseKey][2])
 
-            -- Create the clickable addon link
-            local iconString = string.format("|T%s:%d|t", iconPath, iconSize)
+            -- Zero dimensions make WoW scale the inline texture to this chat line's font.
+            local iconString = string.format("|T%s:0:0|t", iconPath)
             local clickableLink = string.format("|cFFFFFF00|Haddon:iWR:%s|h%s|h|r", databaseKey, iconString)
 
             -- Prepend the clickable link to the message
@@ -1150,8 +1273,9 @@ end
 function iWR:HandleHyperlink(link, text, button, chatFrame)
     local linkType, playerName = string.split(":", link)
     if linkType == "iWRPlayer" and playerName then
-        if iWRDatabase[playerName] then
-            self:ShowDetailWindow(playerName)
+        local databaseKey = iWR:NormalizePlayerDatabaseKey(playerName)
+        if databaseKey and iWRDatabase[databaseKey] then
+            self:ShowDetailWindow(databaseKey)
         else
             iWR:DebugMsg("No data found for player: [" .. playerName .. "]",3)
         end
@@ -1399,6 +1523,20 @@ function iWR:InitializeSettings()
         iWRMemory.GroupLog = {}
     end
 
+    -- Forever identity migration for character lists and sync contacts.
+    local normalizedCharacters = {}
+    for characterName, enabled in pairs(iWRSettings.MyCharacters or {}) do
+        local _, resolvedName = iWR:GetPlayerDatabaseKey(characterName)
+        if enabled and resolvedName then normalizedCharacters[resolvedName] = true end
+    end
+    iWRSettings.MyCharacters = normalizedCharacters
+
+    for _, entry in ipairs(iWRSettings.SyncList or {}) do
+        local _, resolvedName = iWR:GetPlayerDatabaseKey(entry.name, entry.realm)
+        if resolvedName then entry.name = resolvedName end
+        entry.realm = "Forever"
+    end
+
     -- Prune old entries if over limit
     iWR:PruneGroupLog()
 end
@@ -1412,8 +1550,29 @@ function iWR:InitializeDatabase()
         for index, value in pairs(data) do
             clonedData[index] = value
         end
+        if iWR:IsForeverClient() then
+            local newKey = iWR:NormalizePlayerDatabaseKey(databaseKey, clonedData)
+            if newKey then
+                local _, resolvedName = iWR:GetPlayerDatabaseKey(newKey:gsub("%-Forever$", ""))
+                if resolvedName then
+                    local colorCode = type(clonedData[4]) == "string" and clonedData[4]:match("|c%x%x%x%x%x%x%x%x") or nil
+                    clonedData[4] = colorCode and (colorCode .. resolvedName .. iWR.Colors.Reset) or resolvedName
+                end
+                if updatedDatabase[newKey] then
+                    local existing = updatedDatabase[newKey]
+                    if (tonumber(clonedData[3]) or 0) > (tonumber(existing[3]) or 0) then
+                        iWR:MergeNoteHistory(existing, clonedData)
+                        updatedDatabase[newKey] = clonedData
+                    else
+                        iWR:MergeNoteHistory(clonedData, existing)
+                    end
+                else
+                    updatedDatabase[newKey] = clonedData
+                end
+                clonedData[7] = "Forever"
+            end
         -- Check if the key already has a realm (contains "-")
-        if not strfind(databaseKey, "-") then
+        elseif not strfind(databaseKey, "-") then
             local newKey = databaseKey .. "-" .. iWR.CurrentRealm
             -- Check if the newKey already exists in updatedDatabase
             if not updatedDatabase[newKey] then
@@ -1472,7 +1631,7 @@ function iWR:InitializeDatabase()
             if keyRealm and keyRealm ~= "" then
                 data[7] = keyRealm
             else
-                data[7] = iWR.CurrentRealm
+                data[7] = iWR:IsForeverClient() and "Forever" or iWR.CurrentRealm
             end
         end
 
@@ -1549,7 +1708,7 @@ function iWR:RegisterChatFilters()
 end
 
 function iWR:VerifyTargetClassinDB(databasekey, targetClass)
-    if iWRDatabase[databasekey][2] ~= 0 then
+    if iWRDatabase[databasekey][2] ~= 0 and targetClass then
 
         -- Get target name and realm
         local targetNameWithRealm = GetUnitName("target", true)
@@ -1561,8 +1720,15 @@ function iWR:VerifyTargetClassinDB(databasekey, targetClass)
         if not targetRealm or targetRealm == "" then
             targetRealm = iWR.CurrentRealm
         end
-        if iWR.Colors.Gray .. targetName == iWRDatabase[databasekey][4] or targetName == iWRDatabase[databasekey][4] then
-            iWRDatabase[databasekey][4] = iWR:ColorizePlayerNameByClass(targetName, targetClass)
+        local _, resolvedTargetName = iWR:GetPlayerDatabaseKey(targetName, targetRealm)
+        local storedValue = iWRDatabase[databasekey][4] or ""
+        local storedName = StripColorCodes(storedValue)
+        local coloredTargetName = iWR:ColorizePlayerNameByClass(resolvedTargetName, targetClass)
+        local storedColor = storedValue:match("|c%x%x%x%x%x%x%x%x")
+        local targetColor = coloredTargetName:match("|c%x%x%x%x%x%x%x%x")
+        if iWR:IsSamePlayerName(resolvedTargetName, storedName)
+            and storedColor ~= targetColor then
+            iWRDatabase[databasekey][4] = coloredTargetName
             print(L["CharNoteStart"] .. iWRDatabase[databasekey][4] .. L["CharNoteColorUpdate"])
             iWR:PopulateDatabase()
             if iWRSettings.DataSharing ~= false and not iWRDatabase[databasekey][9] then
@@ -1622,11 +1788,15 @@ function iWR:MenuOpen(menuName, classToken)
             menuName = nil
         end
 
-        local targetName = UnitName("target")
+        local rawTargetName = UnitName("target")
+        local targetName = iWR:GetUnitPlayerIdentity("target")
         local targetIsSecret = issv and targetName and issv(targetName)
         local namesMatch = false
         if menuName and not targetIsSecret then
-            namesMatch = (menuName == targetName)
+            if rawTargetName and iWR:IsSamePlayerName(menuName, rawTargetName) then
+                menuName = targetName
+            end
+            namesMatch = iWR:IsSamePlayerName(menuName, targetName)
         end
 
         if menuName and menuName ~= "" and not namesMatch then
@@ -1639,19 +1809,15 @@ function iWR:MenuOpen(menuName, classToken)
 
             -- Determine database key for slider lookup (strip color codes for clean lookup)
             local cleanName = StripColorCodes(menuName)
-            if cleanName:find("-") then
-                lookupName, lookupRealm = strsplit("-", cleanName)
-            else
-                lookupName = cleanName
-                lookupRealm = iWR.CurrentRealm
-            end
+            lookupName, lookupRealm = iWR:ResolvePlayerIdentity(cleanName)
         else
             iWRNameInput:SetText(L["DefaultNameInput"])
             iWRNoteInput:SetText(L["DefaultNoteInput"])
             if UnitExists("target") and UnitIsPlayer("target") then
-                local playerName = UnitName("target")
+                local playerName, playerSecondName = UnitName("target")
                 local nameIsSecret = issv and playerName and issv(playerName)
                 if not nameIsSecret then
+                    playerName = iWR:ResolvePlayerIdentity(playerName, playerSecondName)
                     local _, class = UnitClass("target")
                     if class then
                         iWRNameInput:SetText(iWR:ColorizePlayerNameByClass(playerName, class))
@@ -1659,7 +1825,7 @@ function iWR:MenuOpen(menuName, classToken)
                         iWRNameInput:SetText(playerName)
                     end
                     lookupName = playerName
-                    local targetRealm = select(2, UnitName("target"))
+                    local targetRealm = "Forever"
                     local realmIsSecret = issv and targetRealm and issv(targetRealm)
                     if not realmIsSecret then
                         lookupRealm = (targetRealm and targetRealm ~= "") and targetRealm or iWR.CurrentRealm
@@ -1735,9 +1901,10 @@ function iWR:DatabaseOpen()
         iWRNameInput:SetText(L["DefaultNameInput"])
         iWRNoteInput:SetText(L["DefaultNoteInput"])
         if UnitExists("target") and UnitIsPlayer("target") then
-            local playerName = UnitName("target")
+            local playerName, playerSecondName = UnitName("target")
             local issv = _G.issecretvalue
             if not (issv and playerName and issv(playerName)) then
+                playerName = iWR:ResolvePlayerIdentity(playerName, playerSecondName)
                 local _, class = UnitClass("target")
                 if class then
                     iWRNameInput:SetText(iWR:ColorizePlayerNameByClass(playerName, class))
@@ -1799,11 +1966,11 @@ function iWR:ClearNote(Name)
 
     -- Determine the final name and realm to use
     local finalName, finalRealm
-    if string.find(Name, "-") then
+    if not iWR:IsForeverClient() and string.find(Name, "-") then
         -- Case 1: Input name includes "-"
         finalName, finalRealm = strsplit("-", Name)
         iWR:DebugMsg("Input includes realm. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
-    elseif targetName and targetName == uncoloredName then
+    elseif targetName and iWR:IsSamePlayerName(targetName, uncoloredName) then
         -- Case 2: Input name matches target name
         finalName = targetName
         finalRealm = targetRealm
@@ -2078,7 +2245,7 @@ function iWR:CreateNote(Name, Note, Type, personal)
     iWR:DebugMsg("New note Note: [" .. (Note ~= "" and ("|r" .. Note .. iWR.Colors.iWR) or iWR.Colors.Reset .. "Nothing" .. iWR.Colors.iWR) .. "].", 3)
     iWR:DebugMsg("New note Type: [|r" .. iWR.Colors[Type] .. iWR:GetTypeName(Type) .. iWR.Colors.iWR .. "].", 3)
 
-    local playerName = UnitName("player")
+    local playerName = iWR:GetUnitPlayerIdentity("player")
     local currentTime, currentDate = iWR:GetCurrentTimeByHours()
     local playerUpdate = false
 
@@ -2092,11 +2259,11 @@ function iWR:CreateNote(Name, Note, Type, personal)
 
     -- Determine the final name and realm to use
     local finalName, finalRealm
-    if string.find(Name, "-") then
+    if not iWR:IsForeverClient() and string.find(Name, "-") then
         -- Case 1: Input name includes "-"
         finalName, finalRealm = strsplit("-", Name)
         iWR:DebugMsg("Input includes realm. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
-    elseif targetName and targetName == uncoloredName then
+    elseif targetName and iWR:IsSamePlayerName(targetName, uncoloredName) then
         -- Case 2: Input name matches target name
         finalName = targetName
         finalRealm = targetRealm
@@ -2133,7 +2300,7 @@ function iWR:CreateNote(Name, Note, Type, personal)
     if colorCode then
         dbName = colorCode .. capitalizedName
     else
-        if targetName == capitalizedName then
+        if iWR:IsSamePlayerName(targetName, capitalizedName) then
             local targetClass = select(2, UnitClass("target"))
             dbName = targetClass and (iWR.Colors.Classes[targetClass] .. capitalizedName)
         else
@@ -2154,7 +2321,7 @@ function iWR:CreateNote(Name, Note, Type, personal)
     -- Capture faction from target (if target matches this note)
     local noteFaction = ""
     local noFaction = true
-    if targetName and targetName == capitalizedName then
+    if targetName and iWR:IsSamePlayerName(targetName, capitalizedName) then
         noteFaction = UnitFactionGroup("target") or ""
     end
     if noteFaction ~= "" then noFaction = false end
@@ -2254,20 +2421,27 @@ function iWR:ModifyMenuForContext(menuType)
             end
         end
 
-        -- Try extracting realm from fullName (e.g., "Player-Realm")
-        if not playerRealm and contextData and contextData.fullName then
-            local extractedName, extractedRealm = strmatch(contextData.fullName, "([^%-]+)%-(.+)")
-            if extractedName and extractedRealm then
-                playerName = extractedName
-                playerRealm = extractedRealm
+        -- Forever's fullName contains both character-name parts (often First-Last).
+        if contextData and contextData.fullName then
+            if iWR:IsForeverClient() then
+                playerName = contextData.fullName
+                playerRealm = nil
+            elseif not playerRealm then
+                local extractedName, extractedRealm = strmatch(contextData.fullName, "([^%-]+)%-(.+)")
+                if extractedName and extractedRealm then
+                    playerName = extractedName
+                    playerRealm = extractedRealm
+                end
             end
         end
 
         -- Final fallback: Default to the player's own realm
-        playerRealm = playerRealm or GetRealmName()
+        playerRealm = playerRealm or (iWR:IsForeverClient() and "Forever" or GetRealmName())
 
         -- Debug output
-        local fullPlayerName = playerRealm and playerName .. "-" .. playerRealm or playerName
+        local _, resolvedName, resolvedRealm = iWR:GetPlayerDatabaseKey(playerName, playerRealm)
+        playerName, playerRealm = resolvedName, resolvedRealm
+        local fullPlayerName = iWR:IsForeverClient() and playerName or (playerRealm and playerName .. "-" .. playerRealm or playerName)
         iWR:DebugMsg("Right-click menu opened for: [" .. fullPlayerName .. "].", 3)
 
         -- Create UI elements

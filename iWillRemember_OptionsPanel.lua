@@ -916,14 +916,14 @@ function iWR:CreateOptionsPanel()
     UpdateWhitelistDisplay()
 
     UIDropDownMenu_Initialize(addFriendDropdown, function(frame, level)
-        local currentRealm = GetRealmName()
+        local currentRealm = iWR.CurrentRealm
         local numFriends = C_FriendList.GetNumFriends()
         for i = 1, numFriends do
             local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
             if friendInfo and friendInfo.name then
                 local isInWhitelist = false
                 for _, entry in ipairs(iWRSettings.SyncList or {}) do
-                    if entry.name == friendInfo.name and entry.realm == currentRealm then
+                    if iWR:IsSamePlayerName(entry.name, friendInfo.name) then
                         isInWhitelist = true
                         break
                     end
@@ -935,7 +935,7 @@ function iWR:CreateOptionsPanel()
                     info.func = function(self)
                         if not iWRSettings.SyncList then iWRSettings.SyncList = {} end
                         table.insert(iWRSettings.SyncList, {
-                            name = self.value,
+                            name = select(2, iWR:GetPlayerDatabaseKey(self.value)),
                             realm = currentRealm,
                             type = "wow",
                         })
@@ -950,7 +950,7 @@ function iWR:CreateOptionsPanel()
     end)
 
     UIDropDownMenu_Initialize(removeFriendDropdown, function(frame, level)
-        local currentRealm = GetRealmName()
+        local currentRealm = iWR.CurrentRealm
         for _, entry in ipairs(iWRSettings.SyncList or {}) do
             if entry.realm == currentRealm then
                 local info = UIDropDownMenu_CreateInfo()
@@ -958,7 +958,7 @@ function iWR:CreateOptionsPanel()
                 info.value = entry.name
                 info.func = function(self)
                     for i, e in ipairs(iWRSettings.SyncList or {}) do
-                        if e.name == self.value and e.realm == currentRealm then
+                        if iWR:IsSamePlayerName(e.name, self.value) then
                             table.remove(iWRSettings.SyncList, i)
                             break
                         end

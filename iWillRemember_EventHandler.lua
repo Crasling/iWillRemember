@@ -107,16 +107,20 @@ function iWR:OnEnable()
     ----------------------------------------------------------------
     -- TOOLTIP HOOK (SAFE AT ENABLE)
     ----------------------------------------------------------------
-    local gameTocNumber = tonumber(iWR.GameTocVersion) or 0
-    if TooltipDataProcessor and gameTocNumber >= 100000 then
-        -- Retail 10.0+: OnTooltipSetUnit removed, use TooltipDataProcessor
-        TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, function(tooltip, ...)
-            if tooltip == GameTooltip then
-                iWR:AddNoteToGameTooltip(tooltip, ...)
-            end
+    local modernTooltipHooked = false
+    if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall
+        and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Unit then
+        modernTooltipHooked = pcall(function()
+            TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, function(tooltip, ...)
+                if tooltip == GameTooltip then
+                    iWR:AddNoteToGameTooltip(tooltip, ...)
+                end
+            end)
         end)
-    else
-        -- Classic / TBC / Wrath / Cata / MoP: use OnTooltipSetUnit
+    end
+
+    if not modernTooltipHooked then
+        -- Legacy fallback for clients that still expose OnTooltipSetUnit.
         local ok = pcall(function()
             self:SecureHookScript(GameTooltip, "OnTooltipSetUnit", "AddNoteToGameTooltip")
         end)
@@ -129,6 +133,14 @@ function iWR:OnEnable()
         end
     end
 
+    if GameTooltip and GameTooltip.HookScript then
+        pcall(function()
+            GameTooltip:HookScript("OnTooltipCleared", function(tooltip)
+                tooltip.iWRNoteDatabaseKey = nil
+            end)
+        end)
+    end
+
     ----------------------------------------------------------------
     -- DELAYED UI HOOKS
     ----------------------------------------------------------------
@@ -137,9 +149,12 @@ function iWR:OnEnable()
     ----------------------------------------------------------------
     -- CORE INITIALIZATION
     ----------------------------------------------------------------
-    -- Register current character for Mine/Friends filter (account-wide)
+    -- Register current character for the Mine/Friends filter.
     if not iWRSettings.MyCharacters then iWRSettings.MyCharacters = {} end
-    iWRSettings.MyCharacters[UnitName("player")] = true
+    local currentCharacter = iWR:GetUnitPlayerIdentity("player")
+    if currentCharacter then
+        iWRSettings.MyCharacters[currentCharacter] = true
+    end
 
     iWR:InitializeSettings()
 
@@ -180,7 +195,7 @@ function iWR:OnEnable()
     -- WELCOME MESSAGE
     ----------------------------------------------------------------
     if iWRSettings.WelcomeMessage ~= iWR.Version then
-        local playerName = UnitName("player")
+        local playerName = iWR:GetUnitPlayerIdentity("player")
         local _, class = UnitClass("player")
 
         print(

@@ -432,7 +432,7 @@ saveNoteButton:SetScript("OnClick", function()
         -- Only clear if the entry already exists; level 0 with no entry does nothing
         local checkName = StripColorCodes(iWRNameInput:GetText() or "")
         local checkRealm = iWR.CurrentRealm
-        if string.find(checkName, "-") then
+        if not iWR:IsForeverClient() and string.find(checkName, "-") then
             checkName, checkRealm = strsplit("-", checkName)
         end
         if checkName and checkName ~= "" then
@@ -1119,12 +1119,14 @@ function iWR:PopulateDatabase()
         -- Apply author filter (Mine/Friends) — uses MyCharacters to include alts
         if dbNoteFilter == "mine" then
             local authorName = data[6] and StripColorCodes(data[6]) or ""
-            if not myCharacters[authorName] then
+            local _, normalizedAuthor = iWR:GetPlayerDatabaseKey(authorName)
+            if not normalizedAuthor or not myCharacters[normalizedAuthor] then
                 includeEntry = false
             end
         elseif dbNoteFilter == "friends" then
             local authorName = data[6] and StripColorCodes(data[6]) or ""
-            if myCharacters[authorName] then
+            local _, normalizedAuthor = iWR:GetPlayerDatabaseKey(authorName)
+            if normalizedAuthor and myCharacters[normalizedAuthor] then
                 includeEntry = false
             end
         end
@@ -1197,7 +1199,7 @@ function iWR:PopulateDatabase()
                     local numMembers = GetNumGroupMembers()
                     for gi = 1, numMembers do
                         local unit = IsInRaid() and ("raid" .. gi) or ("party" .. gi)
-                        if UnitExists(unit) and UnitName(unit) == strippedName then
+                        if UnitExists(unit) and iWR:IsSamePlayerName(UnitName(unit), strippedName) then
                             isOnline = UnitIsConnected(unit)
                             break
                         end
@@ -1211,7 +1213,7 @@ function iWR:PopulateDatabase()
                         local gName, _, _, _, _, _, _, _, online = GetGuildRosterInfo(gi)
                         if gName then
                             local shortName = Ambiguate(gName, "short")
-                            if shortName == strippedName then
+                            if iWR:IsSamePlayerName(shortName, strippedName) then
                                 isOnline = online
                                 break
                             end
@@ -1224,7 +1226,7 @@ function iWR:PopulateDatabase()
                     local numFriends = C_FriendList.GetNumFriends()
                     for fi = 1, numFriends do
                         local info = C_FriendList.GetFriendInfoByIndex(fi)
-                        if info and info.name == strippedName then
+                        if info and iWR:IsSamePlayerName(info.name, strippedName) then
                             isOnline = info.connected
                             break
                         end
@@ -1840,7 +1842,7 @@ function iWR:PopulateGroupLog()
         if not entry then break end
 
         -- Skip players that already have a note in the database
-        local databaseKey = entry.name .. "-" .. entry.realm
+        local databaseKey = iWR:GetPlayerDatabaseKey(entry.name, entry.realm)
         if iWRDatabase[databaseKey] then
             -- Player already has a note, don't show in Group Log
         else
@@ -2217,7 +2219,7 @@ gwAddBtn:SetScript("OnClick", function()
     local guildName = strtrim(gwInput:GetText())
     if guildName == "" then return end
     if not iWRSettings.GuildWatchlist then iWRSettings.GuildWatchlist = {} end
-    local authorName = iWR:ColorizePlayerNameByClass(UnitName("player"), select(2, UnitClass("player")))
+    local authorName = iWR:ColorizePlayerNameByClass(iWR:GetUnitPlayerIdentity("player"), select(2, UnitClass("player")))
     local noteText = strtrim(gwNoteInput:GetText())
     iWRSettings.GuildWatchlist[guildName] = { type = gwTypeValue, author = authorName, note = noteText }
     gwInput:SetText("")
