@@ -110,12 +110,8 @@ function iWR:CheckLatestVersion()
         iWR:DebugMsg("Version check sent to guild.", 3)
     end
 
-    -- Send to General channel
-    local channelIndex = GetChannelName("General")
-    if channelIndex and channelIndex > 0 then
-        iWR:SendCommMessage("iWRVersionCheck", VersionCache, "CHANNEL", tostring(channelIndex))
-        iWR:DebugMsg("Version check sent to General channel.", 3)
-    end
+    -- Forever does not permit addon traffic over public chat channels.
+    -- Version discovery stays on private whispers and the guild channel.
 end
 
 -- ╭────────────────────────────────────────────────────────╮

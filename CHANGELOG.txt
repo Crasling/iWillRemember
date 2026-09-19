@@ -1,6 +1,16 @@
 ================================================================================
- iWillRemember - Changelog
+iWillRemember - Changelog
 ================================================================================
+
+v0.22.2 - Forever Communication Fix
+--------------------------------------------------------------------------------
+
+ [FIX] iWillRemember no longer attempts to send version checks through the
+ public General channel, preventing the Forever login error "That operation is
+ not permitted in this channel"
+
+ [FIX] All iWillRemember communication prefixes are registered before the
+ login version check is sent, preventing early sync messages from being missed
 
 v0.22.1 - Forever Release
 --------------------------------------------------------------------------------

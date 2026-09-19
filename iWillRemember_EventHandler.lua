@@ -173,8 +173,6 @@ function iWR:OnEnable()
         iWR:StartHourlyBackup()
     end
 
-    iWR:CheckLatestVersion()
-
     ----------------------------------------------------------------
     -- COMM CHANNELS
     ----------------------------------------------------------------
@@ -182,6 +180,9 @@ function iWR:OnEnable()
     iWR:RegisterComm("iWRNewDBUpdate", "OnNewDBUpdate")
     iWR:RegisterComm("iWRRemDBUpdate", "OnRemDBUpdate")
     iWR:RegisterComm("iWRVersionCheck", "OnVersionCheck")
+
+    -- Register every prefix before the login version announcement sends.
+    iWR:CheckLatestVersion()
 
     ----------------------------------------------------------------
     -- MINIMAP ICON
