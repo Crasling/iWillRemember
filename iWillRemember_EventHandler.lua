@@ -193,23 +193,6 @@ function iWR:OnEnable()
     end
 
     ----------------------------------------------------------------
-    -- WELCOME MESSAGE
-    ----------------------------------------------------------------
-    if iWRSettings.WelcomeMessage ~= iWR.Version then
-        local playerName = iWR:GetUnitPlayerIdentity("player")
-        local _, class = UnitClass("player")
-
-        print(
-            L["iWRWelcomeStart"] ..
-            iWR.Colors.Classes[class] ..
-            playerName ..
-            L["iWRWelcomeEnd"]
-        )
-
-        iWRSettings.WelcomeMessage = iWR.Version
-    end
-
-    ----------------------------------------------------------------
     -- SLASH COMMANDS
     ----------------------------------------------------------------
     SLASH_IWR1 = "/iwr"

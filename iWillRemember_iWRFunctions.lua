@@ -2435,6 +2435,40 @@ function iWR:ModifyMenuForContext(menuType)
             end
         end
 
+        -- Forever's party menu context may expose only the first name. Prefer
+        -- the underlying unit token, whose UnitName value contains the complete
+        -- first-and-last character name. Fall back to matching the menu GUID
+        -- against the current group when Blizzard omits the token.
+        local unitToken = contextData and (contextData.unit or contextData.unitToken)
+        unitToken = unitToken or (ownerRegion and (ownerRegion.unit or ownerRegion.unitToken))
+        if not unitToken and ownerRegion and ownerRegion.GetAttribute then
+            local ok, value = pcall(ownerRegion.GetAttribute, ownerRegion, "unit")
+            if ok then unitToken = value end
+        end
+        if issv and unitToken and issv(unitToken) then unitToken = nil end
+
+        local menuGUID = contextData and contextData.guid
+        if not unitToken and menuGUID and not (issv and issv(menuGUID)) then
+            local prefix = IsInRaid() and "raid" or "party"
+            local count = IsInRaid() and GetNumGroupMembers() or GetNumSubgroupMembers()
+            for index = 1, count do
+                local candidate = prefix .. index
+                local ok, guid = pcall(UnitGUID, candidate)
+                if ok and guid == menuGUID then
+                    unitToken = candidate
+                    break
+                end
+            end
+        end
+
+        if unitToken and UnitExists(unitToken) then
+            local unitName, unitRealm = iWR:GetUnitPlayerIdentity(unitToken)
+            if unitName and unitName ~= "" then
+                playerName = unitName
+                playerRealm = unitRealm
+            end
+        end
+
         -- Final fallback: Default to the player's own realm
         playerRealm = playerRealm or (iWR:IsForeverClient() and "Forever" or GetRealmName())
 

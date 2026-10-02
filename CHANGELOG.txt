@@ -2,6 +2,13 @@
 iWillRemember - Changelog
 ================================================================================
 
+v0.22.4 - Forever Name and Settings Update
+--------------------------------------------------------------------------------
+[CHANGED] Removed the one-time version welcome and thank-you message.
+[FIX] Party-member note menus now retain complete Forever first-and-last names.
+[CHANGED] Removed iSoundPlayer and the already-retired iCommunityChat from the
+          Other Addons section.
+
 v0.22.3 - Database update
 --------------------------------------------------------------------------------
 [FIX] Vars save.

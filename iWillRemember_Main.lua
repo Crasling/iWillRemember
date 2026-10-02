@@ -123,7 +123,6 @@ iWR.SettingsDefault = {
     ShowChatIcons = true,
     SoundWarnings = true,
     UpdateTargetFrame = true,
-    WelcomeMessage = "0",
     iWRDatabaseBackupInfo = {
         backupDate = "",
         backupTime = "",

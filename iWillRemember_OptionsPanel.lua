@@ -476,10 +476,9 @@ function iWR:CreateOptionsPanel()
 
     -- Other addon tabs (detection deferred to OnShow)
     local iNIFContainer, iNIFContent = CreateTabContent()
-    local iSPContainer, iSPContent = CreateTabContent()
     local iSTContainer, iSTContent = CreateTabContent()
 
-    local tabContents = {generalContainer, syncContainer, backupContainer, customizeContainer, aboutContainer, iNIFContainer, iSPContainer, iSTContainer}
+    local tabContents = {generalContainer, syncContainer, backupContainer, customizeContainer, aboutContainer, iNIFContainer, iSTContainer}
 
     local sidebarButtons = {}
     local activeIndex = 1
@@ -513,8 +512,7 @@ function iWR:CreateOptionsPanel()
 
     table.insert(sidebarItems, {type = "header", label = L["SidebarHeaderOtherAddons"]})
     table.insert(sidebarItems, {type = "tab", label = L["TabINIFPromo"], index = 6})
-    table.insert(sidebarItems, {type = "tab", label = L["TabISPPromo"], index = 7})
-    table.insert(sidebarItems, {type = "tab", label = L["TabISTPromo"], index = 8})
+    table.insert(sidebarItems, {type = "tab", label = L["TabISTPromo"], index = 7})
 
     local sidebarY = -6
     for _, item in ipairs(sidebarItems) do
@@ -1382,60 +1380,6 @@ function iWR:CreateOptionsPanel()
     -- │              (both variants built, toggled OnShow)             │
     -- ╰───────────────────────────────────────────────────────────────╯
 
-    -- iSP installed variant
-    local iSPInstalledFrame = CreateFrame("Frame", nil, iSPContent)
-    iSPInstalledFrame:SetAllPoints(iSPContent)
-    iSPInstalledFrame:Hide()
-    do
-        y = -10
-        _, y = CreateSectionHeader(iSPInstalledFrame, L["ISPSettingsHeader"], y)
-
-        local iSPDesc
-        iSPDesc, y = CreateInfoText(iSPInstalledFrame,
-            L["ISPInstalledDesc1"] .. "\n\n" .. L["ISPInstalledDesc2"],
-            y, "GameFontHighlight")
-
-        y = y - 10
-
-        local iSPButton = CreateFrame("Button", nil, iSPInstalledFrame, "UIPanelButtonTemplate")
-        iSPButton:SetSize(180, 28)
-        iSPButton:SetPoint("TOPLEFT", iSPInstalledFrame, "TOPLEFT", 25, y)
-        iSPButton:SetText(L["ISPOpenSettingsButton"])
-        iSPButton:SetScript("OnClick", function()
-            local iSPFrame = _G["iSPSettingsFrame"]
-            if iSPFrame then
-                local point, _, relPoint, xOfs, yOfs = settingsFrame:GetPoint()
-                iSPFrame:ClearAllPoints()
-                iSPFrame:SetPoint(point, UIParent, relPoint, xOfs, yOfs)
-                settingsFrame:Hide()
-                iSPFrame:Show()
-            end
-        end)
-    end
-
-    -- iSP promo variant
-    local iSPPromoFrame = CreateFrame("Frame", nil, iSPContent)
-    iSPPromoFrame:SetAllPoints(iSPContent)
-    iSPPromoFrame:Hide()
-    do
-        y = -10
-        _, y = CreateSectionHeader(iSPPromoFrame, L["ISPPromoHeader"], y)
-
-        local iSPPromo
-        iSPPromo, y = CreateInfoText(iSPPromoFrame,
-            L["ISPPromoDesc"],
-            y, "GameFontHighlight")
-
-        y = y - 4
-
-        local iSPPromoLink
-        iSPPromoLink, y = CreateInfoText(iSPPromoFrame,
-            L["ISPPromoLink"],
-            y, "GameFontDisableSmall")
-    end
-
-    scrollChildren[7]:SetHeight(400)
-
     -- ╭───────────────────────────────────────────────────────────────╮
     -- │                      iST Settings Tab                         │
     -- ╰───────────────────────────────────────────────────────────────╯
@@ -1489,7 +1433,7 @@ function iWR:CreateOptionsPanel()
             y, "GameFontDisableSmall")
     end
 
-    scrollChildren[8]:SetHeight(400)
+    scrollChildren[7]:SetHeight(400)
 
     -- ╭───────────────────────────────────────────────────────────────╮
     -- │                       About Tab Content                       │
@@ -1682,18 +1626,11 @@ function iWR:CreateOptionsPanel()
             sidebarButtons[6].text:SetText(iNIFLoaded and L["TabINIF"] or L["TabINIFPromo"])
         end
 
-        local iSPLoaded = C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("iSoundPlayer")
-        iSPInstalledFrame:SetShown(iSPLoaded)
-        iSPPromoFrame:SetShown(not iSPLoaded)
-        if sidebarButtons[7] then
-            sidebarButtons[7].text:SetText(iSPLoaded and L["TabISP"] or L["TabISPPromo"])
-        end
-
         local iSTLoaded = C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("iSealTwist")
         iSTInstalledFrame:SetShown(iSTLoaded)
         iSTPromoFrame:SetShown(not iSTLoaded)
-        if sidebarButtons[8] then
-            sidebarButtons[8].text:SetText(iSTLoaded and L["TabIST"] or L["TabISTPromo"])
+        if sidebarButtons[7] then
+            sidebarButtons[7].text:SetText(iSTLoaded and L["TabIST"] or L["TabISTPromo"])
         end
 
     end)
@@ -1757,9 +1694,6 @@ end
 local function CloseOtherAddonSettings()
     local iNIFFrame = _G["iNIFSettingsFrame"]
     if iNIFFrame and iNIFFrame:IsShown() then iNIFFrame:Hide() end
-
-    local iSPFrame = _G["iSPSettingsFrame"]
-    if iSPFrame and iSPFrame:IsShown() then iSPFrame:Hide() end
 
     local iSTFrame = _G["iSTSettingsFrame"]
     if iSTFrame and iSTFrame:IsShown() then iSTFrame:Hide() end

@@ -171,13 +171,6 @@ L["INIFInstalledDesc2"] = "|cFF808080Примечание: Эти настрой
 L["INIFOpenSettingsButton"] = "Открыть настройки iNIF"
 L["INIFPromoDesc"] = Colors.iWR .. "iNeedIfYouNeed" .. Colors.Reset .. " — умный аддон для лута. Автоматически бросает Need, когда другие участники группы нуждаются, иначе Greed. Не упустите шанс на случайный BoE лут.\n\n" .. Colors.Reset .. "Простой чекбокс на окне лута — отметьте и нажмите Greed для мониторинга."
 L["INIFPromoLink"] = "Доступно в CurseForge App и на curseforge.com/wow/addons/ineedifyouneed"
-L["TabISP"] = "iSP Settings"
-L["ISPSettingsHeader"] = Colors.iWR .. "Настройки iSoundPlayer"
-L["ISPInstalledDesc1"] = Colors.iWR .. "iSoundPlayer" .. Colors.Reset .. " установлен! Вы можете получить доступ к настройкам iSP отсюда."
-L["ISPInstalledDesc2"] = "|cFF808080Примечание: Эти настройки управляются iSP и влияют на аддон iSP.|r"
-L["ISPOpenSettingsButton"] = "Открыть настройки iSP"
-L["ISPPromoDesc"] = Colors.iWR .. "iSoundPlayer" .. Colors.Reset .. " — аддон для воспроизведения звуков. Проигрывайте свои MP3-файлы при событиях в игре: убийства, повышение уровня, встречи с боссами и многое другое.\n\n" .. Colors.Reset .. "Добавьте звуковые файлы и назначьте триггеры — полностью настраиваемый."
-L["ISPPromoLink"] = "Доступно в CurseForge App и на curseforge.com/wow/addons/isoundplayer"
 
 
 -- Guild Watchlist
@@ -194,8 +187,6 @@ L["GuildWatchlistAutoImport"] = Msg("Список гильдий: Автоимп
 L["GuildWatchlistDefaultNote"] = "Автоимпорт из гильдии: %s"
 
 L["iWRLoaded"] = Msg("iWillRemember")
-L["iWRWelcomeStart"] = Msg("Спасибо ")
-L["iWRWelcomeEnd"] = Colors.iWR .. (" за участие в разработке iWillRemember, если у вас возникнут проблемы, пожалуйста, свяжитесь с нами на CurseForge в разделе комментариев или в Discord.")
 L["DiscordCopiedToNote"] = Msg("Ссылка на Discord была скопирована в поле заметки.")
 L["DiscordLink"] = ("https://discord.gg/8nnt25aw8B")
 L["InCombat"] = Msg("Нельзя использовать в бою.")
@@ -230,9 +221,7 @@ L["RemoveFromWhitelist"] = "Удалить из белого списка" -- И
 L["NoFriendsWhitelist"] = "|cFF808080Нет друзей в белом списке.|r" -- ИИ перевод
 L["BackupSettingsHeader"] = Colors.iWR .. "Настройки резервного копирования" -- ИИ перевод
 L["INIFPromoHeader"] = Colors.iWR .. "iNeedIfYouNeed"
-L["ISPPromoHeader"] = Colors.iWR .. "iSoundPlayer"
 L["TabINIFPromo"] = "iNeedIfYouNeed"
-L["TabISPPromo"] = "iSoundPlayer"
 L["AboutHeader"] = Colors.iWR .. "О аддоне" -- ИИ перевод
 L["DiscordHeader"] = Colors.iWR .. "Discord"
 L["DeveloperHeader"] = Colors.iWR .. "Разработчик" -- ИИ перевод
