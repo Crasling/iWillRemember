@@ -121,6 +121,9 @@ iWR.SettingsDefault = {
         minimapPos = -30
     },
     ShowChatIcons = true,
+    ShowPlatynatorIcons = false,
+    PlatynatorIconOffsetX = 10,
+    PlatynatorIconOffsetY = 10,
     SoundWarnings = true,
     UpdateTargetFrame = true,
     iWRDatabaseBackupInfo = {

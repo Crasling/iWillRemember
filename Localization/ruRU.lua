@@ -17,6 +17,17 @@ if GetLocale() ~= "ruRU" then return end
 local L = LibStub("AceLocale-3.0"):NewLocale("iWR", "ruRU")
 if not L then return end
 
+-- Platynator integration uses English until a reviewed Russian translation is available.
+L["ShowPlatynatorIcons"] = "Show Icons on Platynator Nameplates"
+L["DescShowPlatynatorIcons"] = "|cFF808080Shows the saved relationship icon beside tracked players' nameplates when Platynator is loaded.|r"
+L["TabPlatynator"] = "Platynator"
+L["PlatynatorSettings"] = Colors.iWR .. "Platynator Nameplates"
+L["PlatynatorSettingsInfo"] = "Configure how iWillRemember relationship icons appear on Platynator nameplates. Changes are shown immediately on visible nameplates."
+L["PlatynatorIconOffsetX"] = "Horizontal position"
+L["PlatynatorIconOffsetY"] = "Vertical position"
+L["DescPlatynatorIconOffsetX"] = "|cFF808080Move the icon left or right relative to the health bar.|r"
+L["DescPlatynatorIconOffsetY"] = "|cFF808080Move the icon down or up relative to the health bar.|r"
+
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
 -- │                                     Цвета                                     │
 -- ╰────────────────────────────────────────────────────────────────────────────────╯

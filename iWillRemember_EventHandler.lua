@@ -267,3 +267,53 @@ targetFrame:SetScript("OnEvent", function(_, event, unit)
         end
     end
 end)
+
+----------------------------------------------------------------
+-- PLATYNATOR NAMEPLATES
+----------------------------------------------------------------
+local nameplateFrame = CreateFrame("Frame")
+nameplateFrame:RegisterEvent("NAME_PLATE_UNIT_ADDED")
+nameplateFrame:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
+nameplateFrame:SetScript("OnEvent", function(_, event, unitToken)
+    if event == "NAME_PLATE_UNIT_ADDED" then
+        iWR:UpdatePlatynatorNameplate(unitToken)
+        -- Platynator builds and assigns its display during the same event. Refresh
+        -- once after the event stack so its widgets are available for anchoring.
+        C_Timer.After(0, function()
+            if UnitExists(unitToken) then
+                iWR:UpdatePlatynatorNameplate(unitToken)
+            end
+        end)
+    else
+        local namePlate = C_NamePlate and C_NamePlate.GetNamePlateForUnit
+            and C_NamePlate.GetNamePlateForUnit(unitToken)
+        if namePlate and namePlate.iWRRelationshipIcon then
+            namePlate.iWRRelationshipIcon:Hide()
+        end
+    end
+end)
+
+----------------------------------------------------------------
+-- BLIZZARD GUILD ROSTER
+----------------------------------------------------------------
+local function InstallGuildRosterHook()
+    iWR:HookGuildRosterButtons()
+    if type(GuildRoster_Update) == "function" and not iWR.GuildRosterUpdateHooked then
+        iWR.GuildRosterUpdateHooked = true
+        hooksecurefunc("GuildRoster_Update", function()
+            iWR:HookGuildRosterButtons()
+        end)
+    end
+end
+
+local guildRosterHookFrame = CreateFrame("Frame")
+guildRosterHookFrame:RegisterEvent("ADDON_LOADED")
+guildRosterHookFrame:SetScript("OnEvent", function(_, _, loadedAddon)
+    if loadedAddon == "Blizzard_GuildUI" then
+        InstallGuildRosterHook()
+    end
+end)
+
+if C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("Blizzard_GuildUI") then
+    InstallGuildRosterHook()
+end

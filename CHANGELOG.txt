@@ -2,6 +2,17 @@
 iWillRemember - Changelog
 ================================================================================
 
+v0.22.5 - Guild Roster and Platynator Integration
+--------------------------------------------------------------------------------
+[ADDED] Guild members can now be added to iWillRemember directly from the
+        Blizzard Guild Roster and Communities member menus. Complete Forever
+        first-and-last names are retained when creating the note.
+[ADDED] Optional Platynator integration can display saved relationship icons
+        beside tracked players' nameplates.
+[ADDED] When Platynator is loaded, iWR Settings now shows a dedicated
+        Platynator page. The nameplate icon can be enabled and repositioned
+        horizontally or vertically, with changes shown immediately.
+
 v0.22.4 - Forever Name and Settings Update
 --------------------------------------------------------------------------------
 [CHANGED] Removed the one-time version welcome and thank-you message.

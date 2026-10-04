@@ -1756,6 +1756,129 @@ function iWR:UpdateTargetFrame()
             iWR:SetTargetingFrame()
         end
     end
+    if iWR.RefreshPlatynatorNameplates then
+        iWR:RefreshPlatynatorNameplates()
+    end
+end
+
+-- Platynator keeps Blizzard's nameplate as the stable owner while replacing its
+-- presentation. Anchoring iWR here avoids depending on Platynator's private frames.
+function iWR:IsPlatynatorLoaded()
+    return C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("Platynator")
+end
+
+local function GetPlatynatorDisplay(namePlate)
+    if not namePlate or not namePlate.GetChildren then return nil end
+    for _, child in ipairs({namePlate:GetChildren()}) do
+        -- Platynator's live display is an unnamed child with its active widget list.
+        if type(child.widgets) == "table" and child.InitializeWidgets and child.SetUnit then
+            return child
+        end
+    end
+end
+
+local function GetPlatynatorHealthWidget(display)
+    for _, widget in ipairs(display.widgets or {}) do
+        if widget.kind == "bars" and widget.details and widget.details.kind == "health" then
+            return widget
+        end
+    end
+end
+
+function iWR:UpdatePlatynatorNameplate(unitToken)
+    if not C_NamePlate or not C_NamePlate.GetNamePlateForUnit or not unitToken then return end
+
+    local namePlate = C_NamePlate.GetNamePlateForUnit(unitToken)
+    if not namePlate then return end
+
+    local iconFrame = namePlate.iWRRelationshipIcon
+    local shouldShow = iWRSettings.ShowPlatynatorIcons and self:IsPlatynatorLoaded()
+    if not shouldShow or not UnitExists(unitToken) or not UnitIsPlayer(unitToken) then
+        if iconFrame then iconFrame:Hide() end
+        return
+    end
+
+    local display = GetPlatynatorDisplay(namePlate)
+    if not display then
+        if iconFrame then iconFrame:Hide() end
+        return
+    end
+
+    local playerName, secondName = UnitName(unitToken)
+    local issv = _G.issecretvalue
+    if not playerName or (issv and (issv(playerName) or (secondName and issv(secondName)))) then
+        if iconFrame then iconFrame:Hide() end
+        return
+    end
+
+    local databaseKey = self:GetPlayerDatabaseKey(playerName, secondName)
+    local data = databaseKey and iWRDatabase[databaseKey]
+    local texture = data and data[2] and data[2] ~= 0 and self:GetIcon(data[2])
+    if not texture then
+        if iconFrame then iconFrame:Hide() end
+        return
+    end
+
+    if not iconFrame then
+        iconFrame = CreateFrame("Frame", nil, display)
+        iconFrame:SetSize(20, 20)
+        iconFrame:SetFrameStrata("HIGH")
+        iconFrame:SetFrameLevel(1100)
+        iconFrame.texture = iconFrame:CreateTexture(nil, "OVERLAY", nil, 7)
+        iconFrame.texture:SetAllPoints()
+        namePlate.iWRRelationshipIcon = iconFrame
+    end
+
+    iconFrame:SetParent(display)
+    iconFrame:ClearAllPoints()
+    local offsetX = tonumber(iWRSettings.PlatynatorIconOffsetX)
+        or self.SettingsDefault.PlatynatorIconOffsetX
+    local offsetY = tonumber(iWRSettings.PlatynatorIconOffsetY)
+        or self.SettingsDefault.PlatynatorIconOffsetY
+    local healthWidget = GetPlatynatorHealthWidget(display)
+    if healthWidget then
+        iconFrame:SetPoint("RIGHT", healthWidget, "LEFT", offsetX, offsetY)
+    else
+        iconFrame:SetPoint("RIGHT", display, "CENTER", -66 + offsetX, offsetY - 4)
+    end
+    iconFrame.texture:SetTexture(texture)
+    iconFrame:Show()
+end
+
+function iWR:RefreshPlatynatorNameplates()
+    if not C_NamePlate or not C_NamePlate.GetNamePlates then return end
+    for _, namePlate in ipairs(C_NamePlate.GetNamePlates() or {}) do
+        local unitToken = namePlate.namePlateUnitToken
+        if unitToken then
+            self:UpdatePlatynatorNameplate(unitToken)
+        elseif namePlate.iWRRelationshipIcon then
+            namePlate.iWRRelationshipIcon:Hide()
+        end
+    end
+end
+
+-- The Forever guild roster can pass only the first half of a character name to
+-- MENU_UNIT_FRIEND. Capture the clicked roster row before Blizzard opens it.
+function iWR:HookGuildRosterButtons()
+    local container = _G.GuildRosterContainer
+    if not container or not container.buttons then return end
+
+    for _, button in ipairs(container.buttons) do
+        if not button.iWRGuildRosterHooked then
+            button.iWRGuildRosterHooked = true
+            button:HookScript("OnMouseDown", function(row, mouseButton)
+                if mouseButton ~= "RightButton" or not row.guildIndex then return end
+                local name, _, _, _, _, _, _, _, _, _, classToken = GetGuildRosterInfo(row.guildIndex)
+                if not name then return end
+                local resolvedName = iWR:ResolvePlayerIdentity(name)
+                iWR.PendingGuildRosterMenu = {
+                    name = resolvedName,
+                    classToken = classToken,
+                    openedAt = GetTime(),
+                }
+            end)
+        end
+    end
 end
 
 -- ╭──────────────────────────────╮
@@ -2409,10 +2532,36 @@ function iWR:ModifyMenuForContext(menuType)
         local playerName = contextData and contextData.name
         local playerRealm = contextData and contextData.realm
         local playerClass = nil
+        local usingGuildRosterIdentity = false
+
+        -- The modern Communities guild window supplies the complete member
+        -- record here for both its compact chat list and expanded roster.
+        local clubMemberInfo = contextData and contextData.clubMemberInfo
+        if clubMemberInfo then
+            playerName = clubMemberInfo.name or playerName
+            local classID = clubMemberInfo.classID
+            local valueIsSecret = _G.issecretvalue
+            if classID and not (valueIsSecret and valueIsSecret(classID))
+                and C_CreatureInfo and C_CreatureInfo.GetClassInfo then
+                local classInfo = C_CreatureInfo.GetClassInfo(classID)
+                playerClass = classInfo and classInfo.classFile or nil
+            end
+        end
+
+        local rosterMenu = iWR.PendingGuildRosterMenu
+        if menuType == "MENU_UNIT_FRIEND" and rosterMenu
+            and GetTime() - (rosterMenu.openedAt or 0) < 1
+            and _G.GuildRosterFrame and GuildRosterFrame:IsShown() then
+            playerName = rosterMenu.name
+            playerRealm = nil
+            playerClass = rosterMenu.classToken
+            usingGuildRosterIdentity = true
+            iWR.PendingGuildRosterMenu = nil
+        end
 
         -- Retail 12.0+: contextData values can be secret strings — skip iWR menu entry
         local issv = _G.issecretvalue
-        if issv then
+        if issv and not usingGuildRosterIdentity then
             if (playerName and issv(playerName)) or (playerRealm and issv(playerRealm)) then
                 return
             end
@@ -2422,7 +2571,7 @@ function iWR:ModifyMenuForContext(menuType)
         end
 
         -- Forever's fullName contains both character-name parts (often First-Last).
-        if contextData and contextData.fullName then
+        if not usingGuildRosterIdentity and contextData and contextData.fullName then
             if iWR:IsForeverClient() then
                 playerName = contextData.fullName
                 playerRealm = nil
@@ -2439,16 +2588,19 @@ function iWR:ModifyMenuForContext(menuType)
         -- the underlying unit token, whose UnitName value contains the complete
         -- first-and-last character name. Fall back to matching the menu GUID
         -- against the current group when Blizzard omits the token.
-        local unitToken = contextData and (contextData.unit or contextData.unitToken)
-        unitToken = unitToken or (ownerRegion and (ownerRegion.unit or ownerRegion.unitToken))
-        if not unitToken and ownerRegion and ownerRegion.GetAttribute then
-            local ok, value = pcall(ownerRegion.GetAttribute, ownerRegion, "unit")
-            if ok then unitToken = value end
+        local unitToken
+        if not usingGuildRosterIdentity then
+            unitToken = contextData and (contextData.unit or contextData.unitToken)
+            unitToken = unitToken or (ownerRegion and (ownerRegion.unit or ownerRegion.unitToken))
+            if not unitToken and ownerRegion and ownerRegion.GetAttribute then
+                local ok, value = pcall(ownerRegion.GetAttribute, ownerRegion, "unit")
+                if ok then unitToken = value end
+            end
+            if issv and unitToken and issv(unitToken) then unitToken = nil end
         end
-        if issv and unitToken and issv(unitToken) then unitToken = nil end
 
         local menuGUID = contextData and contextData.guid
-        if not unitToken and menuGUID and not (issv and issv(menuGUID)) then
+        if not usingGuildRosterIdentity and not unitToken and menuGUID and not (issv and issv(menuGUID)) then
             local prefix = IsInRaid() and "raid" or "party"
             local count = IsInRaid() and GetNumGroupMembers() or GetNumSubgroupMembers()
             for index = 1, count do
@@ -2483,7 +2635,7 @@ function iWR:ModifyMenuForContext(menuType)
         rootDescription:CreateTitle("iWillRemember")
         rootDescription:CreateButton(L["CreateNote"], function()
             local fullEntryName = (playerRealm ~= iWR.CurrentRealm and playerRealm ~= "") and fullPlayerName or playerName
-            iWR:MenuOpen(fullEntryName)
+            iWR:MenuOpen(fullEntryName, playerClass)
             iWR:DatabaseClose()
         end)
     end)
@@ -2501,4 +2653,8 @@ iWR:ModifyMenuForContext("MENU_UNIT_PARTY")
 iWR:ModifyMenuForContext("MENU_UNIT_RAID_PLAYER")
 iWR:ModifyMenuForContext("MENU_UNIT_ENEMY_PLAYER")
 iWR:ModifyMenuForContext("MENU_UNIT_FRIEND") -- Chat and Social Panel (fyrye)
+iWR:ModifyMenuForContext("MENU_UNIT_GUILD_MEMBER")
+iWR:ModifyMenuForContext("MENU_UNIT_CHAT_ROSTER")
+iWR:ModifyMenuForContext("MENU_UNIT_COMMUNITIES_GUILD_MEMBER")
+iWR:ModifyMenuForContext("MENU_UNIT_COMMUNITIES_WOW_MEMBER")
 

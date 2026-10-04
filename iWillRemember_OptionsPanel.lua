@@ -143,6 +143,44 @@ local function CreateSettingsEditBox(parent, label, yOffset, width, getFunc, set
     return editBox, labelStr, yOffset - 28
 end
 
+local function CreateSettingsSlider(parent, frameName, label, descText, yOffset,
+                                    minValue, maxValue, step, value, onValueChanged)
+    local slider = CreateFrame("Slider", frameName, parent, "OptionsSliderTemplate")
+    slider:SetPoint("TOPLEFT", parent, "TOPLEFT", 30, yOffset - 18)
+    slider:SetWidth(300)
+    slider:SetMinMaxValues(minValue, maxValue)
+    slider:SetValueStep(step)
+    slider:SetObeyStepOnDrag(true)
+
+    _G[frameName .. "Low"]:SetText(tostring(minValue))
+    _G[frameName .. "High"]:SetText(tostring(maxValue))
+
+    local function UpdateText(currentValue)
+        _G[frameName .. "Text"]:SetText(label .. ": " .. tostring(currentValue))
+    end
+
+    value = tonumber(value) or 0
+    slider:SetValue(value)
+    UpdateText(value)
+    slider:SetScript("OnValueChanged", function(_, currentValue)
+        currentValue = math.floor(currentValue + 0.5)
+        UpdateText(currentValue)
+        onValueChanged(currentValue)
+    end)
+
+    local nextY = yOffset - 52
+    if descText and descText ~= "" then
+        local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        desc:SetPoint("TOPLEFT", parent, "TOPLEFT", 30, nextY)
+        desc:SetWidth(480)
+        desc:SetJustifyH("LEFT")
+        desc:SetText(descText)
+        nextY = nextY - math.max(desc:GetStringHeight(), 12) - 8
+    end
+
+    return slider, nextY
+end
+
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │                             Icon Picker Popup                                │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
@@ -477,8 +515,9 @@ function iWR:CreateOptionsPanel()
     -- Other addon tabs (detection deferred to OnShow)
     local iNIFContainer, iNIFContent = CreateTabContent()
     local iSTContainer, iSTContent = CreateTabContent()
+    local platynatorContainer, platynatorContent = CreateTabContent()
 
-    local tabContents = {generalContainer, syncContainer, backupContainer, customizeContainer, aboutContainer, iNIFContainer, iSTContainer}
+    local tabContents = {generalContainer, syncContainer, backupContainer, customizeContainer, aboutContainer, iNIFContainer, iSTContainer, platynatorContainer}
 
     local sidebarButtons = {}
     local activeIndex = 1
@@ -489,7 +528,7 @@ function iWR:CreateOptionsPanel()
             content:SetShown(i == index)
         end
         -- Update sidebar button highlights
-        for i, btn in ipairs(sidebarButtons) do
+        for i, btn in pairs(sidebarButtons) do
             if i == index then
                 btn.bg:SetColorTexture(1, 0.59, 0.09, 0.25)
                 btn.text:SetFontObject(GameFontHighlight)
@@ -509,6 +548,11 @@ function iWR:CreateOptionsPanel()
         {type = "tab", label = L["Tab5Customize"], index = 4},
         {type = "tab", label = L["Tab4About"], index = 5},
     }
+
+    local platynatorLoaded = iWR.IsPlatynatorLoaded and iWR:IsPlatynatorLoaded()
+    if platynatorLoaded then
+        table.insert(sidebarItems, {type = "tab", label = L["TabPlatynator"], index = 8})
+    end
 
     table.insert(sidebarItems, {type = "header", label = L["SidebarHeaderOtherAddons"]})
     table.insert(sidebarItems, {type = "tab", label = L["TabINIFPromo"], index = 6})
@@ -1435,6 +1479,46 @@ function iWR:CreateOptionsPanel()
 
     scrollChildren[7]:SetHeight(400)
 
+    -- Platynator integration is only offered when Platynator is active.
+    local platynatorOffsetXSlider
+    local platynatorOffsetYSlider
+    do
+        y = -10
+        _, y = CreateSectionHeader(platynatorContent, L["PlatynatorSettings"], y)
+
+        _, y = CreateInfoText(platynatorContent, L["PlatynatorSettingsInfo"], y,
+            "GameFontHighlight")
+        y = y - 8
+
+        local cbPlatynatorIcons
+        cbPlatynatorIcons, y = CreateSettingsCheckbox(platynatorContent,
+            L["ShowPlatynatorIcons"], L["DescShowPlatynatorIcons"], y,
+            "ShowPlatynatorIcons", nil, function(checked)
+                iWRSettings.ShowPlatynatorIcons = checked
+                iWR:RefreshPlatynatorNameplates()
+            end)
+        checkboxRefs.ShowPlatynatorIcons = cbPlatynatorIcons
+
+        y = y - 6
+        platynatorOffsetXSlider, y = CreateSettingsSlider(platynatorContent,
+            "iWRPlatynatorIconOffsetXSlider", L["PlatynatorIconOffsetX"],
+            L["DescPlatynatorIconOffsetX"], y, -50, 50, 1,
+            iWRSettings.PlatynatorIconOffsetX, function(value)
+                iWRSettings.PlatynatorIconOffsetX = value
+                iWR:RefreshPlatynatorNameplates()
+            end)
+
+        platynatorOffsetYSlider, y = CreateSettingsSlider(platynatorContent,
+            "iWRPlatynatorIconOffsetYSlider", L["PlatynatorIconOffsetY"],
+            L["DescPlatynatorIconOffsetY"], y, -50, 50, 1,
+            iWRSettings.PlatynatorIconOffsetY, function(value)
+                iWRSettings.PlatynatorIconOffsetY = value
+                iWR:RefreshPlatynatorNameplates()
+            end)
+
+        scrollChildren[8]:SetHeight(math.abs(y) + 20)
+    end
+
     -- ╭───────────────────────────────────────────────────────────────╮
     -- │                       About Tab Content                       │
     -- ╰───────────────────────────────────────────────────────────────╯
@@ -1655,6 +1739,14 @@ function iWR:CreateOptionsPanel()
                 cbSoundWarnings:Disable()
                 cbSoundWarnings.Text:SetFontObject(GameFontDisable)
             end
+        end
+        if platynatorOffsetXSlider then
+            platynatorOffsetXSlider:SetValue(iWRSettings.PlatynatorIconOffsetX
+                or iWR.SettingsDefault.PlatynatorIconOffsetX)
+        end
+        if platynatorOffsetYSlider then
+            platynatorOffsetYSlider:SetValue(iWRSettings.PlatynatorIconOffsetY
+                or iWR.SettingsDefault.PlatynatorIconOffsetY)
         end
     end
 
