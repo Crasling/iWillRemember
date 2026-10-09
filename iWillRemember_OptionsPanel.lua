@@ -25,10 +25,7 @@ local function CreateSectionHeader(parent, text, yOffset)
     header:SetHeight(24)
     header:SetPoint("TOPLEFT", parent, "TOPLEFT", 10, yOffset)
     header:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -10, yOffset)
-    header:SetBackdrop({
-        bgFile = "Interface\\BUTTONS\\WHITE8X8",
-    })
-    header:SetBackdropColor(0.15, 0.15, 0.2, 0.6)
+    iWR:StyleSurface(header, "header")
 
     local accent = header:CreateTexture(nil, "ARTWORK")
     accent:SetHeight(1)
@@ -81,6 +78,7 @@ end
 
 local function CreateSettingsButton(parent, text, width, yOffset, onClick)
     local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    iWR:StyleButton(btn)
     btn:SetSize(width, 26)
     btn:SetPoint("TOPLEFT", parent, "TOPLEFT", 20, yOffset)
     btn:SetText(text)
@@ -118,6 +116,7 @@ local function CreateSettingsEditBox(parent, label, yOffset, width, getFunc, set
     labelStr:SetText(label)
 
     local editBox = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+    iWR:StyleEditBox(editBox)
     editBox:SetSize(width or 150, 22)
     editBox:SetPoint("LEFT", labelStr, "LEFT", 90, 0)
     editBox:SetAutoFocus(false)
@@ -208,8 +207,7 @@ local function ShowIconPicker(typeIndex, previewTexture)
 
     local popup = iWR:CreateiWRStyleFrame(UIParent, popupWidth, popupHeight, {"CENTER", UIParent, "CENTER"})
     popup:SetFrameStrata("DIALOG")
-    popup:SetBackdropColor(0.05, 0.05, 0.1, 0.98)
-    popup:SetBackdropBorderColor(0.8, 0.8, 0.9, 1)
+    iWR:StyleSurface(popup, "panel")
     popup:EnableMouse(true)
     popup:SetMovable(true)
     popup:SetScript("OnDragStart", function(self) self:StartMoving() end)
@@ -223,13 +221,7 @@ local function ShowIconPicker(typeIndex, previewTexture)
     pTitleBar:SetHeight(28)
     pTitleBar:SetPoint("TOPLEFT", popup, "TOPLEFT", 0, 0)
     pTitleBar:SetPoint("TOPRIGHT", popup, "TOPRIGHT", 0, 0)
-    pTitleBar:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        edgeSize = 16,
-        insets = {left = 5, right = 5, top = 5, bottom = 5},
-    })
-    pTitleBar:SetBackdropColor(0.07, 0.07, 0.12, 1)
+    iWR:StyleSurface(pTitleBar, "header")
 
     local pTitle = pTitleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     pTitle:SetPoint("LEFT", pTitleBar, "LEFT", 12, 0)
@@ -256,12 +248,12 @@ local function ShowIconPicker(typeIndex, previewTexture)
 
         local highlight = btn:CreateTexture(nil, "HIGHLIGHT")
         highlight:SetAllPoints(btn)
-        highlight:SetColorTexture(1, 1, 1, 0.3)
+        highlight:SetColorTexture(1, 0.59, 0.09, 0.24)
 
         local border = btn:CreateTexture(nil, "OVERLAY")
         border:SetPoint("TOPLEFT", btn, "TOPLEFT", -1, 1)
         border:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", 1, -1)
-        border:SetColorTexture(0.4, 0.4, 0.5, 0.5)
+        border:SetColorTexture(unpack(iWR.Theme.border))
         border:SetDrawLayer("OVERLAY", -1)
 
         btn:SetScript("OnClick", function()
@@ -288,6 +280,7 @@ local function ShowIconPicker(typeIndex, previewTexture)
     local inputY = startY - gridHeight - 10
 
     local manualBox = CreateFrame("EditBox", nil, popup, "InputBoxTemplate")
+    iWR:StyleEditBox(manualBox)
     manualBox:SetSize(gridWidth - 50, 22)
     manualBox:SetPoint("TOPLEFT", popup, "TOPLEFT", margin + 2, inputY)
     manualBox:SetAutoFocus(false)
@@ -295,6 +288,7 @@ local function ShowIconPicker(typeIndex, previewTexture)
     manualBox:SetMaxLetters(200)
 
     local manualBtn = CreateFrame("Button", nil, popup, "UIPanelButtonTemplate")
+    iWR:StyleButton(manualBtn)
     manualBtn:SetSize(44, 22)
     manualBtn:SetPoint("LEFT", manualBox, "RIGHT", 4, 0)
     manualBtn:SetText(L["SetButton"])
@@ -390,8 +384,7 @@ function iWR:CreateOptionsPanel()
     settingsFrame:SetMovable(true)
     settingsFrame:SetFrameStrata("HIGH")
     settingsFrame:SetClampedToScreen(true)
-    settingsFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.95)
-    settingsFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1)
+    iWR:StyleSurface(settingsFrame, "panel")
     iWR.SettingsFrame = settingsFrame
 
     -- Shadow
@@ -417,13 +410,7 @@ function iWR:CreateOptionsPanel()
     titleBar:SetHeight(31)
     titleBar:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 0, 0)
     titleBar:SetPoint("TOPRIGHT", settingsFrame, "TOPRIGHT", 0, 0)
-    titleBar:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        edgeSize = 16,
-        insets = {left = 5, right = 5, top = 5, bottom = 5},
-    })
-    titleBar:SetBackdropColor(0.07, 0.07, 0.12, 1)
+    iWR:StyleSurface(titleBar, "header")
 
     local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
     titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
@@ -442,14 +429,7 @@ function iWR:CreateOptionsPanel()
     sidebar:SetWidth(sidebarWidth)
     sidebar:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 10, -35)
     sidebar:SetPoint("BOTTOMLEFT", settingsFrame, "BOTTOMLEFT", 10, 10)
-    sidebar:SetBackdrop({
-        bgFile = "Interface\\BUTTONS\\WHITE8X8",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        edgeSize = 12,
-        insets = {left = 3, right = 3, top = 3, bottom = 3},
-    })
-    sidebar:SetBackdropColor(0.05, 0.05, 0.08, 0.95)
-    sidebar:SetBackdropBorderColor(0.4, 0.4, 0.5, 0.6)
+    iWR:StyleSurface(sidebar, "surface")
 
     -- ╭───────────────────────────────────────────────────────────────╮
     -- │                       Content Area                            │
@@ -457,14 +437,7 @@ function iWR:CreateOptionsPanel()
     local contentArea = CreateFrame("Frame", nil, settingsFrame, "BackdropTemplate")
     contentArea:SetPoint("TOPLEFT", sidebar, "TOPRIGHT", 6, 0)
     contentArea:SetPoint("BOTTOMRIGHT", settingsFrame, "BOTTOMRIGHT", -10, 10)
-    contentArea:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        edgeSize = 16,
-        insets = {left = 4, right = 4, top = 4, bottom = 4},
-    })
-    contentArea:SetBackdropBorderColor(0.6, 0.6, 0.7, 1)
-    contentArea:SetBackdropColor(0.08, 0.08, 0.1, 0.95)
+    iWR:StyleSurface(contentArea, "surface")
 
     -- Tab content frames with scroll
     local scrollFrames = {}
@@ -529,13 +502,7 @@ function iWR:CreateOptionsPanel()
         end
         -- Update sidebar button highlights
         for i, btn in pairs(sidebarButtons) do
-            if i == index then
-                btn.bg:SetColorTexture(1, 0.59, 0.09, 0.25)
-                btn.text:SetFontObject(GameFontHighlight)
-            else
-                btn.bg:SetColorTexture(0, 0, 0, 0)
-                btn.text:SetFontObject(GameFontNormal)
-            end
+            iWR:SetButtonActive(btn, i == index)
         end
     end
 
@@ -567,13 +534,9 @@ function iWR:CreateOptionsPanel()
             sidebarY = sidebarY - 20
         else
             local btn = CreateFrame("Button", nil, sidebar)
+            iWR:StyleButton(btn)
             btn:SetSize(sidebarWidth - 12, 26)
             btn:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, sidebarY)
-
-            local bg = btn:CreateTexture(nil, "BACKGROUND")
-            bg:SetAllPoints(btn)
-            bg:SetColorTexture(0, 0, 0, 0)
-            btn.bg = bg
 
             local text = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             text:SetPoint("LEFT", btn, "LEFT", 14, 0)
@@ -629,6 +592,29 @@ function iWR:CreateOptionsPanel()
     cbChatIcons, y = CreateSettingsCheckbox(generalContent, L["ShowChatIcons"],
         L["DescShowChatIcons"], y, "ShowChatIcons")
     checkboxRefs.ShowChatIcons = cbChatIcons
+
+    local cbGroupFinderNotes
+    cbGroupFinderNotes, y = CreateSettingsCheckbox(generalContent, L["ShowGroupFinderNotes"],
+        L["DescShowGroupFinderNotes"], y, "ShowGroupFinderNotes", nil,
+        function(checked)
+            iWRSettings.ShowGroupFinderNotes = checked
+            if iWR.RefreshGroupFinderNotes then
+                iWR:RefreshGroupFinderNotes()
+            end
+        end)
+    checkboxRefs.ShowGroupFinderNotes = cbGroupFinderNotes
+
+    local cbWhoNotes
+    cbWhoNotes, y = CreateSettingsCheckbox(generalContent, L["ShowWhoNotes"] or "Show Notes in Who Search",
+        L["DescShowWhoNotes"] or "|cFF808080Shows saved relationship icons beside tracked players in Who search results.|r",
+        y, "ShowWhoNotes", nil,
+        function(checked)
+            iWRSettings.ShowWhoNotes = checked
+            if iWR.RefreshWhoNotes then
+                iWR:RefreshWhoNotes()
+            end
+        end)
+    checkboxRefs.ShowWhoNotes = cbWhoNotes
 
     local cbSimpleMenu
     cbSimpleMenu, y = CreateSettingsCheckbox(generalContent, L["SimpleMenu"] or "Simple Menu",
@@ -744,8 +730,7 @@ function iWR:CreateOptionsPanel()
         edgeSize = 12,
         insets = {left = 3, right = 3, top = 3, bottom = 3},
     })
-    mcPanel:SetBackdropColor(0.08, 0.08, 0.1, 0.8)
-    mcPanel:SetBackdropBorderColor(0.5, 0.5, 0.6, 0.6)
+    iWR:StyleSurface(mcPanel, "surface")
 
     local mcText = mcPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     mcText:SetPoint("TOPLEFT", mcPanel, "TOPLEFT", 8, -6)
@@ -907,8 +892,7 @@ function iWR:CreateOptionsPanel()
         edgeSize = 12,
         insets = {left = 3, right = 3, top = 3, bottom = 3},
     })
-    wlPanel:SetBackdropColor(0.08, 0.08, 0.1, 0.8)
-    wlPanel:SetBackdropBorderColor(0.5, 0.5, 0.6, 0.6)
+    iWR:StyleSurface(wlPanel, "surface")
 
     local wlTitle = wlPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     wlTitle:SetPoint("TOPLEFT", wlPanel, "TOPLEFT", 10, -6)
@@ -1277,6 +1261,7 @@ function iWR:CreateOptionsPanel()
 
             -- Change button
             local changeBtn = CreateFrame("Button", nil, rowFrame, "UIPanelButtonTemplate")
+            iWR:StyleButton(changeBtn)
             changeBtn:SetSize(70, 24)
             changeBtn:SetPoint("LEFT", label, "RIGHT", 10, 0)
             changeBtn:SetText(L["ChangeIcon"] or "Change")
@@ -1286,6 +1271,7 @@ function iWR:CreateOptionsPanel()
 
             -- Reset button
             local resetIconBtn = CreateFrame("Button", nil, rowFrame, "UIPanelButtonTemplate")
+            iWR:StyleButton(resetIconBtn, true)
             resetIconBtn:SetSize(60, 24)
             resetIconBtn:SetPoint("LEFT", changeBtn, "RIGHT", 6, 0)
             resetIconBtn:SetText(L["ResetIcon"] or "Reset")
@@ -1337,6 +1323,7 @@ function iWR:CreateOptionsPanel()
         -- Reset Labels button
         y = y - 4
         local resetLabelsBtn = CreateFrame("Button", nil, customizeContent, "UIPanelButtonTemplate")
+        iWR:StyleButton(resetLabelsBtn, true)
         resetLabelsBtn:SetSize(200, 24)
         resetLabelsBtn:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 20, y)
         resetLabelsBtn:SetText(L["ResetLabels"])
@@ -1381,6 +1368,7 @@ function iWR:CreateOptionsPanel()
         y = y - 10
 
         local iNIFButton = CreateFrame("Button", nil, iNIFInstalledFrame, "UIPanelButtonTemplate")
+        iWR:StyleButton(iNIFButton)
         iNIFButton:SetSize(180, 28)
         iNIFButton:SetPoint("TOPLEFT", iNIFInstalledFrame, "TOPLEFT", 25, y)
         iNIFButton:SetText(L["INIFOpenSettingsButton"])
@@ -1442,6 +1430,7 @@ function iWR:CreateOptionsPanel()
         y = y - 10
 
         local iSTButton = CreateFrame("Button", nil, iSTInstalledFrame, "UIPanelButtonTemplate")
+        iWR:StyleButton(iSTButton)
         iSTButton:SetSize(180, 28)
         iSTButton:SetPoint("TOPLEFT", iSTInstalledFrame, "TOPLEFT", 25, y)
         iSTButton:SetText(L["ISTOpenSettingsButton"])
@@ -1571,6 +1560,7 @@ function iWR:CreateOptionsPanel()
     y = y - 16
 
     local discordBox = CreateFrame("EditBox", nil, aboutContent, "InputBoxTemplate")
+    iWR:StyleEditBox(discordBox)
     discordBox:SetSize(280, 22)
     discordBox:SetPoint("TOPLEFT", aboutContent, "TOPLEFT", 25, y)
     discordBox:SetAutoFocus(false)
@@ -1765,6 +1755,7 @@ function iWR:CreateOptionsPanel()
     stubDesc:SetText(L["SettingsPanelStubDesc"])
 
     local stubButton = CreateFrame("Button", nil, stubPanel, "UIPanelButtonTemplate")
+    iWR:StyleButton(stubButton)
     stubButton:SetSize(180, 28)
     stubButton:SetPoint("TOPLEFT", stubDesc, "BOTTOMLEFT", 0, -15)
     stubButton:SetText(L["SettingsTitle"])

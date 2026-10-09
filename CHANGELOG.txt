@@ -2,6 +2,26 @@
 iWillRemember - Changelog
 ================================================================================
 
+v0.23.1 - Smarter Player Lookup
+--------------------------------------------------------------------------------
+[ADDED] Group Finder results now identify noted leaders and group members. Hover
+        a listing to see each saved relationship and note before joining.
+[ADDED] Who search results now show relationship icons for noted players.
+[ADDED] Player-name suggestions use recent Group Log entries, while database
+        search suggests saved players as you type.
+[CHANGED] Reworked the Notes, Group Log, and Guild Watchlist pages with compact
+          rows, clearer columns, player identity icons, and consistent controls.
+[CHANGED] The note editor now shows known faction, race, and class information
+          beside the player name.
+[CHANGED] The database window can be resized with its corner handle and remembers
+          the chosen scale.
+[CHANGED] Personal notes are identified in note history and remain excluded from
+          both normal updates and full database sharing.
+[FIX] Group Finder note markers remain attached to the correct listing when rows
+      are refreshed, recycled, or inspected through the native tooltip.
+[FIX] Improved handling of missing names and unavailable player information in
+      Group Finder and combat-sensitive UI paths.
+
 v0.22.5 - Guild Roster and Platynator Integration
 --------------------------------------------------------------------------------
 [ADDED] Guild members can now be added to iWillRemember directly from the

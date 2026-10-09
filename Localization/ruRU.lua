@@ -269,6 +269,7 @@ L["RemoveButton"] = "Удалить" -- ИИ перевод
 L["PlayerNameHeader"] = "Имя игрока" -- ИИ перевод
 L["NoteHeader"] = "Заметка" -- ИИ перевод
 L["RelationLevelHeader"] = "Уровень отношения" -- ИИ перевод
+L["ActionsHeader"] = "Действия" -- ИИ перевод
 L["PersonalCheckbox"] = "Личная (не синхронизируется)" -- ИИ перевод
 L["PersonalDatabaseTitle"] = "iWillRemember — Личная база данных" -- ИИ перевод
 L["CreateNote"] = "Создать заметку" -- ИИ перевод

@@ -121,6 +121,8 @@ iWR.SettingsDefault = {
         minimapPos = -30
     },
     ShowChatIcons = true,
+    ShowGroupFinderNotes = true,
+    ShowWhoNotes = true,
     ShowPlatynatorIcons = false,
     PlatynatorIconOffsetX = 10,
     PlatynatorIconOffsetY = 10,
@@ -145,6 +147,7 @@ iWR.SettingsDefault = {
     GuildWatchlist = {},
     ChatFrames = {},
     ForceEnglish = false,
+    DatabaseWindowScale = 1,
 }
 
 -- Database entry template

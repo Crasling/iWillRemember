@@ -155,17 +155,336 @@ function iWR:VerifyInputNote(Note)
     return false
 end
 
+iWR.Theme = iWR.Theme or {
+    panel = { 0.025, 0.022, 0.018, 0.98 },
+    header = { 0.10, 0.07, 0.035, 0.98 },
+    surface = { 0.08, 0.065, 0.05, 0.96 },
+    surfaceRaised = { 0.12, 0.085, 0.04, 0.98 },
+    border = { 0.42, 0.35, 0.19, 1 },
+    borderStrong = { 0.58, 0.43, 0.18, 1 },
+    gold = { 1.00, 0.59, 0.09, 1 },
+    goldSoft = { 0.78, 0.53, 0.18, 1 },
+    danger = { 0.72, 0.20, 0.12, 1 },
+    disabled = { 0.42, 0.42, 0.42, 1 },
+}
+
+local IWR_BACKDROP = {
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true,
+    tileSize = 16,
+    edgeSize = 12,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 },
+}
+
+function iWR:StyleSurface(frame, variant)
+    if not frame or not frame.SetBackdrop then return frame end
+    local color = self.Theme[variant or "surface"] or self.Theme.surface
+    local border = variant == "header" and self.Theme.borderStrong or self.Theme.border
+    frame:SetBackdrop(IWR_BACKDROP)
+    frame:SetBackdropColor(unpack(color))
+    frame:SetBackdropBorderColor(unpack(border))
+    return frame
+end
+
+local function setButtonVisual(button, active)
+    if not button or not button.iWRButtonBg then return end
+    local theme = iWR.Theme
+    local destructive = button.iWRDestructive
+    local enabled = button.IsEnabled == nil or button:IsEnabled()
+    local hovered = enabled and button.iWRHovered
+    local pressed = enabled and button.iWRPressed
+    local background
+    local border
+    if destructive then
+        background = pressed and { 0.22, 0.045, 0.025, 0.98 } or { 0.16, 0.035, 0.025, 0.98 }
+        border = hovered and { 0.92, 0.28, 0.14, 1 } or { 0.72, 0.20, 0.12, 1 }
+    elseif active then
+        background = pressed and { 0.15, 0.10, 0.045, 0.98 } or { 0.12, 0.085, 0.035, 0.98 }
+        border = theme.gold
+    else
+        background = pressed and { 0.12, 0.085, 0.045, 0.98 } or { 0.08, 0.06, 0.035, 0.98 }
+        border = hovered and theme.goldSoft or { 0.52, 0.38, 0.17, 1 }
+    end
+    if button.iWRButtonBackdrop then
+        button.iWRButtonBackdrop:SetBackdropColor(unpack(background))
+        button.iWRButtonBackdrop:SetBackdropBorderColor(unpack(border))
+    else
+        button.iWRButtonBg:SetColorTexture(unpack(background))
+        button.iWRBorderTop:SetColorTexture(unpack(border))
+        button.iWRBorderBottom:SetColorTexture(unpack(border))
+        button.iWRBorderLeft:SetColorTexture(unpack(border))
+        button.iWRBorderRight:SetColorTexture(unpack(border))
+    end
+    if button.iWRButtonAccent then
+        button.iWRButtonAccent:SetColorTexture(unpack(destructive and theme.danger or theme.gold))
+        button.iWRButtonAccent:Hide()
+    end
+    if button.iWRButtonShine then
+        button.iWRButtonShine:Hide()
+    end
+    button:SetAlpha(enabled and 1 or 0.45)
+    local font = (button.GetFontString and button:GetFontString()) or button.text
+    if font then
+        if destructive then font:SetTextColor(1, 0.55, 0.40)
+        else font:SetTextColor(unpack(theme.gold)) end
+    end
+end
+
+function iWR:StyleButton(button, destructive)
+    if not button then return button end
+    button.iWRDestructive = destructive == true
+    if not button.iWRStyled then
+        for _, region in ipairs({ button:GetRegions() }) do
+            if region.IsObjectType and region:IsObjectType("Texture") then region:SetAlpha(0) end
+        end
+        local backdrop = button
+        if not button.SetBackdrop then
+            local parent = button:GetParent()
+            local parentLevel = parent and parent:GetFrameLevel() or 0
+            if button:GetFrameLevel() <= parentLevel then button:SetFrameLevel(parentLevel + 1) end
+            backdrop = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+            backdrop:SetAllPoints(button)
+            backdrop:SetFrameStrata(button:GetFrameStrata())
+            backdrop:SetFrameLevel(math.max(0, button:GetFrameLevel() - 1))
+            button:HookScript("OnShow", function() backdrop:Show() end)
+            button:HookScript("OnHide", function() backdrop:Hide() end)
+            backdrop:SetShown(button:IsShown())
+        end
+        backdrop:SetBackdrop(IWR_BACKDROP)
+        button.iWRButtonBackdrop = backdrop
+        local bg = button:CreateTexture(nil, "BACKGROUND")
+        bg:SetPoint("TOPLEFT", 1, -1)
+        bg:SetPoint("BOTTOMRIGHT", -1, 1)
+        button.iWRButtonBg = bg
+        local function borderTexture()
+            return button:CreateTexture(nil, "BORDER")
+        end
+        button.iWRBorderTop = borderTexture()
+        button.iWRBorderTop:SetPoint("TOPLEFT", 1, -1)
+        button.iWRBorderTop:SetPoint("TOPRIGHT", -1, -1)
+        button.iWRBorderTop:SetHeight(1)
+        button.iWRBorderBottom = borderTexture()
+        button.iWRBorderBottom:SetPoint("BOTTOMLEFT", 1, 1)
+        button.iWRBorderBottom:SetPoint("BOTTOMRIGHT", -1, 1)
+        button.iWRBorderBottom:SetHeight(1)
+        button.iWRBorderLeft = borderTexture()
+        button.iWRBorderLeft:SetPoint("TOPLEFT", 1, -1)
+        button.iWRBorderLeft:SetPoint("BOTTOMLEFT", 1, 1)
+        button.iWRBorderLeft:SetWidth(1)
+        button.iWRBorderRight = borderTexture()
+        button.iWRBorderRight:SetPoint("TOPRIGHT", -1, -1)
+        button.iWRBorderRight:SetPoint("BOTTOMRIGHT", -1, 1)
+        button.iWRBorderRight:SetWidth(1)
+
+        local accent = button:CreateTexture(nil, "ARTWORK")
+        accent:SetPoint("TOPLEFT", button, "TOPLEFT", 2, -2)
+        accent:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 2, 2)
+        accent:SetWidth(2)
+        accent:Hide()
+        button.iWRButtonAccent = accent
+
+        local shine = button:CreateTexture(nil, "ARTWORK")
+        shine:SetPoint("TOPLEFT", button, "TOPLEFT", 3, -3)
+        shine:SetPoint("TOPRIGHT", button, "TOPRIGHT", -3, -3)
+        shine:SetHeight(1)
+        shine:SetColorTexture(1, 0.59, 0.09, 1)
+        button.iWRButtonShine = shine
+
+        bg:Hide()
+        button.iWRBorderTop:Hide()
+        button.iWRBorderBottom:Hide()
+        button.iWRBorderLeft:Hide()
+        button.iWRBorderRight:Hide()
+        accent:Hide()
+        shine:Hide()
+
+        local highlight = button:CreateTexture(nil, "HIGHLIGHT")
+        highlight:SetPoint("TOPLEFT", 2, -2)
+        highlight:SetPoint("BOTTOMRIGHT", -2, 2)
+        highlight:SetColorTexture(1, 0.59, 0.09, 0.15)
+        button.iWRStyled = true
+        if button.HookScript then
+            button:HookScript("OnEnter", function(self)
+                self.iWRHovered = true
+                setButtonVisual(self, self.iWRActive)
+            end)
+            button:HookScript("OnLeave", function(self)
+                self.iWRHovered = false
+                self.iWRPressed = false
+                setButtonVisual(self, self.iWRActive)
+            end)
+            button:HookScript("OnMouseDown", function(self)
+                self.iWRPressed = true
+                setButtonVisual(self, self.iWRActive)
+            end)
+            button:HookScript("OnMouseUp", function(self)
+                self.iWRPressed = false
+                setButtonVisual(self, self.iWRActive)
+            end)
+            button:HookScript("OnEnable", function(self) setButtonVisual(self, self.iWRActive) end)
+            button:HookScript("OnDisable", function(self) setButtonVisual(self, self.iWRActive) end)
+        end
+    end
+    setButtonVisual(button, button.iWRActive)
+    return button
+end
+
+function iWR:SetButtonActive(button, active)
+    if not button then return end
+    button.iWRActive = active == true
+    setButtonVisual(button, button.iWRActive)
+end
+
+function iWR:StyleEditBox(editBox)
+    if not editBox or editBox.iWRStyled then return editBox end
+    for _, region in ipairs({ editBox:GetRegions() }) do
+        if region.IsObjectType and region:IsObjectType("Texture") then region:SetAlpha(0) end
+    end
+    local backdrop = editBox
+    if not editBox.SetBackdrop then
+        local parent = editBox:GetParent()
+        local parentLevel = parent and parent:GetFrameLevel() or 0
+        if editBox:GetFrameLevel() <= parentLevel then editBox:SetFrameLevel(parentLevel + 1) end
+        backdrop = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+        backdrop:SetAllPoints(editBox)
+        backdrop:SetFrameStrata(editBox:GetFrameStrata())
+        backdrop:SetFrameLevel(math.max(0, editBox:GetFrameLevel() - 1))
+        editBox:HookScript("OnShow", function() backdrop:Show() end)
+        editBox:HookScript("OnHide", function() backdrop:Hide() end)
+        backdrop:SetShown(editBox:IsShown())
+    end
+    backdrop:SetBackdrop(IWR_BACKDROP)
+    backdrop:SetBackdropColor(0.025, 0.025, 0.025, 1)
+    backdrop:SetBackdropBorderColor(0.48, 0.35, 0.16, 1)
+    editBox.iWRInputBackdrop = backdrop
+    editBox.iWRStyled = true
+    if editBox.SetTextInsets then editBox:SetTextInsets(9, 9, 0, 0) end
+    if editBox.SetHighlightColor then editBox:SetHighlightColor(1, 0.59, 0.09, 0.28) end
+    editBox:HookScript("OnEditFocusGained", function(self)
+        self.iWRInputBackdrop:SetBackdropColor(0.04, 0.035, 0.028, 1)
+        self.iWRInputBackdrop:SetBackdropBorderColor(unpack(iWR.Theme.gold))
+    end)
+    editBox:HookScript("OnEditFocusLost", function(self)
+        self.iWRInputBackdrop:SetBackdropColor(0.025, 0.025, 0.025, 1)
+        self.iWRInputBackdrop:SetBackdropBorderColor(0.48, 0.35, 0.16, 1)
+    end)
+    return editBox
+end
+
+local function IsMouseOverFrame(frame)
+    if not frame or not frame:IsShown() then return false end
+    if frame.IsMouseOver then return frame:IsMouseOver() end
+    return MouseIsOver and MouseIsOver(frame) or false
+end
+
+function iWR:AttachAutocomplete(editBox, provider, options)
+    if not editBox or editBox.iWRAutocomplete or type(provider) ~= "function" then return end
+    options = options or {}
+
+    local dropdown = CreateFrame("Frame", nil, editBox:GetParent(), "BackdropTemplate")
+    dropdown:SetPoint("TOPLEFT", editBox, "BOTTOMLEFT", 0, -3)
+    dropdown:SetPoint("TOPRIGHT", editBox, "BOTTOMRIGHT", 0, -3)
+    dropdown:SetHeight(128)
+    dropdown:SetFrameStrata(options.frameStrata or "FULLSCREEN_DIALOG")
+    dropdown:SetFrameLevel(math.max(editBox:GetFrameLevel() + 20, editBox:GetParent():GetFrameLevel() + 20))
+    dropdown:SetClampedToScreen(true)
+    dropdown:SetBackdrop(IWR_BACKDROP)
+    dropdown:SetBackdropColor(0.025, 0.022, 0.018, 1)
+    dropdown:SetBackdropBorderColor(1, 0.59, 0.09, 0.90)
+    dropdown:EnableMouse(true)
+    dropdown:Hide()
+
+    local buttons = {}
+    local function SelectEntry(entry)
+        if not entry then return end
+        editBox.iWRSettingAutocomplete = true
+        editBox:SetText(entry.value or entry.label or "")
+        editBox.iWRSettingAutocomplete = nil
+        editBox:SetCursorPosition(#(editBox:GetText() or ""))
+        editBox:ClearFocus()
+        dropdown:Hide()
+        if options.onSelect then options.onSelect(entry, editBox) end
+    end
+
+    for index = 1, (options.maxResults or 5) do
+        local button = CreateFrame("Button", nil, dropdown)
+        button:SetPoint("TOPLEFT", dropdown, "TOPLEFT", 7, -6 - (index - 1) * 23)
+        button:SetPoint("TOPRIGHT", dropdown, "TOPRIGHT", -7, -6 - (index - 1) * 23)
+        button:SetHeight(23)
+        button.text = button:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        button.text:SetPoint("LEFT", button, "LEFT", 7, 0)
+        button.text:SetPoint("RIGHT", button, "RIGHT", -7, 0)
+        button.text:SetJustifyH("LEFT")
+        button.highlight = button:CreateTexture(nil, "HIGHLIGHT")
+        button.highlight:SetAllPoints()
+        button.highlight:SetColorTexture(1, 0.59, 0.09, 0.18)
+        button:SetScript("OnClick", function(self) SelectEntry(self.entry) end)
+        buttons[index] = button
+    end
+
+    local function UpdateSuggestions()
+        local query = StripColorCodes(editBox:GetText() or ""):lower():match("^%s*(.-)%s*$") or ""
+        local matches = {}
+        if query ~= "" then
+            for order, candidate in ipairs(provider() or {}) do
+                local entry = type(candidate) == "table" and candidate or { value = tostring(candidate), label = tostring(candidate) }
+                local searchText = tostring(entry.search or entry.value or entry.label or ""):lower()
+                local position = searchText:find(query, 1, true)
+                if position then
+                    entry.iWRStarts = position == 1
+                    entry.iWROrder = entry.order or order
+                    matches[#matches + 1] = entry
+                end
+            end
+            table.sort(matches, function(left, right)
+                if left.iWRStarts ~= right.iWRStarts then return left.iWRStarts end
+                if left.iWROrder ~= right.iWROrder then return left.iWROrder < right.iWROrder end
+                return tostring(left.label or left.value) < tostring(right.label or right.value)
+            end)
+        end
+
+        for index, button in ipairs(buttons) do
+            local entry = matches[index]
+            button.entry = entry
+            button:SetShown(entry ~= nil)
+            if entry then
+                local label = entry.label or entry.value or ""
+                if entry.detail and entry.detail ~= "" then label = label .. "  |cFF888888" .. entry.detail .. "|r" end
+                button.text:SetText(label)
+            end
+        end
+        dropdown:SetShown(editBox:HasFocus() and query ~= "" and matches[1] ~= nil)
+    end
+
+    editBox:HookScript("OnTextChanged", function(self)
+        if not self.iWRSettingAutocomplete then UpdateSuggestions() end
+    end)
+    editBox:HookScript("OnEditFocusGained", UpdateSuggestions)
+    editBox:HookScript("OnEditFocusLost", function(self)
+        C_Timer.After(0, function()
+            if not self:HasFocus() and not IsMouseOverFrame(dropdown) then dropdown:Hide() end
+        end)
+    end)
+    editBox:SetScript("OnEscapePressed", function(self)
+        dropdown:Hide()
+        self:ClearFocus()
+    end)
+    editBox:SetScript("OnEnterPressed", function(self)
+        local first = buttons[1]
+        if dropdown:IsShown() and first.entry then SelectEntry(first.entry) else self:ClearFocus() end
+    end)
+
+    editBox.iWRAutocomplete = dropdown
+    editBox.iWRUpdateAutocomplete = UpdateSuggestions
+end
+
 function iWR:CreateiWRStyleFrame(parent, width, height, point, backdrop)
     local frameName = "iWRFrame_" .. tostring(math.random(1, 100000))
     local frame = CreateFrame("Frame", frameName, parent, "BackdropTemplate")
     frame:SetSize(width, height)
     frame:SetPoint(unpack(point))
-    frame:SetBackdrop(backdrop or {
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        edgeSize = 16,
-        insets = {left = 5, right = 5, top = 5, bottom = 5},
-    })
+    if backdrop then frame:SetBackdrop(backdrop) else self:StyleSurface(frame, "panel") end
     -- Add to UISpecialFrames for ESC functionality
     if not tContains(UISpecialFrames, frame:GetName()) then
         tinsert(UISpecialFrames, frame:GetName())
@@ -451,7 +770,7 @@ end
 -- ╭──────────────────────────────────────────────╮
 -- │      Guild Watchlist: Auto-Import Check     │
 -- ╰──────────────────────────────────────────────╯
-function iWR:CheckGuildWatchlist(databaseKey, guildName, playerName, playerRealm, classToken)
+function iWR:CheckGuildWatchlist(databaseKey, guildName, playerName, playerRealm, classToken, raceToken, factionToken)
     if not iWRSettings.GuildWatchlist or not next(iWRSettings.GuildWatchlist) then return end
     if not guildName or guildName == "" then return end
     if iWRDatabase[databaseKey] then return end
@@ -486,7 +805,9 @@ function iWR:CheckGuildWatchlist(databaseKey, guildName, playerName, playerRealm
         currentDate,        -- [5] Date
         noteAuthor,         -- [6] Author
         capitalizedRealm,   -- [7] Realm
-        UnitFactionGroup("target") or ""  -- [8] Faction
+        factionToken or UnitFactionGroup("target") or "",  -- [8] Faction
+        [12] = classToken or "",            -- [12] Class token
+        [13] = raceToken or select(2, UnitRace("target")) or "", -- [13] Race token
     }
 
     print(string.format(L["GuildWatchlistAutoImport"], dbName .. iWR.Colors.Reset, guildName))
@@ -550,7 +871,8 @@ function iWR:CheckGroupMembersAgainstDatabase()
                     local guildName = GetGuildInfo(unitID)
                     if guildName and iWRSettings.GuildWatchlist and iWRSettings.GuildWatchlist[guildName] then
                         local _, classToken = UnitClass(unitID)
-                        iWR:CheckGuildWatchlist(databaseKey, guildName, capitalizedName, capitalizedRealm, classToken)
+                        local _, raceToken = UnitRace(unitID)
+                        iWR:CheckGuildWatchlist(databaseKey, guildName, capitalizedName, capitalizedRealm, classToken, raceToken, UnitFactionGroup(unitID))
                         -- Check if auto-imported with negative type for warning
                         if iWRDatabase[databaseKey] then
                             local data = iWR:GetDatabaseEntry(databaseKey)
@@ -621,6 +943,7 @@ function iWR:LogGroupMembers()
 
                 -- Get class info
                 local _, classToken = UnitClass(unitID)
+                local _, raceToken = UnitRace(unitID)
 
                 -- Check if player already has a note in database
                 local databaseKey = capitalizedName .. "-" .. capitalizedRealm
@@ -631,6 +954,8 @@ function iWR:LogGroupMembers()
                     name = capitalizedName,
                     realm = capitalizedRealm,
                     class = classToken or "UNKNOWN",
+                    race = raceToken or "",
+                    faction = UnitFactionGroup(unitID) or "",
                     timestamp = time(),
                     date = date("%Y-%m-%d"),
                     zone = zoneName,
@@ -703,6 +1028,7 @@ end
 function iWR:CreateRelationButton(parent, size, position, texture, label, onClick)
     -- Create the button
     local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    self:StyleButton(button)
     button:SetSize(size[1], size[2])
     button:SetPoint(unpack(position))
     button:SetScript("OnClick", onClick)
@@ -982,6 +1308,7 @@ end
 -- │      Function: Strip Color Codes Function    │
 -- ╰──────────────────────────────────────────────╯
 function StripColorCodes(input)
+    if type(input) ~= "string" then return "" end
     return input:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
 end
 
@@ -1059,11 +1386,12 @@ function iWR:SetTargetingFrame()
     -- Check if the target is in the database
     if not iWRDatabase[databaseKey] then
         local _, class = UnitClass("target")
+        local _, race = UnitRace("target")
 
         -- Guild Watchlist: auto-import if target's guild is watched
         local guildName = GetGuildInfo("target")
         if guildName and iWRSettings.GuildWatchlist and iWRSettings.GuildWatchlist[guildName] then
-            iWR:CheckGuildWatchlist(databaseKey, guildName, targetName, targetRealm, class)
+            iWR:CheckGuildWatchlist(databaseKey, guildName, targetName, targetRealm, class, race, UnitFactionGroup("target"))
         end
 
         -- Re-check after potential guild import
@@ -1083,6 +1411,8 @@ function iWR:SetTargetingFrame()
                     iWR.Colors.iWR .. "iWillRemember",      -- [6] Author
                     "Spineshatter",                         -- [7] Realm
                     faction,                                -- [8] Faction
+                    [12] = class or "",                     -- [12] Class token
+                    [13] = select(2, UnitRace("target")) or "", -- [13] Race token
                 }
             else
                 if iWRNameInput then
@@ -1106,9 +1436,12 @@ function iWR:SetTargetingFrame()
     -- If the target is in the database and has a valid type
     if iWRDatabase[databaseKey][2] ~= 0 then
         local _, class = UnitClass("target")
+        local _, race = UnitRace("target")
 
         -- Verify and update the class in the database if necessary
         iWR:VerifyTargetClassinDB(databaseKey, class)
+        iWRDatabase[databaseKey][12] = class or iWRDatabase[databaseKey][12] or ""
+        iWRDatabase[databaseKey][13] = race or iWRDatabase[databaseKey][13] or ""
 
         -- Update faction if available and missing
         local faction = UnitFactionGroup("target")
@@ -1297,8 +1630,7 @@ function iWR:ShowDetailWindow(playerName)
     -- Create the detail frame if it doesn't exist
     if not self.detailFrame then
         self.detailFrame = iWR:CreateiWRStyleFrame(UIParent, 300, 250, {"TOP", UIParent, "TOP", 0, -100})
-        self.detailFrame:SetBackdropColor(0.05, 0.05, 0.1, 0.9)
-        self.detailFrame:SetBackdropBorderColor(0.8, 0.8, 0.9, 1)
+        self:StyleSurface(self.detailFrame, "panel")
         self.detailFrame:EnableMouse(true)
         self.detailFrame:SetMovable(true)
         self.detailFrame:SetClampedToScreen(true)
@@ -1329,13 +1661,7 @@ function iWR:ShowDetailWindow(playerName)
         titleBar:SetHeight(31)
         titleBar:SetPoint("TOP", self.detailFrame, "TOP", 0, 0)
         titleBar:SetWidth(self.detailFrame:GetWidth())
-        titleBar:SetBackdrop({
-            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-            edgeSize = 16,
-            insets = {left = 5, right = 5, top = 5, bottom = 5},
-        })
-        titleBar:SetBackdropColor(0.07, 0.07, 0.12, 1)
+        self:StyleSurface(titleBar, "header")
 
         -- Add a title text
         local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
@@ -1447,12 +1773,14 @@ function iWR:ShowDetailWindow(playerName)
     -- Edit & Remove buttons
     if not self.detailEditBtn then
         self.detailEditBtn = CreateFrame("Button", nil, self.detailContent, "UIPanelButtonTemplate")
+        self:StyleButton(self.detailEditBtn)
         self.detailEditBtn:SetSize(80, 22)
         self.detailEditBtn:SetText("Edit")
         self.detailEditBtn:SetNormalFontObject(GameFontNormal)
     end
     if not self.detailRemoveBtn then
         self.detailRemoveBtn = CreateFrame("Button", nil, self.detailContent, "UIPanelButtonTemplate")
+        self:StyleButton(self.detailRemoveBtn, true)
         self.detailRemoveBtn:SetSize(80, 22)
         self.detailRemoveBtn:SetText("Remove")
         self.detailRemoveBtn:SetNormalFontObject(GameFontNormal)
@@ -1900,10 +2228,15 @@ end
 -- ╭────────────────────────────╮
 -- │      Open Menu Window      │
 -- ╰────────────────────────────╯
-function iWR:MenuOpen(menuName, classToken)
+function iWR:MenuOpen(menuName, classToken, raceToken)
     if not iWR.State.InCombat then
         iWRPanel:Show()
         local lookupName, lookupRealm
+
+        -- Preserve identity details supplied by places such as the group log.
+        -- The compact editor only contains text fields, so this lets CreateNote
+        -- retain the race/class icons after the note is saved.
+        iWR.PendingNoteIdentity = nil
 
         -- Retail 12.0+: contextData values can be secret strings — treat as empty
         local issv = _G.issecretvalue
@@ -1923,6 +2256,15 @@ function iWR:MenuOpen(menuName, classToken)
         end
 
         if menuName and menuName ~= "" and not namesMatch then
+            local pendingName = StripColorCodes(menuName)
+            if not iWR:IsForeverClient() then
+                pendingName = strsplit("-", pendingName)
+            end
+            iWR.PendingNoteIdentity = {
+                name = pendingName,
+                class = classToken,
+                race = raceToken,
+            }
             if classToken then
                 iWRNameInput:SetText(iWR:ColorizePlayerNameByClass(menuName, classToken))
             else
@@ -2269,6 +2611,7 @@ function iWR:ApplyGlobalTombstones(databaseKey, entry)
             entry[3] = promoted[3]
             entry[5] = promoted[4]
             entry[6] = promoted[5]
+            entry[9] = promoted[6] == true and true or nil
             if #entry[10] == 0 then entry[10] = nil end
         else
             return nil -- all notes tombstoned, don't add to DB
@@ -2295,33 +2638,33 @@ function iWR:MergeNoteHistory(olderEntry, newerEntry)
         for ts in pairs(newerEntry[11]) do tombstones[ts] = true end
     end
 
-    -- Collect all notes from both entries: {note, relation, timestamp, date, author}
+    -- Collect all notes from both entries: {note, relation, timestamp, date, author, personal}
     local allNotes = {}
     local seen = {} -- deduplicate by timestamp
 
     -- Helper to add a note if not duplicate and not tombstoned
-    local function addNote(note, relation, timestamp, date, author)
+    local function addNote(note, relation, timestamp, date, author, personal)
         if not timestamp then return end
         local key = tostring(timestamp)
         if not seen[key] and not tombstones[timestamp] then
             seen[key] = true
-            table.insert(allNotes, { note or "", relation or 0, timestamp, date or "", author or "" })
+            table.insert(allNotes, { note or "", relation or 0, timestamp, date or "", author or "", personal == true })
         end
     end
 
     -- Add current notes from both entries
-    addNote(olderEntry[1], olderEntry[2], olderEntry[3], olderEntry[5], olderEntry[6])
-    addNote(newerEntry[1], newerEntry[2], newerEntry[3], newerEntry[5], newerEntry[6])
+    addNote(olderEntry[1], olderEntry[2], olderEntry[3], olderEntry[5], olderEntry[6], olderEntry[9])
+    addNote(newerEntry[1], newerEntry[2], newerEntry[3], newerEntry[5], newerEntry[6], newerEntry[9])
 
     -- Add history from both entries
     if olderEntry[10] then
         for _, h in ipairs(olderEntry[10]) do
-            addNote(h[1], h[2], h[3], h[4], h[5])
+            addNote(h[1], h[2], h[3], h[4], h[5], h[6])
         end
     end
     if newerEntry[10] then
         for _, h in ipairs(newerEntry[10]) do
-            addNote(h[1], h[2], h[3], h[4], h[5])
+            addNote(h[1], h[2], h[3], h[4], h[5], h[6])
         end
     end
 
@@ -2342,6 +2685,7 @@ function iWR:MergeNoteHistory(olderEntry, newerEntry)
         newerEntry[3] = latest[3]
         newerEntry[5] = latest[4]
         newerEntry[6] = latest[5]
+        newerEntry[9] = latest[6] == true and true or nil
     end
 
     -- Remaining notes become history
@@ -2357,6 +2701,22 @@ function iWR:MergeNoteHistory(olderEntry, newerEntry)
     else
         newerEntry[11] = nil
     end
+end
+
+function iWR:CreateShareableEntry(entry)
+    if type(entry) ~= "table" or entry[9] == true then return nil end
+    local shared = {}
+    for key, value in pairs(entry) do
+        if key ~= 10 then shared[key] = value end
+    end
+    if entry[10] then
+        local history = {}
+        for _, note in ipairs(entry[10]) do
+            if note[6] ~= true then history[#history + 1] = note end
+        end
+        if history[1] then shared[10] = history end
+    end
+    return shared
 end
 
 -- ╭─────────────────────────────────╮
@@ -2443,9 +2803,27 @@ function iWR:CreateNote(Name, Note, Type, personal)
 
     -- Capture faction from target (if target matches this note)
     local noteFaction = ""
+    local noteClass = existingData[12] or ""
+    local noteRace = existingData[13] or ""
+    local pendingIdentity = iWR.PendingNoteIdentity
+    if pendingIdentity and iWR:IsSamePlayerName(pendingIdentity.name, capitalizedName) then
+        noteClass = pendingIdentity.class or noteClass
+        noteRace = pendingIdentity.race or noteRace
+    end
     local noFaction = true
     if targetName and iWR:IsSamePlayerName(targetName, capitalizedName) then
         noteFaction = UnitFactionGroup("target") or ""
+        noteClass = select(2, UnitClass("target")) or noteClass
+        noteRace = select(2, UnitRace("target")) or noteRace
+    end
+    if noteClass == "" and colorCode then
+        local normalizedColor = colorCode:upper()
+        for classToken, classColor in pairs(iWR.Colors.Classes or {}) do
+            if tostring(classColor):sub(1, 10):upper() == normalizedColor then
+                noteClass = classToken
+                break
+            end
+        end
     end
     if noteFaction ~= "" then noFaction = false end
 
@@ -2459,13 +2837,14 @@ function iWR:CreateNote(Name, Note, Type, personal)
     local history = nil
     if playerUpdate and existingData[1] then
         history = existingData[10] or {}
-        -- Push current note into history: {note, relation, timestamp, date, author}
+        -- Push current note into history: {note, relation, timestamp, date, author, personal}
         table.insert(history, {
             existingData[1],  -- note text
             existingData[2],  -- relation level at that time
             existingData[3],  -- timestamp
             existingData[5],  -- date
             existingData[6],  -- author
+            existingData[9] == true, -- personal flag
         })
         -- Enforce max history size (MAX_NOTES_PER_PLAYER - 1, since current note is separate)
         local maxHistory = iWR.CONSTANTS.MAX_NOTES_PER_PLAYER - 1
@@ -2488,7 +2867,10 @@ function iWR:CreateNote(Name, Note, Type, personal)
         personalFlag or nil, -- [9]: Personal flag (true = not shared)
         history,            -- [10]: Notes history (nil if single note)
         existingData[11] or nil, -- [11]: Tombstones (preserved from existing entry)
+        [12] = noteClass,   -- [12]: Class token
+        [13] = noteRace,    -- [13]: Race token
     }
+    iWR.PendingNoteIdentity = nil
 
     -- Update target frame
     iWR:UpdateTargetFrame()
@@ -2496,7 +2878,7 @@ function iWR:CreateNote(Name, Note, Type, personal)
     -- Send sync update if sharing is enabled (skip personal notes)
     if iWRSettings.DataSharing ~= false and not personalFlag then
         wipe(iWR.Cache.DataTable)
-        iWR.Cache.DataTable[databaseKey] = iWRDatabase[databaseKey]
+        iWR.Cache.DataTable[databaseKey] = iWR:CreateShareableEntry(iWRDatabase[databaseKey])
         iWR.Cache.Data = iWR:Serialize(iWR.Cache.DataTable)
         iWR:SendNewDBUpdateToFriends()
     end

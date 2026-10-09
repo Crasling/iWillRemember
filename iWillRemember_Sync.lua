@@ -245,7 +245,7 @@ function iWR:SendFullDBUpdateToFriends()
                     local entryTime = v[3]
                     local lastDays = 100 * 24 -- 100 days in hours
                     if currentTime - entryTime <= lastDays and not v[9] then
-                        iWR.Cache.DataTable[k] = v
+                        iWR.Cache.DataTable[k] = iWR:CreateShareableEntry(v)
                     end
                 end
 
