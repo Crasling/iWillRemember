@@ -2,6 +2,13 @@
 iWillRemember - Changelog
 ================================================================================
 
+v0.23.2 - Larger Personal Database
+--------------------------------------------------------------------------------
+[IMPROVED] The Personal Database opens in a larger window so notes, player
+           details, and actions have more room
+[CHANGED] Updated the addon logo and adjusted its minimap framing so the mark
+          fills the button and remains vertically centered
+
 v0.23.1 - Smarter Player Lookup
 --------------------------------------------------------------------------------
 [ADDED] Group Finder results now identify noted leaders and group members. Hover

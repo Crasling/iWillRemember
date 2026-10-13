@@ -18,6 +18,7 @@ local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
     type = "data source",
     text = "iWillRemember",
     icon = iWR.Icons.iWRIcon,
+    iconCoords = { 0.14, 0.86, 0.10, 0.82 },
     OnClick = function(self, button)
         if button == "LeftButton" and IsShiftKeyDown() then
             iWR:DatabaseToggle()

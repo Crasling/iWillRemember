@@ -906,7 +906,7 @@ function iWR:CreateTab(panel, index, name, onClick)
 end
 
 -- Create a new frame to display the database
-iWRDatabaseFrame = iWR:CreateiWRStyleFrame(UIParent, 800, 450, {"CENTER", UIParent, "CENTER"})
+iWRDatabaseFrame = iWR:CreateiWRStyleFrame(UIParent, 1000, 600, {"CENTER", UIParent, "CENTER"})
 iWRDatabaseFrame:Hide()
 iWRDatabaseFrame:EnableMouse(true)
 iWRDatabaseFrame:SetMovable(true)
