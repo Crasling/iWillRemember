@@ -2,7 +2,7 @@
 iWillRemember - Changelog
 ================================================================================
 
-v0.23.3 - Development
+v0.23.3 - AddOn Access & Target Frames
 --------------------------------------------------------------------------------
 [ADDED] iWillRemember is available from Blizzard's AddOns button
 [FIXED] Target-frame dragons no longer remain visible after switching to an enemy NPC
