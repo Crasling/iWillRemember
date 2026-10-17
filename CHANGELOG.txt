@@ -2,6 +2,11 @@
 iWillRemember - Changelog
 ================================================================================
 
+v0.23.3 - Development
+--------------------------------------------------------------------------------
+[ADDED] iWillRemember is available from Blizzard's AddOns button
+[FIXED] Target-frame dragons no longer remain visible after switching to an enemy NPC
+
 v0.23.2 - Larger Personal Database
 --------------------------------------------------------------------------------
 [IMPROVED] The Personal Database opens in a larger window so notes, player

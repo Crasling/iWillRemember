@@ -118,7 +118,8 @@ iWR.SettingsDefault = {
     HourlyBackup = true,
     MinimapButton = {
         hide = false,
-        minimapPos = -30
+        minimapPos = -30,
+        showInCompartment = true,
     },
     ShowChatIcons = true,
     ShowGroupFinderNotes = true,

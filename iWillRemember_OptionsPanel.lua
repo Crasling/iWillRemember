@@ -705,9 +705,9 @@ function iWR:CreateOptionsPanel()
         function(checked)
             iWRSettings.MinimapButton.hide = not checked
             if checked then
-                LDBIcon:Show("iWillRemember_MinimapButton")
+                LDBIcon:Show("iWillRemember")
             else
-                LDBIcon:Hide("iWillRemember_MinimapButton")
+                LDBIcon:Hide("iWillRemember")
             end
         end)
     checkboxRefs.ShowMinimapButton = cbMinimap

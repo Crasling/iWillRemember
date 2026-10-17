@@ -590,7 +590,7 @@ function iWR:VerifyInputName(Name)
 end
 
 function iWR:SaveMinimapPosition(event, buttonName)
-    iWRSettings.MinimapButton.minimapPos = LDBIcon.db.iWillRemember_MinimapButton.minimapPos
+    iWRSettings.MinimapButton.minimapPos = LDBIcon.db.iWillRemember.minimapPos
 end
 
 -- Hook into LibDBIcon updates
@@ -599,7 +599,7 @@ LDBIcon.RegisterCallback(iWR, "LibDBIcon_Changed", "SaveMinimapPosition")
 -- Restore position on load
 function iWR:RestoreMinimapPosition()
     if iWRSettings.MinimapButton then
-        LDBIcon:Refresh("iWillRemember_MinimapButton", iWRSettings.MinimapButton)
+        LDBIcon:Refresh("iWillRemember", iWRSettings.MinimapButton)
     end
 end
 
@@ -1327,6 +1327,13 @@ end
 -- │      Set New Targeting Frame     │
 -- ╰──────────────────────────────────╯
 function iWR:SetTargetingFrame()
+    -- Always clear iWR's decoration before reading the new target. Modern
+    -- clients can protect hostile target data, and that guard must not leave
+    -- the previous friendly target's dragon visible.
+    if iWR.customFrame then
+        iWR.customFrame:Hide()
+    end
+
     -- Get target name and realm
     local targetNameWithRealm = GetUnitName("target", true)
     local targetName = GetUnitName("target", false)
@@ -1361,10 +1368,6 @@ function iWR:SetTargetingFrame()
         iWR:DebugMsg("Restored target frame texture for classification: " .. classification, 3)
         iWR.modifiedTargetTexture = false
     end
-    if iWR.customFrame then
-        iWR.customFrame:Hide()
-    end
-
     -- Only proceed for players
     if not UnitExists("target") or not UnitIsPlayer("target") then
         if UnitExists("target") then

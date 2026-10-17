@@ -14,7 +14,10 @@
 
 local L = iWR.L
 
-local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
+iWRSettings.MinimapButton = iWRSettings.MinimapButton or { hide = false, minimapPos = -30 }
+iWRSettings.MinimapButton.showInCompartment = true
+
+local minimapButton = LDBroker:NewDataObject("iWillRemember", {
     type = "data source",
     text = "iWillRemember",
     icon = iWR.Icons.iWRIcon,
@@ -47,4 +50,4 @@ local minimapButton = LDBroker:NewDataObject("iWillRemember_MinimapButton", {
 })
 
 -- Register the minimap button with LibDBIcon
-LDBIcon:Register("iWillRemember_MinimapButton", minimapButton, iWRSettings.MinimapButton)
+LDBIcon:Register("iWillRemember", minimapButton, iWRSettings.MinimapButton)
