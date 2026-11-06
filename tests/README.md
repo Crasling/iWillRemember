@@ -4,6 +4,8 @@ Run `sharing.lua` and `sharing_ui.lua` from the addon directory with a Lua 5.4 r
 
 The network checks use independent environments and the bundled AceSerializer, plus the real identity, history, and tombstone helpers. They cover mutual whitelisting without friendship, new WoW friend presence, manual lookups, private notes and history, incremental updates, concurrent senders, lost fragments, malformed snapshots, late replies, receiver resets, transport errors, offline replies, restrictions, a thousand-note transfer, migration, and ruleset changes.
 
+Notes also pass through the real editor save function before incremental and full sharing. Class/race fields (including unknown empty strings) survive the transfer; malformed metadata and unexpected fields reject an incoming snapshot atomically. Snapshot diagnostics report included, personal, old, and invalid note counts without showing note contents.
+
 ## Ruleset storage
 
 The scope includes the WoW project, region, game-mode record, active game mode, and server category. `C_GameRules.IsGameRuleActive` reads `HardcoreRuleset`, `PvPRuleset`, and `RPRuleset` to distinguish Normal (PvE), PvP, Hardcore, RP-PvP, and RP-PvE. Personal PvP flags, War Mode, Classic/Enhanced experience presets, zones, and layer IDs are not server identities and are not used. Missing or unreadable server rule flags block sharing instead of defaulting to PvE.
@@ -24,7 +26,7 @@ Availability uses player GUID preflights, guild/group observations, and current-
 
 ## In-game checks before release
 
-1. On two 0.24.1 clients in the same ruleset, add each other by full name without adding friends. Check status and share notes in both directions.
+1. On two 0.24.2 clients in the same ruleset, add each other by full name without adding friends. Create a note through the editor, check status, and share notes in both directions. Older 0.24.1 receivers reject notes containing class/race fields, so update both clients.
 2. Confirm name suggestions, Add/Enter, removal, last-seen tooltips, and the enabled/disabled sharing checkbox.
 3. Test one guild member and one player outside the guild/group. Keep the Who window closed for the latter's first lookup.
 4. Confirm private notes and private history stay local. Remove a shared entry and check that the other client asks for confirmation after combat. Check Yes, No, and Keep as personal; the personal choice must retain the note and history locally, ignore repeated shared deletions, and exclude queued and future copies from sharing.

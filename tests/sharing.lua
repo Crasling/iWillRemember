@@ -12,12 +12,15 @@ local function copy(value)
     local result = {}; for k, v in pairs(value) do result[copy(k)] = copy(v) end; return result
 end
 local function note(name, private)
-    return { "helpful player", 6, 999999, name, "2026-11-06", "Note Author", "Forever", "Alliance", private }
+    -- The editor always saves class/race slots, including empty strings when
+    -- the player is unknown. Exercise that real layout in every transfer.
+    return { "helpful player", 6, 999999, name, "2026-11-06", "Note Author", "Forever", "Alliance", private,
+        [12] = "PALADIN", [13] = "Human" }
 end
 local function client(name, options)
     options = options or {}
     local env, addon, state = {}, { L = { Yes = "Yes", No = "No", KeepAsPersonal = "Keep as personal" },
-        Version = "0.24.1", GameTocVersion = 16001, CurrentRealm = "Forever" }, {}
+        Version = "0.24.2", GameTocVersion = 16001, CurrentRealm = "Forever" }, {}
     setmetatable(env, { __index = _G }); env._G = env
     env.iWR, env.unpack = addon, table.unpack
     env.strmatch = string.match
@@ -177,11 +180,57 @@ a.addon:ShareWithWhitelist()
 advance(10)
 assert(b.env.iWRDatabase["Helpful Healer-Forever"], "mutually whitelisted non-friends can share: "
     .. table.concat(a.logs, " / ") .. " | " .. table.concat(b.logs, " / ") .. " packets=" .. #a.sent .. "/" .. #b.sent)
+assert(b.env.iWRDatabase["Helpful Healer-Forever"][12] == "PALADIN"
+    and b.env.iWRDatabase["Helpful Healer-Forever"][13] == "Human", "full sharing retains class and race details")
 assert(a.addon:GetSharingPeerStatus(b.name) == "iWR ready", "a matching handshake confirms iWR availability")
 assert(a.env.iWRSettings.SyncList[1].lastSeen, "a real response records last seen")
 local sent = #a.sent + #b.sent
 advance(30)
 assert(#a.sent + #b.sent == sent, "idle clients send no periodic whispers")
+
+-- Create notes through the editor's real save path, rather than only building
+-- network fixtures. Its optional identity fields must survive both send paths.
+local editor, reader = client("Editor Paladin"), client("Editor Reader")
+link(editor, reader); link(reader, editor); whitelist(editor, reader); whitelist(reader, editor)
+local editorEnv, editorAddon = editor.env, editor.addon
+for _, method in ipairs({ "CreateNote", "FormatNameAndRealm", "GetDatabaseEntry" }) do
+    local body = assert(functions:match("(function iWR:" .. method .. "%b().-\nend)"), method)
+    assert(load("local L = iWR.L\n" .. body, method, "t", editorEnv))()
+end
+setmetatable(editorAddon.L, { __index = function(_, value) return value end })
+editorAddon.Colors.iWR, editorAddon.Colors.Gray, editorAddon.Colors[6] = "", "", ""
+editorAddon.Colors.Classes, editorAddon.Cache.DataTable = {}, {}
+editorEnv.GetUnitName = function() return nil end
+editorEnv.UnitClass = function() return "Paladin", "PALADIN" end
+editorEnv.strsplit = function(_, value) return value end
+editorEnv.print = function() end
+function editorAddon:GetTypeName() return "Friendly" end
+function editorAddon:ColorizePlayerNameByClass(value) return value end
+function editorAddon:GetCurrentTimeByHours() return 1000000, "2026-11-06" end
+editorAddon.PendingNoteIdentity = { name = "New Player", class = "WARLOCK", race = "Scourge" }
+editorAddon:CreateNote("New Player", "created through the note editor", 6, false)
+advance(8)
+local created = assert(reader.env.iWRDatabase["New Player-Forever"], "editor-created notes share automatically")
+assert(created[12] == "WARLOCK" and created[13] == "Scourge", "incremental sharing keeps the editor's class/race fields")
+editorAddon:CreateNote("Unknown Player", "unknown class and race", 6, false)
+editorAddon:CreateNote("Personal Player", "must stay private", 6, true)
+editor.env.iWRDatabase["Old Player-Forever"] = note("Old Player")
+editor.env.iWRDatabase["Old Player-Forever"][3] = 990000
+editor.env.iWRDatabase["Invalid Player-Forever"] = note("Invalid Player")
+editor.env.iWRDatabase["Invalid Player-Forever"][12] = {}
+reader.env.iWRDatabase["New Player-Forever"] = nil
+editorAddon:ShareWithWhitelist(); advance(10)
+assert(reader.env.iWRDatabase["New Player-Forever"], "Share now includes editor-created notes")
+local unknown = assert(reader.env.iWRDatabase["Unknown Player-Forever"], "empty identity fields are valid")
+assert(unknown[12] == "" and unknown[13] == "" and not reader.env.iWRDatabase["Personal Player-Forever"],
+    "unknown identity remains empty and personal notes stay local")
+assert(not reader.env.iWRDatabase["Old Player-Forever"] and not reader.env.iWRDatabase["Invalid Player-Forever"],
+    "old and malformed notes remain excluded")
+local explained
+for _, message in ipairs(editor.logs) do
+    if message:find("2 notes; skipped 1 personal, 1 older than 100 days, 1 invalid.", 1, true) then explained = true end
+end
+assert(explained, "snapshot diagnostics explain why notes were skipped without logging their contents")
 
 local private = note("Secret Person", true)
 a.env.iWRDatabase["Secret Person-Forever"] = private
@@ -427,6 +476,16 @@ local function forge(from, target, data, transferId)
         target.addon:OnSharePacket("iWRShareV1", table.concat({ "1", "DATA", fields[3], fields[4], fields[5], transferId,
             index, total, string.format("%x", hash), payload:sub((index - 1) * 120 + 1, index * 120) }, "\t"), "WHISPER", from.name)
     end
+end
+for _, field in ipairs({ 12, 13, 14 }) do
+    local malformed = note("Invalid Metadata")
+    malformed[field] = field == 12 and {} or field == 13 and string.rep("x", 81) or "unknown field"
+    forge(restart, restarted, { kind = "NOTES", entries = {
+        ["Metadata Must Not Merge-Forever"] = note("Metadata Must Not Merge"),
+        ["Invalid Metadata-Forever"] = malformed,
+    } }, "abcdef01" .. field)
+    assert(not restarted.env.iWRDatabase["Metadata Must Not Merge-Forever"],
+        "malformed class/race details and unknown fields reject the whole snapshot")
 end
 local invalid = note("Invalid Player"); invalid[2] = "bad relation"
 forge(restart, restarted, { kind = "NOTES", entries = {

@@ -2,6 +2,11 @@
 iWillRemember - Changelog
 ================================================================================
 
+v0.24.2 - Note Sharing Fix
+--------------------------------------------------------------------------------
+[FIXED] Notes now share properly with players on your whitelist
+[IMPROVED] Clearer debug messages when sharing notes
+
 v0.24.1 - Whitelist Sharing
 --------------------------------------------------------------------------------
 [CHANGED] Sharing now requires both players to whitelist each other

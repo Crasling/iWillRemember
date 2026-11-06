@@ -90,9 +90,13 @@ local function validEntry(entry)
         or entry[3] > iWR:GetCurrentTimeByHours() + 24 or not plain(entry[4], 300)
         or not plain(entry[5], 80) or not plain(entry[6], 160) or not plain(entry[7], 160)
         or (entry[8] ~= nil and not plain(entry[8], 40))
+        -- New notes carry these slots even when their identity is unknown.
+        or iWR:IsSharingSecret(entry[12]) or iWR:IsSharingSecret(entry[13])
+        or (entry[12] ~= nil and not plain(entry[12], 40))
+        or (entry[13] ~= nil and not plain(entry[13], 80))
         or iWR:IsSharingSecret(entry[9]) or (entry[9] ~= nil and entry[9] ~= false) then return false end
     for field in pairs(entry) do
-        if iWR:IsSharingSecret(field) or type(field) ~= "number" or field < 1 or field > 11 or field ~= math.floor(field) then return false end
+        if iWR:IsSharingSecret(field) or type(field) ~= "number" or field < 1 or field > 13 or field ~= math.floor(field) then return false end
     end
     if iWR:IsForeverClient() and entry[7] ~= "Forever" then return false end
     if entry[10] ~= nil then
@@ -117,9 +121,11 @@ local function validEntry(entry)
     return true
 end
 local function shareable(entry)
-    if iWR:IsSharingSecret(entry) or type(entry) ~= "table" or iWR:IsSharingSecret(entry[9]) then return nil end
+    if iWR:IsSharingSecret(entry) or type(entry) ~= "table" or iWR:IsSharingSecret(entry[9]) then return nil, "invalid" end
+    if entry[9] == true then return nil, "personal" end
     local ok, result = pcall(iWR.CreateShareableEntry, iWR, entry)
     if ok and validEntry(result) then return result end
+    return nil, "invalid"
 end
 local function refreshNotes()
     iWR:SaveRulesetStorage()
@@ -203,17 +209,18 @@ local function buildJob(peer, data)
         iWR:DebugMsg("Sharing transfer is too large or could not be serialized for " .. peer.name .. ".", 2)
         return false
     end
-    local noteKeys
+    local noteKeys, noteCount = nil, 0
     if data.kind == "NOTES" then
         noteKeys = {}
-        for id in pairs(data.entries) do noteKeys[id] = true end
+        for id in pairs(data.entries) do noteKeys[id], noteCount = true, noteCount + 1 end
     end
     outgoing[#outgoing + 1] = { name = peer.name, scope = iWR:GetSharingScope(), remote = peer.remote,
         id = token(), payload = payload, hash = checksum(payload), total = math.ceil(#payload / CHUNK),
         kind = data.kind, removeName = data.name, noteKeys = noteKeys,
         index = 1, created = now(), lastProgress = now(), checkedAt = now(), attempts = 0 }
     worker:Show()
-    iWR:DebugMsg("Queued sharing transfer to " .. peer.name .. " (" .. #payload .. " bytes).", 3)
+    iWR:DebugMsg("Queued sharing transfer to " .. peer.name .. " ("
+        .. (noteKeys and noteCount .. " notes, " or "") .. #payload .. " bytes).", 3)
     return true
 end
 flushPeer = function(peer)
@@ -221,12 +228,17 @@ flushPeer = function(peer)
     for _, job in ipairs(outgoing) do if key(job.name) == key(peer.name) then return end end
     if peer.full then
         local entries, current = {}, iWR:GetCurrentTimeByHours()
+        local included, skipped = 0, { personal = 0, old = 0, invalid = 0 }
         for id, entry in pairs(iWRDatabase) do
-            if type(entry) == "table" and finite(entry[3]) and current - entry[3] <= 2400 then
-                local shared = shareable(entry)
-                if shared then entries[id] = shared end
+            local shared, reason = shareable(entry)
+            if not shared then skipped[reason] = skipped[reason] + 1
+            elseif current - shared[3] > 2400 then skipped.old = skipped.old + 1
+            else
+                entries[id], included = shared, included + 1
             end
         end
+        iWR:DebugMsg("Sharing snapshot for " .. peer.name .. ": " .. included .. " notes; skipped "
+            .. skipped.personal .. " personal, " .. skipped.old .. " older than 100 days, " .. skipped.invalid .. " invalid.", 3)
         if buildJob(peer, { kind = "NOTES", entries = entries }) then peer.full, peer.notes = nil, {} end
     elseif next(peer.notes) then
         if buildJob(peer, { kind = "NOTES", entries = peer.notes }) then peer.notes = {} end
