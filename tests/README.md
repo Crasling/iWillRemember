@@ -27,7 +27,7 @@ Availability uses player GUID preflights, guild/group observations, and current-
 1. On two 0.24.1 clients in the same ruleset, add each other by full name without adding friends. Check status and share notes in both directions.
 2. Confirm name suggestions, Add/Enter, removal, last-seen tooltips, and the enabled/disabled sharing checkbox.
 3. Test one guild member and one player outside the guild/group. Keep the Who window closed for the latter's first lookup.
-4. Confirm private notes and private history stay local. Remove a shared entry and check that the other client asks for confirmation after combat.
+4. Confirm private notes and private history stay local. Remove a shared entry and check that the other client asks for confirmation after combat. Check Yes, No, and Keep as personal; the personal choice must retain the note and history locally, ignore repeated shared deletions, and exclude queued and future copies from sharing.
 5. Start a larger share and reload the receiver. Confirm it finishes once and idle clients do not keep whispering.
 6. Log into another ruleset, then back. Confirm the database, whitelist, backups, and deleted notes stay with their ruleset.
 7. Check Debug Mode on the live client for native API restrictions or unusual server delivery delays. Simulated tests do not establish live server behaviour.

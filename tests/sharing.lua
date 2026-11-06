@@ -16,7 +16,8 @@ local function note(name, private)
 end
 local function client(name, options)
     options = options or {}
-    local env, addon, state = {}, { L = {}, Version = "0.24.1", GameTocVersion = 16001, CurrentRealm = "Forever" }, {}
+    local env, addon, state = {}, { L = { Yes = "Yes", No = "No", KeepAsPersonal = "Keep as personal" },
+        Version = "0.24.1", GameTocVersion = 16001, CurrentRealm = "Forever" }, {}
     setmetatable(env, { __index = _G }); env._G = env
     env.iWR, env.unpack = addon, table.unpack
     env.strmatch = string.match
@@ -278,9 +279,52 @@ local confirmation = q.popup
 q.addon:RemoveSharingContact(p.name)
 confirmation.OnAccept()
 assert(q.env.iWRDatabase["Incremental Person-Forever"], "revoking trust also invalidates an open confirmation")
+confirmation.OnButton3()
+assert(not q.env.iWRDatabase["Incremental Person-Forever"][9], "revoking trust also invalidates keep-as-personal")
 q.env.iWRSettings.DataSharing = false
 before = #q.sent; p.addon:ShareWithWhitelist(); advance(5)
 assert(#q.sent == before, "disabling sharing prevents incoming requests from sending replies")
+
+local author, keeper, observer = client("Removal Author"), client("Personal Keeper"), client("Personal Observer")
+link(author, keeper); link(keeper, author); whitelist(author, keeper); whitelist(keeper, author)
+local keptId = "Retained Player-Forever"
+local retained = note("Retained Player")
+retained[10] = { { "earlier shared note", 1, 999998, "date", "Earlier Author", false } }
+author.env.iWRDatabase[keptId] = retained
+author.addon:ShareWithWhitelist(); advance(10)
+local localCopy = assert(keeper.env.iWRDatabase[keptId])
+keeper.env.iWRDatabase["Unaffected Player-Forever"] = note("Unaffected Player")
+link(keeper, observer); link(observer, keeper); whitelist(keeper, observer); whitelist(observer, keeper)
+keeper.addon:RefreshSharingStatus(); advance(10)
+assert(not next(observer.env.iWRDatabase), "availability checks do not enqueue a new full snapshot")
+-- Queue a snapshot before the privacy choice, but prevent it from being sent.
+keeper.locked = true
+keeper.addon:ShareWithWhitelist()
+author.addon:SendRemoveRequestToWhitelist(keptId); advance(5)
+local popup = assert(keeper.popup, "shared deletion presents a decision")
+assert(popup.button3 == "Keep as personal" and popup.selectCallbackByIndex and popup.OnButton3 and popup.OnCancel,
+    "the modern popup routes all three buttons, including the no-change choice")
+popup.OnCancel()
+assert(keeper.env.iWRDatabase[keptId] == localCopy and not localCopy[9], "No keeps the note shared")
+popup.OnButton3()
+popup.OnHide()
+keeper.popup = nil
+assert(keeper.env.iWRDatabase[keptId] == localCopy and localCopy[1] == retained[1] and localCopy[9],
+    "Keep as personal retains the original note and sets its privacy flag")
+assert(localCopy[10][1][1] == "earlier shared note" and localCopy[10][1][6] == true,
+    "retained history is also personal so a later public edit cannot expose it")
+assert(not keeper.env.iWRSettings.DeletedEntries[keptId], "keeping as personal does not delete or tombstone the local note")
+assert(keeper.env.iWRRulesetStores.buckets[keeper.addon:GetSharingScope()].database[keptId][9],
+    "the personal choice is saved in the active ruleset store")
+-- A recipient's deletion request must not invalidate a newly personal copy.
+author.addon:SendRemoveRequestToWhitelist(keptId); advance(5)
+assert(not keeper.popup and #keeper.addon.Queues.RemoveRequests == 0, "repeated shared removals ignore the personal copy")
+keeper.locked = false
+keeper.addon:ShareWithWhitelist(); advance(15)
+assert(observer.env.iWRDatabase["Unaffected Player-Forever"] and not observer.env.iWRDatabase[keptId],
+    "future sharing excludes the retained private note while sending unrelated notes")
+assert(not author.env.iWRDatabase[keptId][9] and not author.env.iWRDatabase[keptId][10][1][6],
+    "keeping a local personal copy does not change the sender's own copy")
 
 local hc = client("Hardcore Warrior", { hardcore = true })
 link(p, hc); link(hc, p); whitelist(p, hc); whitelist(hc, p)

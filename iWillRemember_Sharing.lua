@@ -127,6 +127,25 @@ local function refreshNotes()
     iWR:PopulateDatabase()
     iWR:UpdateTooltip()
 end
+local function keepEntryPersonal(id, entry)
+    entry[9] = true
+    for _, history in ipairs(entry[10] or {}) do history[6] = true end
+    -- Pending snapshots may predate the privacy choice. Rebuild affected
+    -- transfers from the database instead of sending those older copies.
+    for _, peer in pairs(peers) do
+        peer.notes[id], peer.removes[id] = nil, nil
+    end
+    for index = #outgoing, 1, -1 do
+        local job = outgoing[index]
+        if job.noteKeys and job.noteKeys[id] or job.kind == "REMOVE" and job.removeName == id then
+            local peer = peers[key(job.name)]
+            if peer and job.kind == "NOTES" then peer.full = true end
+            table.remove(outgoing, index)
+        end
+    end
+    refreshNotes()
+    iWR:DebugMsg("Kept " .. StripColorCodes(entry[4]) .. " as personal after a shared removal.", 3)
+end
 local function mergePayload(payload, sender)
     local ok, success, data = pcall(iWR.Deserialize, iWR, payload)
     if not ok or not success or type(data) ~= "table" then return false end
@@ -184,9 +203,14 @@ local function buildJob(peer, data)
         iWR:DebugMsg("Sharing transfer is too large or could not be serialized for " .. peer.name .. ".", 2)
         return false
     end
+    local noteKeys
+    if data.kind == "NOTES" then
+        noteKeys = {}
+        for id in pairs(data.entries) do noteKeys[id] = true end
+    end
     outgoing[#outgoing + 1] = { name = peer.name, scope = iWR:GetSharingScope(), remote = peer.remote,
         id = token(), payload = payload, hash = checksum(payload), total = math.ceil(#payload / CHUNK),
-        kind = data.kind, removeName = data.name,
+        kind = data.kind, removeName = data.name, noteKeys = noteKeys,
         index = 1, created = now(), lastProgress = now(), checkedAt = now(), attempts = 0 }
     worker:Show()
     iWR:DebugMsg("Queued sharing transfer to " .. peer.name .. " (" .. #payload .. " bytes).", 3)
@@ -574,17 +598,25 @@ function iWR:ProcessRemoveRequestQueue()
     if request.scope ~= self:GetSharingScope() or not permitted(request.Sender) or not entry or entry[9] then
         return self:ProcessRemoveRequestQueue()
     end
+    local function canApply()
+        return request.scope == self:GetSharingScope() and permitted(request.Sender)
+            and iWRDatabase[request.NoteName] == entry and not entry[9]
+    end
     self.State.PopupActive = true
     StaticPopupDialogs["IWR_SHARED_REMOVE"] = {
         text = request.Sender .. " removed their note for " .. StripColorCodes(entry[4]) .. ". Remove your shared entry too?",
-        button1 = self.L["Yes"], button2 = self.L["No"], timeout = 0, whileDead = true, hideOnEscape = true,
+        button1 = self.L["Yes"], button2 = self.L["No"], button3 = self.L["KeepAsPersonal"],
+        selectCallbackByIndex = true, timeout = 0, whileDead = true, hideOnEscape = true,
         OnAccept = function()
-            if request.scope == self:GetSharingScope() and permitted(request.Sender)
-                and iWRDatabase[request.NoteName] == entry and not entry[9] then
+            if canApply() then
                 self:TombstoneEntireEntry(request.NoteName, entry)
                 iWRDatabase[request.NoteName] = nil
                 refreshNotes()
             end
+        end,
+        OnCancel = function() end,
+        OnButton3 = function()
+            if canApply() then keepEntryPersonal(request.NoteName, entry) end
         end,
         OnHide = function() self.State.PopupActive = false; self:ProcessRemoveRequestQueue() end,
     }

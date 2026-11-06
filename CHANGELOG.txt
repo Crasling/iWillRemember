@@ -4,11 +4,12 @@ iWillRemember - Changelog
 
 v0.24.1 - Whitelist Sharing
 --------------------------------------------------------------------------------
-[CHANGED] Notes are shared only with players on your whitelist
-[ADDED] Add players directly by name, with name suggestions
-[ADDED] Check availability and share notes from the sharing page
-[ADDED] Separate notes and whitelists for PvE, PvP, Hardcore, and RP rulesets
-[FIXED] More reliable sharing when several players send notes at once
+[CHANGED] Sharing now requires both players to whitelist each other
+[ADDED] Add sharing contacts by name, without adding friends
+[ADDED] Check who is online and share notes from the Sync page
+[ADDED] Keep a personal copy when someone deletes a shared note
+[CHANGED] Notes and whitelists stay separate for each server ruleset
+[FIXED] More reliable sharing with several players at once
 
 v0.23.3 - AddOn Access & Target Frames
 --------------------------------------------------------------------------------
