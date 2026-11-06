@@ -47,12 +47,9 @@ loginFrame:RegisterEvent("PLAYER_LOGIN")
 
 loginFrame:SetScript("OnEvent", function()
     C_Timer.After(5, function()
-        if iWR.SendFullDBUpdateToFriends then
-            iWR:SendFullDBUpdateToFriends()
-        end
-        if iWR.EnsureWhitelistedPlayersInFriends then
-            iWR:EnsureWhitelistedPlayersInFriends()
-        end
+        iWR:ActivateSharingRuleset()
+        iWR:SaveRulesetStorage()
+        iWR:SendFullDBUpdateToWhitelist()
     end)
 end)
 
@@ -88,6 +85,7 @@ end)
 -- ADDON ENABLE (SAFE PHASE ONLY)
 ----------------------------------------------------------------
 function iWR:OnEnable()
+    iWR:ActivateSharingRuleset()
     ----------------------------------------------------------------
     -- INFO OUTPUT
     ----------------------------------------------------------------
@@ -151,7 +149,7 @@ function iWR:OnEnable()
     ----------------------------------------------------------------
     -- Register current character for the Mine/Friends filter.
     if not iWRSettings.MyCharacters then iWRSettings.MyCharacters = {} end
-    local currentCharacter = iWR:GetUnitPlayerIdentity("player")
+    local currentCharacter = iWR:SharingCall(iWR.GetUnitPlayerIdentity, iWR, "player")
     if currentCharacter then
         iWRSettings.MyCharacters[currentCharacter] = true
     end
@@ -167,6 +165,7 @@ function iWR:OnEnable()
     end
 
     iWR:InitializeDatabase()
+    iWR:SaveRulesetStorage()
     iWR:CreateOptionsPanel()
 
     if iWRSettings.HourlyBackup then
@@ -176,13 +175,7 @@ function iWR:OnEnable()
     ----------------------------------------------------------------
     -- COMM CHANNELS
     ----------------------------------------------------------------
-    iWR:RegisterComm("iWRFullDBUpdate", "OnFullDBUpdate")
-    iWR:RegisterComm("iWRNewDBUpdate", "OnNewDBUpdate")
-    iWR:RegisterComm("iWRRemDBUpdate", "OnRemDBUpdate")
-    iWR:RegisterComm("iWRVersionCheck", "OnVersionCheck")
-
-    -- Register every prefix before the login version announcement sends.
-    iWR:CheckLatestVersion()
+    iWR:InitializeSharing()
 
     ----------------------------------------------------------------
     -- MINIMAP ICON

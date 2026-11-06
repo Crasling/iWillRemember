@@ -333,6 +333,7 @@ StaticPopupDialogs["IWR_RESTORE_DATABASE"] = {
     OnAccept = function()
         if iWRDatabaseBackup then
             iWRDatabase = CopyTable(iWRDatabaseBackup)
+            iWR:SaveRulesetStorage()
             local info = iWRSettings.iWRDatabaseBackupInfo
             local date = info and info.backupDate or L["UnknownDate"]
             local time = info and info.backupTime or L["UnknownTime"]
@@ -358,6 +359,8 @@ StaticPopupDialogs["IWR_RESET_SETTINGS"] = {
                 iWRSettings[key] = type(value) == "table" and CopyTable(value) or value
             end
         end
+        iWR:ResetSharingSession()
+        iWR:SaveRulesetStorage()
         print(L["SettingsResetSuccess"])
         if iWR.RefreshSettingsPanel then
             iWR:RefreshSettingsPanel()
@@ -827,183 +830,132 @@ function iWR:CreateOptionsPanel()
     _, y = CreateSectionHeader(syncContent, L["SyncSettings"], y)
 
     local cbSync
-    cbSync, y = CreateSettingsCheckbox(syncContent, L["EnableSync"],
-        L["DescEnableSync"], y, "DataSharing")
+    cbSync, y = CreateSettingsCheckbox(syncContent, L["EnableWhitelistSharing"],
+        L["WhitelistSharingDescription"], y, "DataSharing", nil, function(value)
+            iWRSettings.DataSharing = value
+            iWR:ResetSharingSession()
+            iWR:RefreshSharingPanel()
+        end)
     checkboxRefs.DataSharing = cbSync
 
-    -- Sync Mode Dropdown
-    local syncDropdown, _, syncDropdownY
-    syncDropdown, _, y = CreateSettingsDropdown(syncContent, L["SyncModeLabel"], y, 160,
-        function(frame, level)
-            local info = UIDropDownMenu_CreateInfo()
-            info.func = function(self)
-                iWRSettings.SyncType = self.value
-                UIDropDownMenu_SetSelectedValue(frame, self.value)
-                UIDropDownMenu_SetText(frame, self.value == "Whitelist" and L["OnlyWhitelist"] or L["AllFriends"])
-            end
+    local rulesetText = syncContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    rulesetText:SetPoint("TOPLEFT", syncContent, "TOPLEFT", 20, y - 4)
+    y = y - 28
+    local help
+    help, y = CreateInfoText(syncContent, L["WhitelistSharingHelp"], y, "GameFontDisableSmall")
 
-            info.text = L["AllFriends"]
-            info.value = "Friends"
-            info.checked = (iWRSettings.SyncType == "Friends")
-            UIDropDownMenu_AddButton(info, level)
-
-            info.text = L["OnlyWhitelist"]
-            info.value = "Whitelist"
-            info.checked = (iWRSettings.SyncType == "Whitelist")
-            UIDropDownMenu_AddButton(info, level)
-        end)
-
-    local syncModeText = (iWRSettings.SyncType == "Whitelist") and L["OnlyWhitelist"] or L["AllFriends"]
-    UIDropDownMenu_SetText(syncDropdown, syncModeText)
-
-    -- Sync Help
-    local syncHelp
-    syncHelp, y = CreateInfoText(syncContent, L["HelpSync"], y, "GameFontDisableSmall")
-
-    -- ── Side-by-side: Left = dropdowns, Right = whitelist ──
-    local splitY = y - 8
-    -- Content width: 750 total - 10 left - 10 right - 150 sidebar - 6 gap - border insets ~ 560
-    local halfWidth = 270
-
-    -- LEFT SIDE: Add/Remove dropdowns
-    local addFriendLabel = syncContent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    addFriendLabel:SetPoint("TOPLEFT", syncContent, "TOPLEFT", 15, splitY)
-    addFriendLabel:SetText(L["AddtoWhitelist"])
-
-    local addFriendDropdown = CreateFrame("Frame", "iWRDropdown_AddFriend", syncContent, "UIDropDownMenuTemplate")
-    addFriendDropdown:SetPoint("TOPLEFT", addFriendLabel, "BOTTOMLEFT", -20, -2)
-    UIDropDownMenu_SetWidth(addFriendDropdown, halfWidth - 50)
-
-    local removeFriendLabel = syncContent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    removeFriendLabel:SetPoint("TOPLEFT", addFriendDropdown, "BOTTOMLEFT", 20, -8)
-    removeFriendLabel:SetText(L["RemoveFromWhitelist"])
-
-    local removeFriendDropdown = CreateFrame("Frame", "iWRDropdown_RemoveFriend", syncContent, "UIDropDownMenuTemplate")
-    removeFriendDropdown:SetPoint("TOPLEFT", removeFriendLabel, "BOTTOMLEFT", -20, -2)
-    UIDropDownMenu_SetWidth(removeFriendDropdown, halfWidth - 50)
-
-    -- RIGHT SIDE: Whitelist panel with scrollframe
-    local wlPanel = CreateFrame("Frame", nil, syncContent, "BackdropTemplate")
-    wlPanel:SetPoint("TOPLEFT", syncContent, "TOP", 5, splitY)
-    wlPanel:SetSize(halfWidth, 200)
-    wlPanel:SetBackdrop({
-        bgFile = "Interface\\BUTTONS\\WHITE8X8",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        edgeSize = 12,
-        insets = {left = 3, right = 3, top = 3, bottom = 3},
-    })
-    iWR:StyleSurface(wlPanel, "surface")
-
-    local wlTitle = wlPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    wlTitle:SetPoint("TOPLEFT", wlPanel, "TOPLEFT", 10, -6)
-    wlTitle:SetText(L["WhiteListTitle"] .. " (" .. iWR.CurrentRealm .. ")")
-
-    local wlScrollFrame = CreateFrame("ScrollFrame", nil, wlPanel, "UIPanelScrollFrameTemplate")
-    wlScrollFrame:SetPoint("TOPLEFT", wlPanel, "TOPLEFT", 8, -22)
-    wlScrollFrame:SetPoint("BOTTOMRIGHT", wlPanel, "BOTTOMRIGHT", -28, 6)
-
-    local wlScrollChild = CreateFrame("Frame", nil, wlScrollFrame)
-    wlScrollChild:SetWidth(230)
-    wlScrollChild:SetHeight(600)
-    wlScrollFrame:SetScrollChild(wlScrollChild)
-
-    local whitelistText = wlScrollChild:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    whitelistText:SetPoint("TOPLEFT", wlScrollChild, "TOPLEFT", 4, -4)
-    whitelistText:SetWidth(220)
-    whitelistText:SetJustifyH("LEFT")
-    iWR._whitelistText = whitelistText
-
-    -- Mouse wheel on the whitelist panel
-    wlPanel:EnableMouseWheel(true)
-    wlPanel:SetScript("OnMouseWheel", function(_, delta)
-        local current = wlScrollFrame:GetVerticalScroll()
-        local maxScroll = wlScrollChild:GetHeight() - wlScrollFrame:GetHeight()
-        if maxScroll < 0 then maxScroll = 0 end
-        local newScroll = current - (delta * 20)
-        if newScroll < 0 then newScroll = 0 end
-        if newScroll > maxScroll then newScroll = maxScroll end
-        wlScrollFrame:SetVerticalScroll(newScroll)
-    end)
-
-    local function UpdateWhitelistDisplay()
-        local t = {}
-        for _, v in ipairs(iWRSettings.SyncList or {}) do
-            if v.realm == iWR.CurrentRealm then
-                table.insert(t, "|cFF00FF00\226\128\162|r " .. v.name)
-            end
-        end
-        if #t == 0 then
-            whitelistText:SetText(L["NoFriendsWhitelist"])
-        else
-            whitelistText:SetText(table.concat(t, "\n"))
+    local nameInput = CreateFrame("EditBox", nil, syncContent, "InputBoxTemplate")
+    nameInput:SetSize(300, 28)
+    nameInput:SetPoint("TOPLEFT", syncContent, "TOPLEFT", 20, y - 8)
+    nameInput:SetAutoFocus(false)
+    nameInput:SetMaxLetters(120)
+    iWR:StyleEditBox(nameInput)
+    local add = CreateFrame("Button", nil, syncContent, "UIPanelButtonTemplate")
+    iWR:StyleButton(add)
+    add:SetSize(90, 28)
+    add:SetPoint("LEFT", nameInput, "RIGHT", 8, 0)
+    add:SetText(L["WhitelistAddPlayer"])
+    local feedback = syncContent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    feedback:SetPoint("TOPLEFT", nameInput, "BOTTOMLEFT", 0, -5)
+    feedback:SetWidth(480)
+    feedback:SetJustifyH("LEFT")
+    feedback:SetText(L["WhitelistNameHint"])
+    local function addContact()
+        local ok, reason = iWR:AddSharingContact(nameInput:GetText())
+        feedback:SetText(ok and L["WhitelistAdded"] or reason)
+        if ok then
+            nameInput:SetText("")
+            nameInput:ClearFocus()
         end
     end
+    add:SetScript("OnClick", addContact)
+    iWR:AttachAutocomplete(nameInput, function() return iWR:GetSharingSuggestions() end,
+        { onSelect = addContact, onAccept = addContact })
 
-    UpdateWhitelistDisplay()
-
-    UIDropDownMenu_Initialize(addFriendDropdown, function(frame, level)
-        local currentRealm = iWR.CurrentRealm
-        local numFriends = C_FriendList.GetNumFriends()
-        for i = 1, numFriends do
-            local friendInfo = C_FriendList.GetFriendInfoByIndex(i)
-            if friendInfo and friendInfo.name then
-                local isInWhitelist = false
-                for _, entry in ipairs(iWRSettings.SyncList or {}) do
-                    if iWR:IsSamePlayerName(entry.name, friendInfo.name) then
-                        isInWhitelist = true
-                        break
-                    end
-                end
-                if not isInWhitelist then
-                    local info = UIDropDownMenu_CreateInfo()
-                    info.text = friendInfo.name
-                    info.value = friendInfo.name
-                    info.func = function(self)
-                        if not iWRSettings.SyncList then iWRSettings.SyncList = {} end
-                        table.insert(iWRSettings.SyncList, {
-                            name = select(2, iWR:GetPlayerDatabaseKey(self.value)),
-                            realm = currentRealm,
-                            type = "wow",
-                        })
-                        UpdateWhitelistDisplay()
-                        UIDropDownMenu_SetText(frame, "")
-                        CloseDropDownMenus()
-                    end
-                    UIDropDownMenu_AddButton(info, level)
-                end
-            end
-        end
+    y = y - 76
+    local refresh
+    refresh, y = CreateSettingsButton(syncContent, L["WhitelistRefreshStatus"], 150, y, function()
+        iWR:RefreshSharingStatus()
     end)
+    local share = CreateFrame("Button", nil, syncContent, "UIPanelButtonTemplate")
+    iWR:StyleButton(share)
+    share:SetSize(150, 26)
+    share:SetPoint("LEFT", refresh, "RIGHT", 8, 0)
+    share:SetText(L["WhitelistShareNow"])
+    share:SetScript("OnClick", function() iWR:ShareWithWhitelist() end)
 
-    UIDropDownMenu_Initialize(removeFriendDropdown, function(frame, level)
-        local currentRealm = iWR.CurrentRealm
-        for _, entry in ipairs(iWRSettings.SyncList or {}) do
-            if entry.realm == currentRealm then
-                local info = UIDropDownMenu_CreateInfo()
-                info.text = entry.name
-                info.value = entry.name
-                info.func = function(self)
-                    for i, e in ipairs(iWRSettings.SyncList or {}) do
-                        if iWR:IsSamePlayerName(e.name, self.value) then
-                            table.remove(iWRSettings.SyncList, i)
-                            break
-                        end
-                    end
-                    UpdateWhitelistDisplay()
-                    UIDropDownMenu_SetText(frame, "")
-                    CloseDropDownMenus()
-                end
-                UIDropDownMenu_AddButton(info, level)
+    local list = CreateFrame("ScrollFrame", nil, syncContent, "UIPanelScrollFrameTemplate")
+    list:SetPoint("TOPLEFT", syncContent, "TOPLEFT", 20, y - 4)
+    list:SetPoint("TOPRIGHT", syncContent, "TOPRIGHT", -36, y - 4)
+    list:SetHeight(240)
+    local content = CreateFrame("Frame", nil, list)
+    content:SetSize(480, 240)
+    list:SetScrollChild(content)
+    local rows = {}
+    local empty = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    empty:SetPoint("TOPLEFT", content, "TOPLEFT", 8, -8)
+    empty:SetText(L["WhitelistEmpty"])
+
+    function iWR:RefreshSharingPanel()
+        rulesetText:SetText(L["WhitelistRuleset"] .. self:GetSharingRulesetLabel())
+        local contacts = iWRSettings.SyncList or {}
+        empty:SetShown(#contacts == 0)
+        for index, contact in ipairs(contacts) do
+            local row = rows[index]
+            if not row then
+                row = CreateFrame("Frame", nil, content, "BackdropTemplate")
+                row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(index - 1) * 34)
+                row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -(index - 1) * 34)
+                row:SetHeight(30)
+                self:StyleSurface(row, "surface")
+                row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                row.name:SetPoint("LEFT", row, "LEFT", 8, 0)
+                row.name:SetWidth(240)
+                row.name:SetJustifyH("LEFT")
+                row.status = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+                row.status:SetPoint("RIGHT", row, "RIGHT", -35, 0)
+                row.remove = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+                self:StyleButton(row.remove)
+                row.remove:SetSize(22, 22)
+                row.remove:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+                row.remove:SetText("x")
+                row.remove:SetScript("OnClick", function() self:RemoveSharingContact(row.contact.name) end)
+                row:EnableMouse(true)
+                row:SetScript("OnEnter", function()
+                    GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
+                    GameTooltip:SetText(row.contact.name)
+                    GameTooltip:AddLine(self:GetSharingPeerStatus(row.contact.name), 1, 0.82, 0.35)
+                    GameTooltip:AddLine(row.contact.lastSeen and
+                        (L["WhitelistLastSeen"] .. date("%Y-%m-%d %H:%M", row.contact.lastSeen))
+                        or L["WhitelistNotSeen"], 0.7, 0.7, 0.7)
+                    GameTooltip:Show()
+                end)
+                row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+                rows[index] = row
             end
+            row.contact = contact
+            row.name:SetText(contact.name)
+            local status = self:GetSharingPeerStatus(contact.name)
+            row.status:SetText(status)
+            if status == "iWR ready" then row.status:SetTextColor(0.2, 1, 0.3)
+            elseif status == "Offline" or status == "Different ruleset" then row.status:SetTextColor(1, 0.35, 0.25)
+            else row.status:SetTextColor(0.75, 0.75, 0.75) end
+            row:Show()
         end
+        for index = #contacts + 1, #rows do rows[index]:Hide() end
+        content:SetHeight(math.max(240, #contacts * 34))
+    end
+    syncContent:HookScript("OnShow", function() iWR:RefreshSharingPanel() end)
+    list:SetScript("OnSizeChanged", function(_, width) content:SetWidth(width) end)
+    local statusElapsed = 0
+    syncContent:HookScript("OnUpdate", function(_, delta)
+        statusElapsed = statusElapsed + delta
+        if statusElapsed >= 1 then statusElapsed = 0; iWR:RefreshSharingPanel() end
     end)
+    iWR:RefreshSharingPanel()
+    scrollChildren[2]:SetHeight(math.abs(y) + 270)
 
-    -- Set sync tab scroll height (splitY is the top of the side-by-side area, plus ~210 for the panels)
-    scrollChildren[2]:SetHeight(math.abs(splitY) + 220)
-
-    -- ╭───────────────────────────────────────────────────────────────╮
-    -- │                      Backup Tab Content                       │
-    -- ╰───────────────────────────────────────────────────────────────╯
+    -- Backup settings
     y = -10
 
     -- Backup Settings
@@ -1637,7 +1589,7 @@ function iWR:CreateOptionsPanel()
     settingsFrame:HookScript("OnShow", function()
         UpdateBackupInfoDisplay()
         UpdateDatabaseStats()
-        UpdateWhitelistDisplay()
+        iWR:RefreshSharingPanel()
 
         -- Refresh all checkbox states
         for key, cb in pairs(checkboxRefs) do

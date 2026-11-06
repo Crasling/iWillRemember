@@ -2,6 +2,14 @@
 iWillRemember - Changelog
 ================================================================================
 
+v0.24.1 - Whitelist Sharing
+--------------------------------------------------------------------------------
+[CHANGED] Notes are shared only with players on your whitelist
+[ADDED] Add players directly by name, with name suggestions
+[ADDED] Check availability and share notes from the sharing page
+[ADDED] Separate notes and whitelists for PvE, PvP, Hardcore, and RP rulesets
+[FIXED] More reliable sharing when several players send notes at once
+
 v0.23.3 - AddOn Access & Target Frames
 --------------------------------------------------------------------------------
 [ADDED] iWillRemember is available from Blizzard's AddOns button

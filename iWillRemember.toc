@@ -1,6 +1,6 @@
 ## Interface: 16001
-## Title: |cffff9716iWillRemember |cFF00FF00v0.23.3|r
-## Version: 0.23.3
+## Title: |cffff9716iWillRemember |cFF00FF00v0.24.1|r
+## Version: 0.24.1
 ## Notes: |cffff9716Personalized Player Notes Addon|n|cFFFF0000Never forget again.|r
 ## Author: Crasling
 ## IconTexture: Interface\AddOns\iWillRemember\Images\Logo_iWR.blp
@@ -8,7 +8,7 @@
 ## X-Curse-Project-ID: 1160664
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
-## SavedVariables: iWRDatabase, iWRSettings, iWRDatabaseBackup, iWRMemory
+## SavedVariables: iWRDatabase, iWRSettings, iWRDatabaseBackup, iWRMemory, iWRRulesetStores
 
 embeds.xml
 Localization\locale.xml
@@ -17,7 +17,9 @@ iWillRemember_Main.lua
 iWillRemember_iWRFunctions.lua
 iWillRemember_GroupFinder.lua
 iWillRemember_Who.lua
-iWillRemember_Sync.lua
+iWillRemember_SharingScope.lua
+iWillRemember_SharingPeers.lua
+iWillRemember_Sharing.lua
 iWillRemember_Backup.lua
 iWillRemember_OptionsPanel.lua
 iWillRemember_EventHandler.lua

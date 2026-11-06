@@ -24,6 +24,7 @@ function iWR:BackupDatabase()
         backupDate = backupDate,
         backupTime = backupTime
     }
+    self:SaveRulesetStorage()
     -- Debug message to notify the user
     iWR:DebugMsg("Backup completed on " .. backupDate .. " at " .. backupTime .. "!",3)
 end

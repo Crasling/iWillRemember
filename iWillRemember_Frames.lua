@@ -321,7 +321,7 @@ helpIcon:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:SetText(L["HelpTooltipTitle"], 1, 0.85, 0.1)
     GameTooltip:AddLine(L["HelpUse"], 1, 0.82, 0, true)
-    GameTooltip:AddLine(L["HelpSync"], 1, 0.82, 0, true)
+    GameTooltip:AddLine(L["WhitelistSharingHelp"], 1, 0.82, 0, true)
     GameTooltip:AddLine(L["HelpClear"], 1, 0.82, 0, true)
     GameTooltip:AddLine(L["HelpSettings"], 1, 0.82, 0, true)
     GameTooltip:AddLine(L["HelpDiscord"], 1, 0.82, 0, true)
@@ -1326,6 +1326,7 @@ clearDatabaseButton:SetScript("OnClick", function()
         button2 = L["No"],
         OnAccept = function()
             iWRDatabase = {}
+            iWR:SaveRulesetStorage()
             print(iWR.Colors.iWR .. L["ClearDBSuccess"])
             iWR:PopulateDatabase()
         end,
@@ -1359,7 +1360,7 @@ shareDatabaseButton:SetScript("OnClick", function()
         button2 = L["No"],
         OnAccept = function()
             -- Function to share the full database
-            iWR:SendFullDBUpdateToFriends()
+            iWR:ShareWithWhitelist()
             print(iWR.Colors.iWR .. L["ShareDBInitiated"])
         end,
         timeout = 0,
@@ -1904,7 +1905,7 @@ function iWR:PopulateDatabase()
                             iWR.ExpandedEntries[databasekey] = nil
                             iWR:PopulateDatabase()
                             if not wasPersonal then
-                                iWR:SendRemoveRequestToFriends(databasekey)
+                                iWR:SendRemoveRequestToWhitelist(databasekey)
                             end
                         end,
                         timeout = 0,

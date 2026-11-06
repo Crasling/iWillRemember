@@ -472,7 +472,9 @@ function iWR:AttachAutocomplete(editBox, provider, options)
     end)
     editBox:SetScript("OnEnterPressed", function(self)
         local first = buttons[1]
-        if dropdown:IsShown() and first.entry then SelectEntry(first.entry) else self:ClearFocus() end
+        if dropdown:IsShown() and first.entry then SelectEntry(first.entry)
+        elseif options.onAccept then options.onAccept(self)
+        else self:ClearFocus() end
     end)
 
     editBox.iWRAutocomplete = dropdown
@@ -1862,11 +1864,7 @@ function iWR:InitializeSettings()
     end
     iWRSettings.MyCharacters = normalizedCharacters
 
-    for _, entry in ipairs(iWRSettings.SyncList or {}) do
-        local _, resolvedName = iWR:GetPlayerDatabaseKey(entry.name, entry.realm)
-        if resolvedName then entry.name = resolvedName end
-        entry.realm = "Forever"
-    end
+    self:NormalizeSharingWhitelist()
 
     -- Prune old entries if over limit
     iWR:PruneGroupLog()
@@ -2073,7 +2071,7 @@ function iWR:VerifyTargetClassinDB(databasekey, targetClass)
                     iWRDatabase[databasekey][6],     --Data[6]
                 }
                 iWR.Cache.Data = iWR:Serialize(iWR.Cache.DataTable)
-                iWR:SendNewDBUpdateToFriends()
+                iWR:SendNewDBUpdateToWhitelist()
             end
         end
     end
@@ -2479,7 +2477,7 @@ function iWR:ClearNote(Name)
 
         -- Notify friends if data sharing is enabled (skip personal notes)
         if iWRSettings.DataSharing ~= false and not wasPersonal then
-            iWR:SendRemoveRequestToFriends(databaseKey)
+            iWR:SendRemoveRequestToWhitelist(databaseKey)
         end
     else
         -- Notify that the name was not found in the database
@@ -2883,7 +2881,7 @@ function iWR:CreateNote(Name, Note, Type, personal)
         wipe(iWR.Cache.DataTable)
         iWR.Cache.DataTable[databaseKey] = iWR:CreateShareableEntry(iWRDatabase[databaseKey])
         iWR.Cache.Data = iWR:Serialize(iWR.Cache.DataTable)
-        iWR:SendNewDBUpdateToFriends()
+        iWR:SendNewDBUpdateToWhitelist()
     end
 
     -- Print confirmation message
