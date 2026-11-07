@@ -2,6 +2,13 @@
 iWillRemember - Changelog
 ================================================================================
 
+v0.24.4 - Simple Menu
+--------------------------------------------------------------------------------
+[ADDED] Simple / Advanced menu switch
+[CHANGED] Names below the Simple Menu buttons
+[CHANGED] Simple Menu enabled for new users
+[FIXED] Hated button saves the correct rating
+
 v0.24.3 - Sharing Fixes
 --------------------------------------------------------------------------------
 [CHANGED] Sync now sends and receives notes with your whitelist

@@ -621,8 +621,8 @@ function iWR:CreateOptionsPanel()
 
     local cbSimpleMenu
     cbSimpleMenu, y = CreateSettingsCheckbox(generalContent, L["SimpleMenu"] or "Simple Menu",
-        L["DescSimpleMenu"] or "|cFF808080Replaces the slider with configurable level buttons.|r",
-        y, "SimpleMenu")
+        L["DescSimpleMenu"] or "|cFF808080Use five quick buttons with names below the icons to save or clear a note.|r",
+        y, "SimpleMenu", nil, function(value) iWR:SetSimpleMenu(value) end)
     checkboxRefs.SimpleMenu = cbSimpleMenu
 
     local cbGroupLog

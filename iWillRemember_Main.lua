@@ -142,7 +142,7 @@ iWR.SettingsDefault = {
     },
     CustomIcons = {},
     GroupLogEnabled = true,
-    SimpleMenu = false,
+    SimpleMenu = true,
     GoodLevels = 3,
     BadLevels = 2,
     GuildWatchlist = {},

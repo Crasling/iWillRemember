@@ -666,15 +666,15 @@ local simpleButtons = {}
 
 -- Build simple menu with classic fixed buttons: Hated, Disliked, Clear, Liked, Respected
 local function BuildSimpleMenu()
-    -- Hide and release existing buttons
+    -- Reuse the five controls when switching modes or reopening the menu.
     for _, btn in ipairs(simpleButtons) do
         if btn.label then btn.label:Hide() end
         btn:Hide()
     end
-    wipe(simpleButtons)
 
-    -- Fixed classic button order: Hated(-6), Disliked(-1), Clear(0), Liked(+1), Respected(+6)
-    local btnValues = {-6, -1, 0, 1, 6}
+    -- Use the lowest value for Hated so it stays distinct from Disliked
+    -- even when only two negative levels are configured.
+    local btnValues = {-10, -1, 0, 1, 6}
 
     local totalButtons = #btnValues
 
@@ -683,7 +683,7 @@ local function BuildSimpleMenu()
     if totalButtons <= 7 then
         btnSize  = 53
         iconSize = 45
-        spacing  = 60
+        spacing  = 64
         labelFont = "GameFontNormalSmall"
     elseif totalButtons <= 13 then
         btnSize  = 42
@@ -706,6 +706,7 @@ local function BuildSimpleMenu()
     local containerHeight = rows * rowHeight + 4
 
     simpleContainer:SetSize(containerWidth, containerHeight)
+    local extraLabelHeight = 0
 
     -- Create buttons in grid
     for idx, value in ipairs(btnValues) do
@@ -719,7 +720,7 @@ local function BuildSimpleMenu()
         local xOffset = rowStartX + col * spacing
         local yOffset = -(row * rowHeight) - 2
 
-        local btn = CreateFrame("Button", nil, simpleContainer, "UIPanelButtonTemplate")
+        local btn = simpleButtons[idx] or CreateFrame("Button", nil, simpleContainer, "UIPanelButtonTemplate")
         iWR:StyleButton(btn, value == 0)
         btn:SetSize(btnSize, btnSize)
         btn:SetPoint("TOP", simpleContainer, "TOP", xOffset, yOffset)
@@ -734,28 +735,25 @@ local function BuildSimpleMenu()
         end)
 
         -- Icon texture
-        local iconTex = btn:CreateTexture(nil, "ARTWORK")
+        local iconTex = btn.iconTexture or btn:CreateTexture(nil, "ARTWORK")
         iconTex:SetSize(iconSize, iconSize)
         iconTex:SetPoint("CENTER", btn, "CENTER", 0, 0)
         iconTex:SetTexture(iWR:GetIcon(value))
         btn.iconTexture = iconTex
 
-        -- Label under button (numeric for values, "Clear" for 0)
-        local btnLabel = simpleContainer:CreateFontString(nil, "OVERLAY", labelFont)
+        -- Keep the action name visible without needing to hover the icon.
+        local btnLabel = btn.label or simpleContainer:CreateFontString(nil, "OVERLAY", labelFont)
         btnLabel:SetPoint("TOP", btn, "BOTTOM", 0, -2)
         btnLabel:SetWidth(spacing)
-        btnLabel:SetWordWrap(false)
+        btnLabel:SetWordWrap(true)
+        btnLabel:SetJustifyH("CENTER")
 
-        local labelText
-        if value == 0 then
-            labelText = iWR:GetTypeName(0) ~= "" and iWR:GetTypeName(0) or L["ClearButton"]
-        elseif value > 0 then
-            labelText = "+" .. value
-        else
-            labelText = tostring(value)
-        end
+        local labelText = value == 0 and L["ClearButton"] or iWR:GetTypeName(value)
         btnLabel:SetText(labelText)
+        btnLabel:SetTextColor(1, 0.82, 0)
+        extraLabelHeight = math.max(extraLabelHeight, btnLabel:GetStringHeight() - 14)
         btn.label = btnLabel
+        btnLabel:Show()
 
         -- Tooltip showing category name + value
         btn:SetScript("OnEnter", function(self)
@@ -773,15 +771,17 @@ local function BuildSimpleMenu()
         btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
         -- Highlight texture for active state
-        local activeBg = btn:CreateTexture(nil, "BACKGROUND")
+        local activeBg = btn.activeBg or btn:CreateTexture(nil, "BACKGROUND")
         activeBg:SetAllPoints()
         activeBg:SetColorTexture(1, 0.59, 0.09, 0.3)
         activeBg:Hide()
         btn.activeBg = activeBg
         btn.typeValue = value
 
-        simpleButtons[#simpleButtons + 1] = btn
+        simpleButtons[idx] = btn
+        btn:Show()
     end
+    simpleContainer:SetHeight(containerHeight + extraLabelHeight)
 end
 
 -- Highlight the matching simple button for current value (exact match)
@@ -823,9 +823,29 @@ local dbHighlight = openDatabaseButton:CreateTexture(nil, "HIGHLIGHT")
 dbHighlight:SetAllPoints()
 dbHighlight:SetColorTexture(1, 1, 1, 0.15)
 
--- Toggle simple/slider mode and reset on panel show
+local menuModeToggle = CreateFrame("Button", nil, menuContent, "UIPanelButtonTemplate")
+iWR:StyleButton(menuModeToggle)
+menuModeToggle:SetSize(132, 20)
+menuModeToggle:SetPoint("TOPRIGHT", menuContent, "TOPRIGHT", -20, -6)
+menuModeToggle:SetNormalFontObject("GameFontNormalSmall")
+menuModeToggle:SetScript("OnClick", function()
+    iWR:SetSimpleMenu(not iWRSettings.SimpleMenu)
+end)
+menuModeToggle:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText(L["MenuModeToggleHint"], 1, 1, 1, 1, true)
+    GameTooltip:Show()
+end)
+menuModeToggle:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+-- Changing modes keeps the current name, note, personal flag and slider value.
 local function UpdateMenuMode()
-    if iWRSettings and iWRSettings.SimpleMenu then
+    local simple = iWRSettings and iWRSettings.SimpleMenu == true
+    local active, inactive = "|cffff9716", "|cff888888"
+    menuModeToggle:SetText((simple and active or inactive) .. L["MenuModeSimple"] .. "|r / "
+        .. (simple and inactive or active) .. L["MenuModeAdvanced"] .. "|r")
+    sliderThumb.dragging = false
+    if simple then
         sliderSeparator:Hide()
         sliderHeader:Hide()
         relationIconFrame:Hide()
@@ -839,10 +859,12 @@ local function UpdateMenuMode()
 
         -- Build dynamic buttons and resize panel
         BuildSimpleMenu()
+        UpdateSimpleHighlight(currentSliderValue)
         simpleContainer:Show()
 
-        relationCard:SetHeight(math.max(112, simpleContainer:GetHeight() + 37))
-        iWRPanel:SetHeight(282)
+        local relationHeight = math.max(112, simpleContainer:GetHeight() + 37)
+        relationCard:SetHeight(relationHeight)
+        iWRPanel:SetHeight(170 + relationHeight)
     else
         sliderSeparator:Show()
         sliderHeader:Show()
@@ -864,6 +886,15 @@ end
 
 -- Expose for options panel to trigger rebuild when level counts change
 iWR.UpdateMenuMode = UpdateMenuMode
+
+function iWR:SetSimpleMenu(enabled)
+    if not iWRSettings then return end
+    iWRSettings.SimpleMenu = enabled == true
+    UpdateMenuMode()
+    if self.SettingsFrame and self.SettingsFrame:IsShown() and self.RefreshSettingsPanel then
+        self:RefreshSettingsPanel()
+    end
+end
 
 iWRPanel:HookScript("OnShow", function()
     UpdateSliderDisplay(0)
