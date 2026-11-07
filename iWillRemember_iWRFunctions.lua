@@ -705,9 +705,11 @@ end
 function iWR:GetCurrentTimeByHours()
     -- Extract current time components
     ---@diagnostic disable-next-line: param-type-mismatch
-    local CurrHour, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%d/%m/%y"), 4)
+    local CurrHour, CurrMinute, CurrSecond, CurrDay, CurrMonth, CurrYear = strsplit("/", date("%H/%M/%S/%d/%m/%y"), 6)
     -- Calculate the current time in hours
     local CurrentTime = tonumber(CurrHour) + tonumber(CurrDay) * 24 + tonumber(CurrMonth) * 720 + tonumber(CurrYear) * 8640
+    -- Keep old saved timestamps comparable while ordering edits within an hour.
+    CurrentTime = CurrentTime + tonumber(CurrMinute) / 60 + tonumber(CurrSecond) / 3600
     -- Format the current date as YYYY-MM-DD
     local CurrentDate = string.format("20".."%02d-%02d-%02d", tonumber(CurrYear), tonumber(CurrMonth), tonumber(CurrDay))
     -- Return both the current time in hours and the formatted current date
@@ -2626,7 +2628,8 @@ end
 -- │   Function: Merge Note History      │
 -- ╰──────────────────────────────────────╯
 -- Merges note histories from two entries for the same player (used in sync).
--- The newerEntry's [1]-[6] and [10] are updated in-place with the merged result.
+-- The destination keeps its current note when timestamps tie. Different
+-- authors or note contents must survive even with old hour-only timestamps.
 function iWR:MergeNoteHistory(olderEntry, newerEntry)
     if not olderEntry or not newerEntry then return end
 
@@ -2641,21 +2644,26 @@ function iWR:MergeNoteHistory(olderEntry, newerEntry)
 
     -- Collect all notes from both entries: {note, relation, timestamp, date, author, personal}
     local allNotes = {}
-    local seen = {} -- deduplicate by timestamp
+    local seen, priority = {}, {}
 
     -- Helper to add a note if not duplicate and not tombstoned
     local function addNote(note, relation, timestamp, date, author, personal)
         if not timestamp then return end
-        local key = tostring(timestamp)
+        local authorKey = self:GetPlayerDatabaseKey(StripColorCodes(author or "")) or ""
+        local parts = { tostring(timestamp), authorKey:lower(), tostring(relation or 0), note or "", date or "", personal == true and "1" or "0" }
+        for index, value in ipairs(parts) do parts[index] = #value .. ":" .. value end
+        local key = table.concat(parts)
         if not seen[key] and not tombstones[timestamp] then
             seen[key] = true
-            table.insert(allNotes, { note or "", relation or 0, timestamp, date or "", author or "", personal == true })
+            local record = { note or "", relation or 0, timestamp, date or "", author or "", personal == true }
+            allNotes[#allNotes + 1] = record
+            priority[record] = #allNotes
         end
     end
 
     -- Add current notes from both entries
-    addNote(olderEntry[1], olderEntry[2], olderEntry[3], olderEntry[5], olderEntry[6], olderEntry[9])
     addNote(newerEntry[1], newerEntry[2], newerEntry[3], newerEntry[5], newerEntry[6], newerEntry[9])
+    addNote(olderEntry[1], olderEntry[2], olderEntry[3], olderEntry[5], olderEntry[6], olderEntry[9])
 
     -- Add history from both entries
     if olderEntry[10] then
@@ -2670,7 +2678,10 @@ function iWR:MergeNoteHistory(olderEntry, newerEntry)
     end
 
     -- Sort by timestamp ascending (oldest first)
-    table.sort(allNotes, function(a, b) return a[3] < b[3] end)
+    table.sort(allNotes, function(a, b)
+        if a[3] ~= b[3] then return a[3] < b[3] end
+        return priority[a] > priority[b]
+    end)
 
     -- Cap at MAX_NOTES_PER_PLAYER
     local maxNotes = iWR.CONSTANTS.MAX_NOTES_PER_PLAYER
@@ -2702,13 +2713,16 @@ function iWR:MergeNoteHistory(olderEntry, newerEntry)
     else
         newerEntry[11] = nil
     end
+    for _, field in ipairs({ 4, 7, 8, 12, 13 }) do
+        if newerEntry[field] == nil or newerEntry[field] == "" then newerEntry[field] = olderEntry[field] end
+    end
 end
 
 function iWR:CreateShareableEntry(entry)
     if type(entry) ~= "table" or entry[9] == true then return nil end
     local shared = {}
     for key, value in pairs(entry) do
-        if key ~= 10 then shared[key] = value end
+        if key ~= 10 and key ~= 11 then shared[key] = value end
     end
     if entry[10] then
         local history = {}
@@ -2718,6 +2732,18 @@ function iWR:CreateShareableEntry(entry)
         if history[1] then shared[10] = history end
     end
     return shared
+end
+
+function iWR:GetNoteAuthorship(entry)
+    local mine, others = false, false
+    local characters = iWRSettings and iWRSettings.MyCharacters or {}
+    local function include(author)
+        local _, name = self:GetPlayerDatabaseKey(StripColorCodes(author or ""))
+        if name and characters[name] then mine = true else others = true end
+    end
+    include(entry[6])
+    for _, history in ipairs(entry[10] or {}) do include(history[5]) end
+    return mine, others
 end
 
 -- ╭─────────────────────────────────╮

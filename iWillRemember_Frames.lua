@@ -1343,24 +1343,18 @@ end)
 -- ╰─────────────────────────────────────────────╯
 local shareDatabaseButton = CreateFrame("Button", nil, notesContainer, "UIPanelButtonTemplate")
 iWR:StyleButton(shareDatabaseButton)
-shareDatabaseButton:SetText(L["ShareFullDBButton"])
+shareDatabaseButton:SetText(L["WhitelistSyncNow"])
 shareDatabaseButton:SetSize(math.max(100, shareDatabaseButton:GetTextWidth() + 24), 30)
 shareDatabaseButton:SetPoint("BOTTOM", notesContainer, "BOTTOM", 60, 10)
 shareDatabaseButton:SetScript("OnClick", function()
-    -- Check if the database is empty
-    if not next(iWRDatabase) then
-        print(iWR.Colors.iWR .. L["ShareDBEmpty"])
-        return
-    end
-
-    -- Confirm before sharing the database
+    -- An empty database can still receive notes from the whitelist.
     StaticPopupDialogs["SHARE_DATABASE_CONFIRM"] = {
         text = L["ShareDBConfirm"],
         button1 = L["Yes"],
         button2 = L["No"],
         OnAccept = function()
             -- Function to share the full database
-            iWR:ShareWithWhitelist()
+            iWR:SyncWithWhitelist()
             print(iWR.Colors.iWR .. L["ShareDBInitiated"])
         end,
         timeout = 0,
@@ -1421,24 +1415,16 @@ function iWR:PopulateDatabase()
     local categorizedData = {}
     local totalEntries = 0
     local filteredEntries = 0
-    local myCharacters = iWRSettings and iWRSettings.MyCharacters or {}
     for playerName, data in pairs(iWRDatabase) do
         totalEntries = totalEntries + 1
         local includeEntry = true
 
         -- Apply author filter (Mine/Friends) — uses MyCharacters to include alts
         if dbNoteFilter == "mine" then
-            local authorName = data[6] and StripColorCodes(data[6]) or ""
-            local _, normalizedAuthor = iWR:GetPlayerDatabaseKey(authorName)
-            if not normalizedAuthor or not myCharacters[normalizedAuthor] then
-                includeEntry = false
-            end
+            includeEntry = iWR:GetNoteAuthorship(data)
         elseif dbNoteFilter == "friends" then
-            local authorName = data[6] and StripColorCodes(data[6]) or ""
-            local _, normalizedAuthor = iWR:GetPlayerDatabaseKey(authorName)
-            if normalizedAuthor and myCharacters[normalizedAuthor] then
-                includeEntry = false
-            end
+            local _, fromOthers = iWR:GetNoteAuthorship(data)
+            includeEntry = fromOthers
         end
 
         -- Apply search filter: match player name or note

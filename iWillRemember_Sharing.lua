@@ -31,14 +31,14 @@ end
 local function enabled() return iWRSettings.DataSharing ~= false and iWR:GetSharingScope() ~= nil end
 local function permitted(name) return enabled() and iWR:GetWhitelistEntry(name) ~= nil end
 local function notify() if iWR.RefreshSharingPanel then iWR:RefreshSharingPanel() end end
+local function versionNumber(value)
+    if type(value) ~= "string" then return nil end
+    local a, b, c = value:match("^(%d+)%.(%d+)%.(%d+)$")
+    if a then return tonumber(a) * 1000000 + tonumber(b) * 1000 + tonumber(c) end
+end
 local function checkVersion(version)
-    if type(version) ~= "string" or not version:match("^%d+%.%d+%.%d+$")
-        or not iWR.Version:match("^%d+%.%d+%.%d+$") then return end
-    local function number(value)
-        local a, b, c = value:match("^(%d+)%.(%d+)%.(%d+)$")
-        return tonumber(a) * 1000000 + tonumber(b) * 1000 + tonumber(c)
-    end
-    if number(version) > number(iWR.Version) and not iWR.State.VersionMessaged then
+    local remote, current = versionNumber(version), versionNumber(iWR.Version)
+    if remote and current and remote > current and not iWR.State.VersionMessaged then
         iWR:PrintToChat(iWR.L["NewVersionAvailable"])
         iWR.State.VersionMessaged = true
     end
@@ -56,14 +56,16 @@ local function sendRaw(name, message)
     local success = Enum and Enum.SendAddonMessageResult and Enum.SendAddonMessageResult.Success
     return result ~= nil and (result == true or result == (success or 0))
 end
-local function control(name, kind, nonce)
+local function control(name, kind, nonce, requestSync)
     if #controls >= 256 then return false end
     local peer = peers[key(name)]
     if peer and (peer.retryAt or 0) > now() then return false end
     local scope = iWR:GetSharingScope()
     if not scope then return false end
+    local parts = { WIRE, kind, scope, session, nonce, iWR.Version }
+    if requestSync then parts[7] = "SYNC" end
     controls[#controls + 1] = { name = name, kind = kind, scope = scope, created = now(), attempts = 0,
-        message = table.concat({ WIRE, kind, scope, session, nonce, iWR.Version }, "\t") }
+        message = table.concat(parts, "\t") }
     worker:Show()
     return true
 end
@@ -80,7 +82,9 @@ local function queueHello(peer)
         end)
     end
     peer.status = "Waiting for iWR"
-    return control(peer.name, "HELLO", peer.nonce)
+    local queued = control(peer.name, "HELLO", peer.nonce, peer.syncRequested)
+    if queued then peer.syncRequested = nil end
+    return queued
 end
 local function finite(value) return not iWR:IsSharingSecret(value) and type(value) == "number" and value == value and value >= 0 and value < math.huge end
 local function plain(value, maximum) return not iWR:IsSharingSecret(value) and type(value) == "string" and #value <= maximum end
@@ -182,24 +186,35 @@ local function mergePayload(payload, sender)
         if not resolved then return false end
         normalized[resolved] = entry
     end
+    local before, added, merged, personal = 0, 0, 0, 0
+    for _ in pairs(iWRDatabase) do before = before + 1 end
     for id, entry in pairs(normalized) do
         local existing = iWRDatabase[id]
         if existing and existing[9] then
             -- Personal notes never enter a shared merge.
+            personal = personal + 1
         elseif iWR:IsEntryFullyTombstoned(id, entry) then iWR:SendRemoveRequestToPlayer(id, sender)
         else
+            -- A note snapshot cannot authorize deletion of a local note.
+            -- Shared removals use the separate confirmation flow below.
+            entry[11] = nil
             entry = iWR:ApplyGlobalTombstones(id, entry)
             if entry then
-                if not existing then iWRDatabase[id] = entry
-                elseif iWR:IsNeedToUpdate(existing[3], entry[3]) then
-                    iWR:MergeNoteHistory(existing, entry)
-                    iWRDatabase[id] = entry
-                else iWR:MergeNoteHistory(entry, existing) end
+                if not existing then
+                    iWRDatabase[id], added = entry, added + 1
+                else
+                    -- Merge into the recipient's entry; a full snapshot never
+                    -- replaces their database or removes unmentioned players.
+                    iWR:MergeNoteHistory(entry, existing)
+                    merged = merged + 1
+                end
             end
         end
     end
     refreshNotes()
     iWR:DebugMsg("Received " .. count .. " shared player notes from " .. sender .. ".", 3)
+    iWR:DebugMsg("Sharing merge: " .. before .. " existing players, " .. added .. " added, " .. merged
+        .. " merged, " .. personal .. " personal entries kept; " .. (before + added) .. " players total.", 3)
     return true
 end
 local flushPeer
@@ -225,6 +240,16 @@ local function buildJob(peer, data)
 end
 flushPeer = function(peer)
     if not permitted(peer.name) or not peer.remote or (peer.readyUntil or 0) <= now() or #outgoing >= MAX_TRANSFERS then return end
+    -- Older receivers can discard distinct same-hour notes. Do not send them
+    -- a database until their merge implementation has also been updated.
+    if (versionNumber(peer.version) or 0) < 24003 then
+        peer.status = "Update required"
+        if peer.warnedVersion ~= peer.version then
+            peer.warnedVersion = peer.version
+            iWR:DebugMsg("Sync with " .. peer.name .. " requires iWR 0.24.3 or newer on both clients.", 2)
+        end
+        return
+    end
     for _, job in ipairs(outgoing) do if key(job.name) == key(peer.name) then return end end
     if peer.full then
         local entries, current = {}, iWR:GetCurrentTimeByHours()
@@ -254,7 +279,7 @@ function iWR:ConnectSharingPeer(contact, allowWho, debugAction)
         if debugAction then self:DebugMsg(debugAction .. ": " .. contact.name .. "; " .. message, 3) end
     end
     local peer = peerFor(contact.name)
-    if (peer.readyUntil or 0) > now() then
+    if (peer.readyUntil or 0) > now() and not peer.syncRequested then
         report("using the confirmed iWR session.")
         flushPeer(peer)
         if not allowWho then return end
@@ -265,7 +290,8 @@ function iWR:ConnectSharingPeer(contact, allowWho, debugAction)
         report("checks are paused for " .. math.ceil(peer.retryAt - now()) .. " seconds (" .. (peer.status or "cooldown") .. ").")
         return
     end
-    if now() - peer.checkedAt < 30 and (not allowWho or peer.allowWho) then
+    local confirmedSync = peer.syncRequested and peer.remote and (peer.readyUntil or 0) > now()
+    if not confirmedSync and now() - peer.checkedAt < 30 and (not allowWho or peer.allowWho) then
         report("availability was checked recently; recheck in " .. math.ceil(30 - (now() - peer.checkedAt)) .. " seconds.")
         return
     end
@@ -319,12 +345,13 @@ function iWR:SendFullDBUpdateToWhitelist()
         self:ConnectSharingPeer(contact, false)
     end
 end
-function iWR:ShareWithWhitelist()
-    local contacts = manualAction("Share now")
+function iWR:SyncWithWhitelist()
+    local contacts = manualAction("Sync now")
     if not contacts then return end
     for _, contact in ipairs(contacts) do
-        peerFor(contact.name).full = true
-        self:ConnectSharingPeer(contact, true, "Share now")
+        local peer = peerFor(contact.name)
+        peer.full, peer.syncRequested = true, true
+        self:ConnectSharingPeer(contact, true, "Sync now")
     end
 end
 function iWR:SendNewDBUpdateToWhitelist()
@@ -422,14 +449,20 @@ function iWR:OnSharePacket(prefix, message, distribution, sender)
         return
     end
     if parts[2] == "HELLO" then
-        if not validToken(parts[5]) or (peer.retired and peer.retired[parts[4]])
-            or (peer.remote == parts[4] and now() - (peer.lastHello or -100) < 5) then return end
+        if not validToken(parts[5]) or (peer.retired and peer.retired[parts[4]]) then return end
+        local duplicateSync = peer.remote == parts[4] and peer.lastSyncNonce == parts[5]
         adoptSession(peer, parts[4])
         peer.lastHello, peer.remote, peer.readyUntil = now(), parts[4], now() + 120
         peer.status, peer.version, peer.nonce = "iWR ready", parts[6], nil
         local contact = self:GetWhitelistEntry(sender)
         contact.lastSeen, contact.ruleset = time(), parts[3]
         checkVersion(parts[6])
+        if parts[7] == "SYNC" and not duplicateSync then
+            peer.lastSyncNonce = parts[5]
+            peer.full = true
+            peer.syncRequested = nil
+            self:DebugMsg("Two-way sync requested by " .. sender .. "; sending shared notes in return.", 3)
+        end
         control(sender, "READY", parts[5])
         flushPeer(peer)
         notify()
@@ -443,6 +476,7 @@ function iWR:OnSharePacket(prefix, message, distribution, sender)
         contact.lastSeen, contact.ruleset = time(), parts[3]
         checkVersion(parts[6])
         self:DebugMsg("Sharing confirmed with " .. sender .. " on " .. self:GetSharingRulesetLabel() .. ".", 3)
+        if peer.syncRequested then queueHello(peer) end
         flushPeer(peer)
         notify()
         return

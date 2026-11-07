@@ -82,7 +82,7 @@ assert(not addon:GetWhitelistEntry("Manual Stranger"), "the row control removes 
 local refresh, share
 for _, item in ipairs(widgets) do
     if item.text == "WhitelistRefreshStatus" then refresh = item end
-    if item.text == "WhitelistShareNow" then share = item end
+    if item.text == "WhitelistSyncNow" then share = item end
 end
 assert(refresh and share, "availability and sharing have separate actions")
 refresh:OnClick(); share:OnClick()
@@ -102,24 +102,24 @@ local function logged(fragment, since)
 end
 env.iWRSettings.DebugMode = true
 refresh:OnClick(); share:OnClick()
-assert(logged("Refresh status clicked.") and logged("Share now clicked."), "both actual buttons log their activation")
+assert(logged("Refresh status clicked.") and logged("Sync now clicked."), "both actual buttons log their activation")
 assert(logged("whitelisted player(s), ruleset Normal (PvE)") and logged("already pending"),
     "debug output explains the contact count, ruleset, and a pending check")
 local since = #messages
 env.iWRSettings.DataSharing = false
 refresh:OnClick(); share:OnClick()
-assert(logged("Refresh status: sharing is disabled", since) and logged("Share now: sharing is disabled", since),
+assert(logged("Refresh status: sharing is disabled", since) and logged("Sync now: sharing is disabled", since),
     "both buttons explain when sharing is disabled")
 env.iWRSettings.DataSharing = true
 local contacts = env.iWRSettings.SyncList
 env.iWRSettings.SyncList = {}
 since = #messages; refresh:OnClick(); share:OnClick()
-assert(logged("Refresh status: the whitelist is empty", since) and logged("Share now: the whitelist is empty", since),
+assert(logged("Refresh status: the whitelist is empty", since) and logged("Sync now: the whitelist is empty", since),
     "empty-whitelist clicks are visible in debug output")
 env.iWRSettings.SyncList = contacts
 state.scopeSecret = true
 since = #messages; refresh:OnClick(); share:OnClick()
-assert(logged("Refresh status: waiting for the server ruleset", since) and logged("Share now: waiting for the server ruleset", since),
+assert(logged("Refresh status: waiting for the server ruleset", since) and logged("Sync now: waiting for the server ruleset", since),
     "unreadable server rules explain why no request starts")
 state.scopeSecret = false
 env.iWRSettings.DebugMode = false

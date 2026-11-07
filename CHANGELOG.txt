@@ -2,6 +2,12 @@
 iWillRemember - Changelog
 ================================================================================
 
+v0.24.3 - Sharing Fixes
+--------------------------------------------------------------------------------
+[CHANGED] Sync now sends and receives notes with your whitelist
+[FIXED] Sharing now keeps both players' notes
+[FIXED] Your notes stay visible in the Mine filter after sharing
+
 v0.24.2 - Note Sharing Fix
 --------------------------------------------------------------------------------
 [FIXED] Notes now share properly with players on your whitelist

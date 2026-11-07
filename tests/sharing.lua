@@ -5,6 +5,20 @@ local function read(path)
     return value:gsub("\r\n", "\n")
 end
 local functions = read("iWillRemember_iWRFunctions.lua")
+local clockAddon, clockEnv, clockSecond = {}, {}, 1
+setmetatable(clockEnv, { __index = _G })
+clockEnv.iWR = clockAddon
+clockEnv.date = function() return string.format("12/00/%02d/07/11/26", clockSecond) end
+clockEnv.strsplit = function(separator, value)
+    local values = {}; for part in value:gmatch("[^" .. separator .. "]+") do values[#values + 1] = part end
+    return table.unpack(values)
+end
+assert(load(assert(functions:match("(function iWR:GetCurrentTimeByHours%b().-\nend)")), "note clock", "t", clockEnv))()
+local firstStamp, firstDate = clockAddon:GetCurrentTimeByHours()
+clockSecond = 2
+local nextStamp = clockAddon:GetCurrentTimeByHours()
+assert(nextStamp > firstStamp and firstDate == "2026-11-07", "new edits have second precision and keep their saved date")
+assert(math.floor(firstStamp) == 12 + 7 * 24 + 11 * 720 + 26 * 8640, "new timestamps stay comparable with legacy hour values")
 local clients, wire, clock = {}, {}, 100
 local secret = {}
 local function copy(value)
@@ -20,7 +34,7 @@ end
 local function client(name, options)
     options = options or {}
     local env, addon, state = {}, { L = { Yes = "Yes", No = "No", KeepAsPersonal = "Keep as personal" },
-        Version = "0.24.2", GameTocVersion = 16001, CurrentRealm = "Forever" }, {}
+        Version = "0.24.3", GameTocVersion = 16001, CurrentRealm = "Forever" }, {}
     setmetatable(env, { __index = _G }); env._G = env
     env.iWR, env.unpack = addon, table.unpack
     env.strmatch = string.match
@@ -119,7 +133,7 @@ local function client(name, options)
     local stop = assert(functions:find("function iWR:VerifyRealm", start, true))
     assert(load("local L = iWR.L\n" .. functions:sub(start, stop - 1), "identity helpers", "t", env))()
     for _, method in ipairs({ "IsNeedToUpdate", "CreateShareableEntry", "MergeNoteHistory", "TombstoneEntireEntry",
-        "IsEntryFullyTombstoned", "ApplyGlobalTombstones" }) do
+        "IsEntryFullyTombstoned", "ApplyGlobalTombstones", "GetNoteAuthorship" }) do
         local body = assert(functions:match("(function iWR:" .. method .. "%b().-\nend)"), method)
         assert(load(body, method, "t", env))()
     end
@@ -176,7 +190,7 @@ advance(4)
 assert(not next(b.env.iWRDatabase) and #b.sent == 0, "one-sided whitelisting cannot receive or trigger a reply")
 whitelist(b, a)
 advance(31)
-a.addon:ShareWithWhitelist()
+a.addon:SyncWithWhitelist()
 advance(10)
 assert(b.env.iWRDatabase["Helpful Healer-Forever"], "mutually whitelisted non-friends can share: "
     .. table.concat(a.logs, " / ") .. " | " .. table.concat(b.logs, " / ") .. " packets=" .. #a.sent .. "/" .. #b.sent)
@@ -219,8 +233,8 @@ editor.env.iWRDatabase["Old Player-Forever"][3] = 990000
 editor.env.iWRDatabase["Invalid Player-Forever"] = note("Invalid Player")
 editor.env.iWRDatabase["Invalid Player-Forever"][12] = {}
 reader.env.iWRDatabase["New Player-Forever"] = nil
-editorAddon:ShareWithWhitelist(); advance(10)
-assert(reader.env.iWRDatabase["New Player-Forever"], "Share now includes editor-created notes")
+editorAddon:SyncWithWhitelist(); advance(10)
+assert(reader.env.iWRDatabase["New Player-Forever"], "Sync now includes editor-created notes")
 local unknown = assert(reader.env.iWRDatabase["Unknown Player-Forever"], "empty identity fields are valid")
 assert(unknown[12] == "" and unknown[13] == "" and not reader.env.iWRDatabase["Personal Player-Forever"],
     "unknown identity remains empty and personal notes stay local")
@@ -237,7 +251,7 @@ a.env.iWRDatabase["Secret Person-Forever"] = private
 local public = note("Public Person")
 public[10] = { { "private history", 1, 999998, "date", "author", true }, { "public history", 1, 999997, "date", "author", false } }
 a.env.iWRDatabase["Public Person-Forever"] = public
-a.addon:ShareWithWhitelist(); advance(10)
+a.addon:SyncWithWhitelist(); advance(10)
 assert(not b.env.iWRDatabase["Secret Person-Forever"], "private entries do not travel")
 assert(#b.env.iWRDatabase["Public Person-Forever"][10] == 1, "private history does not travel")
 
@@ -247,7 +261,7 @@ for index = 1, 20 do
     a.env.iWRDatabase["Alice Note" .. index .. "-Forever"] = note("Alice Note" .. index)
     c.env.iWRDatabase["Carol Note" .. index .. "-Forever"] = note("Carol Note" .. index)
 end
-a.addon:ShareWithWhitelist(); c.addon:ShareWithWhitelist(); advance(25)
+a.addon:SyncWithWhitelist(); c.addon:SyncWithWhitelist(); advance(25)
 assert(b.env.iWRDatabase["Alice Note20-Forever"] and b.env.iWRDatabase["Carol Note20-Forever"],
     "interleaved senders have independent receive buffers")
 
@@ -256,7 +270,7 @@ drop = function(packet)
     if packet.from == c and packet.message:find("\tDATA\t", 1, true) and not dropped then dropped = true; return true end
 end
 c.env.iWRDatabase["Retry Person-Forever"] = note("Retry Person")
-c.addon:ShareWithWhitelist(); advance(15)
+c.addon:SyncWithWhitelist(); advance(15)
 assert(not b.env.iWRDatabase["Retry Person-Forever"], "an incomplete snapshot cannot partially merge")
 advance(950)
 assert(b.env.iWRDatabase["Retry Person-Forever"], "a lost fragment recovers through a bounded retransmission")
@@ -264,7 +278,7 @@ drop = nil
 
 a.addon:RemoveSharingContact(b.name)
 local before = #a.sent
-b.addon:ShareWithWhitelist(); advance(10)
+b.addon:SyncWithWhitelist(); advance(10)
 assert(#a.sent == before, "removing a contact cancels access immediately")
 
 local oldScope = b.addon:GetSharingScope()
@@ -281,7 +295,7 @@ assert(b.env.iWRDatabase["Helpful Healer-Forever"] and not b.env.iWRDatabase["Ha
 assert(b.env.iWRSettings.DeletedEntries["Old Person-Forever"], "tombstones return with their ruleset")
 b.scopeSecret = true
 assert(not b.addon:GetSharingScope(), "secret ruleset information blocks sharing rather than defaulting to Normal")
-before = #b.sent; b.addon:ShareWithWhitelist(); advance(1)
+before = #b.sent; b.addon:SyncWithWhitelist(); advance(1)
 assert(#b.sent == before)
 b.scopeSecret = false
 
@@ -296,10 +310,10 @@ assert(#d.sent == 0 and d.addon:GetSharingPresence("Unknown Player") == "Unknown
 
 local e, f = client("Erin Priest"), client("Finn Hunter")
 link(e, f, false); whitelist(e, f)
-e.addon:ShareWithWhitelist(); advance(1)
+e.addon:SyncWithWhitelist(); advance(1)
 assert(#e.sent == 0 and e.addon:GetSharingPresence(f.name) == "Offline", "native offline status prevents a whisper")
 e.roster[1].online = true
-advance(31); e.secretStatus = true; e.addon:ShareWithWhitelist(); advance(6)
+advance(31); e.secretStatus = true; e.addon:SyncWithWhitelist(); advance(6)
 assert(#e.sent == 0, "secret native status does not permit a whisper")
 
 local legacy = client("Legacy Owner", { database = { ["Legacy Note-Forever"] = note("Legacy Note") }, whitelist = { { name = "Saved Contact", realm = "Forever", type = "wow" } } })
@@ -312,13 +326,78 @@ local p, q = client("Iris Druid"), client("Jules Paladin")
 link(p, q); link(q, p); whitelist(p, q); whitelist(q, p)
 p.env.iWRDatabase["Incremental Person-Forever"] = note("Incremental Person")
 q.env.iWRDatabase["Private Local-Forever"] = note("Private Local", true)
-p.addon:ShareWithWhitelist(); advance(5)
+p.addon:SyncWithWhitelist(); advance(5)
 local updated = note("Incremental Person"); updated[1], updated[3] = "updated note", 1000000
 p.addon.Cache.Data = p.addon:Serialize({ ["Incremental Person-Forever"] = updated,
     ["Private Local-Forever"] = note("Private Local") })
 p.addon:SendNewDBUpdateToWhitelist(); advance(5)
 assert(q.env.iWRDatabase["Incremental Person-Forever"][1] == "updated note", "new-note updates use the same whitelist session")
 assert(q.env.iWRDatabase["Private Local-Forever"][9] == true, "shared notes never overwrite a local personal entry")
+
+-- Sync now must combine two independently populated databases. Legacy note
+-- timestamps have hour precision, so different notes commonly share a stamp.
+local firstDB, secondDB = client("Merge Author"), client("Local Author")
+link(firstDB, secondDB); link(secondDB, firstDB); whitelist(firstDB, secondDB); whitelist(secondDB, firstDB)
+local remoteOnly, localOnly = "Remote Only-Forever", "Local Only-Forever"
+local sharedKey = "Common Player-Forever"
+firstDB.env.iWRDatabase[remoteOnly] = note("Remote Only")
+secondDB.env.iWRDatabase[localOnly] = note("Local Only")
+local remoteNote, localNote = note("Common Player"), note("Common Player")
+remoteNote[1], remoteNote[6] = "sender's independent note", "Merge Author"
+localNote[1], localNote[6] = "recipient's independent note", "Local Author"
+firstDB.env.iWRDatabase[sharedKey], secondDB.env.iWRDatabase[sharedKey] = remoteNote, localNote
+local receiverDatabase = secondDB.env.iWRDatabase
+firstDB.addon:SyncWithWhitelist(); advance(8)
+assert(secondDB.env.iWRDatabase == receiverDatabase and receiverDatabase[sharedKey] == localNote,
+    "sharing preserves the recipient's database and existing entry objects")
+assert(secondDB.env.iWRDatabase[localOnly] and secondDB.env.iWRDatabase[remoteOnly],
+    "a full share retains unrelated local entries and adds the sender's entries")
+assert(firstDB.env.iWRDatabase[localOnly], "one Sync now click also retrieves the other client's independent database")
+local merged = secondDB.env.iWRDatabase[sharedKey]
+assert(merged[1] == "recipient's independent note" and merged[10]
+    and merged[10][1][1] == "sender's independent note", "same-hour notes are combined without replacing the recipient's note")
+local sameAuthorEdit = copy(merged)
+local sameAuthorDestination = copy(merged)
+sameAuthorEdit[1] = "another note by the same author"
+secondDB.addon:MergeNoteHistory(sameAuthorEdit, sameAuthorDestination)
+assert(sameAuthorDestination[1] == "recipient's independent note" and #sameAuthorDestination[10] == 2,
+    "different legacy notes by the same author in one hour also remain distinct")
+firstDB.addon:SyncWithWhitelist(); advance(8)
+assert(#secondDB.env.iWRDatabase[sharedKey][10] == 1, "repeating Sync now does not duplicate the merged note")
+secondDB.addon:SyncWithWhitelist(); advance(8)
+assert(firstDB.env.iWRDatabase[localOnly] and firstDB.env.iWRDatabase[remoteOnly]
+    and firstDB.env.iWRDatabase[sharedKey][10], "both independent databases combine safely in both directions")
+secondDB.env.iWRSettings.MyCharacters["Local Author"] = true
+remoteNote[1], remoteNote[3] = "a genuinely newer note", 1000000
+firstDB.addon:SyncWithWhitelist(); advance(8)
+merged = secondDB.env.iWRDatabase[sharedKey]
+assert(merged[1] == "a genuinely newer note" and #merged[10] == 2,
+    "newer shared notes retain both original notes in history")
+local mine, fromOthers = secondDB.addon:GetNoteAuthorship(merged)
+assert(mine and fromOthers, "Mine and Friends filters account for retained history, not only the newest author's name")
+
+local emptySync, populatedSync = client("Empty Sync"), client("Populated Sync")
+link(emptySync, populatedSync); link(populatedSync, emptySync); whitelist(emptySync, populatedSync); whitelist(populatedSync, emptySync)
+populatedSync.env.iWRDatabase["Receive Only-Forever"] = note("Receive Only")
+emptySync.addon:SyncWithWhitelist(); advance(8)
+assert(emptySync.env.iWRDatabase["Receive Only-Forever"], "an empty database can initiate a two-way sync and receive notes")
+local queuedSync, queuedPeer = client("Queued Sync"), client("Queued Peer")
+link(queuedSync, queuedPeer); link(queuedPeer, queuedSync); whitelist(queuedSync, queuedPeer); whitelist(queuedPeer, queuedSync)
+queuedSync.addon:RefreshSharingStatus(); advance(4)
+queuedPeer.env.iWRDatabase["Queued Reply-Forever"] = note("Queued Reply")
+advance(31)
+queuedSync.addon:RefreshSharingStatus()
+queuedSync.addon:SyncWithWhitelist(); advance(8)
+assert(queuedSync.env.iWRDatabase["Queued Reply-Forever"],
+    "Sync now upgrades an already queued status handshake without losing the return transfer")
+local oldReceiver = client("Old Receiver")
+oldReceiver.addon.Version = "0.24.2"
+link(emptySync, oldReceiver); link(oldReceiver, emptySync); whitelist(emptySync, oldReceiver); whitelist(oldReceiver, emptySync)
+emptySync.addon:SyncWithWhitelist(); advance(8)
+for _, packet in ipairs(emptySync.sent) do
+    assert(packet.target ~= oldReceiver.name or not packet.message:find("\tDATA\t", 1, true),
+        "updated clients do not send databases to old receivers with the destructive merge bug")
+end
 q.combat = true
 p.addon:SendRemoveRequestToWhitelist("Incremental Person-Forever"); advance(5)
 assert(#q.addon.Queues.RemoveRequests == 1 and not q.popup, "removal confirmations wait for combat")
@@ -331,7 +410,7 @@ assert(q.env.iWRDatabase["Incremental Person-Forever"], "revoking trust also inv
 confirmation.OnButton3()
 assert(not q.env.iWRDatabase["Incremental Person-Forever"][9], "revoking trust also invalidates keep-as-personal")
 q.env.iWRSettings.DataSharing = false
-before = #q.sent; p.addon:ShareWithWhitelist(); advance(5)
+before = #q.sent; p.addon:SyncWithWhitelist(); advance(5)
 assert(#q.sent == before, "disabling sharing prevents incoming requests from sending replies")
 
 local author, keeper, observer = client("Removal Author"), client("Personal Keeper"), client("Personal Observer")
@@ -340,7 +419,7 @@ local keptId = "Retained Player-Forever"
 local retained = note("Retained Player")
 retained[10] = { { "earlier shared note", 1, 999998, "date", "Earlier Author", false } }
 author.env.iWRDatabase[keptId] = retained
-author.addon:ShareWithWhitelist(); advance(10)
+author.addon:SyncWithWhitelist(); advance(10)
 local localCopy = assert(keeper.env.iWRDatabase[keptId])
 keeper.env.iWRDatabase["Unaffected Player-Forever"] = note("Unaffected Player")
 link(keeper, observer); link(observer, keeper); whitelist(keeper, observer); whitelist(observer, keeper)
@@ -348,7 +427,7 @@ keeper.addon:RefreshSharingStatus(); advance(10)
 assert(not next(observer.env.iWRDatabase), "availability checks do not enqueue a new full snapshot")
 -- Queue a snapshot before the privacy choice, but prevent it from being sent.
 keeper.locked = true
-keeper.addon:ShareWithWhitelist()
+keeper.addon:SyncWithWhitelist()
 author.addon:SendRemoveRequestToWhitelist(keptId); advance(5)
 local popup = assert(keeper.popup, "shared deletion presents a decision")
 assert(popup.button3 == "Keep as personal" and popup.selectCallbackByIndex and popup.OnButton3 and popup.OnCancel,
@@ -369,7 +448,7 @@ assert(keeper.env.iWRRulesetStores.buckets[keeper.addon:GetSharingScope()].datab
 author.addon:SendRemoveRequestToWhitelist(keptId); advance(5)
 assert(not keeper.popup and #keeper.addon.Queues.RemoveRequests == 0, "repeated shared removals ignore the personal copy")
 keeper.locked = false
-keeper.addon:ShareWithWhitelist(); advance(15)
+keeper.addon:SyncWithWhitelist(); advance(15)
 assert(observer.env.iWRDatabase["Unaffected Player-Forever"] and not observer.env.iWRDatabase[keptId],
     "future sharing excludes the retained private note while sending unrelated notes")
 assert(not author.env.iWRDatabase[keptId][9] and not author.env.iWRDatabase[keptId][10][1][6],
@@ -377,25 +456,25 @@ assert(not author.env.iWRDatabase[keptId][9] and not author.env.iWRDatabase[kept
 
 local hc = client("Hardcore Warrior", { hardcore = true })
 link(p, hc); link(hc, p); whitelist(p, hc); whitelist(hc, p)
-p.addon:ShareWithWhitelist(); advance(6)
+p.addon:SyncWithWhitelist(); advance(6)
 assert(not next(hc.env.iWRDatabase) and hc.addon:GetSharingPeerStatus(p.name) == "Different ruleset",
     "a whitelist entry does not bypass the wire ruleset check")
 
 local blocked, available = client("Blocked Sender"), client("Available Receiver")
 link(blocked, available); link(available, blocked); whitelist(blocked, available); whitelist(available, blocked)
 blocked.sendError = true
-blocked.addon:ShareWithWhitelist(); advance(8)
+blocked.addon:SyncWithWhitelist(); advance(8)
 assert(#blocked.sent == 3 and not next(available.env.iWRDatabase), "numeric transport errors get only bounded retries")
 local locked = client("Locked Sender")
 link(locked, available); whitelist(locked, available); whitelist(available, locked)
 locked.locked = secret
-locked.addon:ShareWithWhitelist(); advance(4)
+locked.addon:SyncWithWhitelist(); advance(4)
 assert(#locked.sent == 0, "an unreadable messaging lock fails closed")
 locked.locked = false; advance(5)
 assert(locked.addon:GetSharingPeerStatus(available.name) == "iWR ready", "a short messaging restriction can recover")
 locked:event("CHAT_MSG_SYSTEM", "No player named 'Available Receiver' is currently playing.")
 before = #locked.sent
-locked.addon:ShareWithWhitelist(); advance(10)
+locked.addon:SyncWithWhitelist(); advance(10)
 assert(#locked.sent == before and locked.addon:GetSharingPeerStatus(available.name) == "Offline", "the server's offline error pauses further whispers")
 
 local waiting = client("Waiting Owner", { scopeSecret = true,
@@ -409,7 +488,7 @@ assert(waiting.env.iWRDatabase["Existing Note-Forever"] and waiting.env.iWRDatab
 local big, receiver = client("Large Sender"), client("Large Receiver")
 link(big, receiver); link(receiver, big); whitelist(big, receiver); whitelist(receiver, big)
 for index = 1, 1000 do big.env.iWRDatabase["Large Note" .. index .. "-Forever"] = note("Large Note" .. index) end
-big.addon:ShareWithWhitelist(); advance(240)
+big.addon:SyncWithWhitelist(); advance(240)
 assert(receiver.env.iWRDatabase["Large Note1000-Forever"], "a thousand-note transfer completes through renewed native presence checks")
 assert(big.preflights > 1, "long transfers renew native availability instead of trusting the login snapshot forever")
 
@@ -426,14 +505,14 @@ modern.env.C_ChatInfo.RequestCanLocalWhisperTarget = function(playerGuid)
     modern:event("CAN_LOCAL_WHISPER_TARGET_RESPONSE", playerGuid, 0)
 end
 modern.env.iWRDatabase["Modern Note-Forever"] = note("Modern Note")
-modern.addon:ShareWithWhitelist(); advance(5)
+modern.addon:SyncWithWhitelist(); advance(5)
 assert(modernFriend.env.iWRDatabase["Modern Note-Forever"], "new WoW friends can supply presence without the legacy friend list")
 
 local lookupSender, lookup = client("Lookup Sender"), client("Lookup Receiver")
 whitelist(lookup, lookupSender)
 lookupSender.env.iWRDatabase["Lookup Note-Forever"] = note("Lookup Note")
 assert(lookupSender.addon:AddSharingContact(lookup.name))
-lookupSender.addon:ShareWithWhitelist()
+lookupSender.addon:SyncWithWhitelist()
 lookupSender.whoResults = { { fullName = lookup.name } }
 lookupSender:event("WHO_LIST_UPDATE"); advance(6)
 assert(lookup.env.iWRDatabase["Lookup Note-Forever"], "a positive name lookup can start sharing without a friend or known GUID")
@@ -442,7 +521,7 @@ local chatLookup, chatReceiver = client("Chat Lookup"), client("Chat Receiver")
 whitelist(chatLookup, chatReceiver); whitelist(chatReceiver, chatLookup)
 chatLookup.env.WHO_LIST_FORMAT = "%s: Level %d %s - %s"
 chatLookup.env.iWRDatabase["Chat Result-Forever"] = note("Chat Result")
-chatLookup.addon:ShareWithWhitelist()
+chatLookup.addon:SyncWithWhitelist()
 chatLookup:event("CHAT_MSG_SYSTEM", "Other Person: Level 60 Paladin - Stormwind")
 assert(#chatLookup.sent == 0, "a different Who result cannot confirm the requested player")
 chatLookup:event("CHAT_MSG_SYSTEM", "|Hplayer:Chat-Receiver|h[Chat Receiver]|h: Level 60 Paladin - Stormwind")
@@ -452,14 +531,14 @@ assert(chatReceiver.env.iWRDatabase["Chat Result-Forever"], "chat-routed Who res
 local ordered = client("Ordered Lookup")
 assert(ordered.addon:AddSharingContact("Ordered Player"))
 ordered.env.WHO_LIST_FORMAT = "%2$d / %1$s / %3$s"
-ordered.addon:ShareWithWhitelist()
+ordered.addon:SyncWithWhitelist()
 ordered:event("CHAT_MSG_SYSTEM", "60 / Ordered Player / Paladin")
 assert(ordered.addon:GetSharingPresence("Ordered Player") == "Online", "localized positional Who formats identify the name argument")
 
 local restart, restarted = client("Restart Sender"), client("Restart Receiver")
 link(restart, restarted); link(restarted, restart); whitelist(restart, restarted); whitelist(restarted, restart)
 for index = 1, 60 do restart.env.iWRDatabase["Restart Note" .. index .. "-Forever"] = note("Restart Note" .. index) end
-restart.addon:ShareWithWhitelist(); advance(2)
+restart.addon:SyncWithWhitelist(); advance(2)
 restarted.addon:ResetSharingSession(); advance(20)
 assert(restarted.env.iWRDatabase["Restart Note60-Forever"], "a receiver reload restarts the session and pending share")
 
@@ -488,6 +567,13 @@ for _, field in ipairs({ 12, 13, 14 }) do
         "malformed class/race details and unknown fields reject the whole snapshot")
 end
 local invalid = note("Invalid Player"); invalid[2] = "bad relation"
+local retained = assert(restarted.env.iWRDatabase["Restart Note1-Forever"])
+local deletionInjection = note("Restart Note1")
+deletionInjection[1], deletionInjection[6], deletionInjection[11] = "independent note", "Other Author", { [retained[3]] = true }
+forge(restart, restarted, { kind = "NOTES", entries = { ["Restart Note1-Forever"] = deletionInjection } }, "abcdef020")
+assert(restarted.env.iWRDatabase["Restart Note1-Forever"] == retained and retained[1] == "helpful player"
+    and retained[10] and retained[10][1][1] == "independent note",
+    "an incoming snapshot cannot silently delete the recipient's note through remote tombstones")
 forge(restart, restarted, { kind = "NOTES", entries = {
     ["Must Not Merge-Forever"] = note("Must Not Merge"), ["Invalid Player-Forever"] = invalid,
 } }, "abcdef001")
@@ -507,7 +593,7 @@ drop = function(packet)
     end)
     return true
 end
-lag.addon:ShareWithWhitelist(); advance(1250)
+lag.addon:SyncWithWhitelist(); advance(1250)
 assert(lagReceiver.env.iWRDatabase["Delayed Note-Forever"], "five-minute one-way chat delays preserve the original handshake and transfer")
 for _, message in ipairs(lag.logs) do assert(not message:find("not confirmed", 1, true), "slow successful transfers do not fail early") end
 drop = nil
@@ -597,7 +683,7 @@ for _, target in ipairs({ pvpReceiver, pveReceiver }) do
     link(pvpSender, target); link(target, pvpSender); whitelist(pvpSender, target); whitelist(target, pvpSender)
 end
 pvpSender.env.iWRDatabase["PvP Only-Forever"] = note("PvP Only")
-pvpSender.addon:ShareWithWhitelist(); advance(7)
+pvpSender.addon:SyncWithWhitelist(); advance(7)
 assert(pvpReceiver.env.iWRDatabase["PvP Only-Forever"] and not pveReceiver.env.iWRDatabase["PvP Only-Forever"],
     "PvP clients can share with each other while the same-project PvE client rejects their notes")
 print("PASS: all five server rulesets, separate data stores, secret-rule guards, early test-save migration, and PvP/PvE wire isolation")
@@ -605,7 +691,7 @@ print("PASS: all five server rulesets, separate data stores, secret-rule guards,
 local diagnostic, offline = client("Diagnostic Sender"), client("Offline Contact")
 link(diagnostic, offline, false); whitelist(diagnostic, offline)
 diagnostic.addon:RefreshSharingStatus()
-diagnostic.addon:ShareWithWhitelist()
+diagnostic.addon:SyncWithWhitelist()
 local function hasLog(fragment)
     for _, message in ipairs(diagnostic.logs) do if message:find(fragment, 1, true) then return true end end
     return false
@@ -613,6 +699,6 @@ end
 assert(hasLog("no handshake sent; availability is Offline") and hasLog("availability was checked recently; recheck in"),
     "manual actions explain native offline status and the short recheck cooldown")
 diagnostic:event("CHAT_MSG_SYSTEM", "No player named 'Offline Contact' is currently playing.")
-diagnostic.addon:ShareWithWhitelist()
+diagnostic.addon:SyncWithWhitelist()
 assert(hasLog("checks are paused for 300 seconds (Offline)"), "manual actions report the full offline pause rather than only the short recheck delay")
 return { client = client, advance = advance }
