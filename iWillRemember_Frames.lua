@@ -721,6 +721,7 @@ local function BuildSimpleMenu()
         local yOffset = -(row * rowHeight) - 2
 
         local btn = simpleButtons[idx] or CreateFrame("Button", nil, simpleContainer, "UIPanelButtonTemplate")
+        btn.iWRRatingLevel = value ~= 0 and value or nil
         iWR:StyleButton(btn, value == 0)
         btn:SetSize(btnSize, btnSize)
         btn:SetPoint("TOP", simpleContainer, "TOP", xOffset, yOffset)

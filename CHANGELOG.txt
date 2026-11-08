@@ -2,6 +2,14 @@
 iWillRemember - Changelog
 ================================================================================
 
+v0.24.5 - Settings Updates
+--------------------------------------------------------------------------------
+[ADDED] Custom drake colors with matching button borders
+[ADDED] iRC in Other Addons
+[CHANGED] Cleaner settings with clearer sections and controls
+[FIXED] Settings buttons no longer turn white
+[FIXED] Icon picker shows icons correctly
+
 v0.24.4 - Simple Menu
 --------------------------------------------------------------------------------
 [ADDED] Simple / Advanced menu switch

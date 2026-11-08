@@ -141,6 +141,7 @@ iWR.SettingsDefault = {
         [-6]  = "Hated",
     },
     CustomIcons = {},
+    LevelColors = {},
     GroupLogEnabled = true,
     SimpleMenu = true,
     GoodLevels = 3,

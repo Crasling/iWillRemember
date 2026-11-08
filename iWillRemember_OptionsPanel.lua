@@ -20,12 +20,101 @@ local iconPath = iWR.AddonPath .. "Images\\Logo_iWR.blp"
 -- │                              Helper Functions                                 │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
+local SETTINGS_BACKDROP = {
+    bgFile = "Interface\\BUTTONS\\WHITE8X8",
+    edgeFile = "Interface\\BUTTONS\\WHITE8X8",
+    edgeSize = 1,
+}
+
+local function StyleSettingsSurface(frame, header)
+    frame:SetBackdrop(SETTINGS_BACKDROP)
+    if header then frame:SetBackdropColor(0.075, 0.058, 0.035, 0.98)
+    else frame:SetBackdropColor(0.025, 0.023, 0.020, 0.98) end
+    frame:SetBackdropBorderColor(0.32, 0.25, 0.14, 1)
+end
+
+local function StyleSettingsButton(button, destructive)
+    button.iWRSettingsControl = true
+    iWR:StyleButton(button, destructive)
+    button.iWRButtonBackdrop:SetBackdrop(SETTINGS_BACKDROP)
+    -- Replacing the backdrop resets its tint, so restore this button's colors.
+    iWR:SetButtonActive(button, button.iWRActive)
+end
+
+local function CreateAppearanceReset(parent, hint, onClick)
+    local button = CreateFrame("Button", nil, parent)
+    button:SetSize(44, 24)
+    button.text = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    button.text:SetPoint("CENTER")
+    button.text:SetText(L["ResetIcon"])
+    button.text:SetTextColor(0.66, 0.61, 0.51)
+    button:SetScript("OnClick", onClick)
+    button:SetScript("OnEnter", function(self)
+        self.text:SetTextColor(1, 0.73, 0.25)
+        if not GameTooltip then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText(hint, 1, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    button:SetScript("OnLeave", function(self)
+        self.text:SetTextColor(0.66, 0.61, 0.51)
+        if GameTooltip then GameTooltip:Hide() end
+    end)
+    button:SetScript("OnDisable", function(self) self:SetAlpha(0.3) end)
+    button:SetScript("OnEnable", function(self) self:SetAlpha(1) end)
+    return button
+end
+
+local function StyleSettingsCheckbox(cb)
+    cb:SetSize(24, 24)
+    cb:SetNormalTexture("Interface\\BUTTONS\\WHITE8X8")
+    cb:GetNormalTexture():SetVertexColor(0, 0, 0, 0)
+    cb:GetNormalTexture():SetAllPoints(cb)
+    cb:SetPushedTexture("Interface\\BUTTONS\\WHITE8X8")
+    cb:GetPushedTexture():SetVertexColor(0.18, 0.13, 0.06, 1)
+    cb:SetHighlightTexture("Interface\\BUTTONS\\WHITE8X8", "ADD")
+    cb:GetHighlightTexture():SetVertexColor(0.5, 0.32, 0.09, 0.25)
+    local background = CreateFrame("Frame", nil, cb, "BackdropTemplate")
+    background:SetAllPoints(cb)
+    background:SetFrameLevel(math.max(0, cb:GetFrameLevel() - 1))
+    background:SetBackdrop(SETTINGS_BACKDROP)
+    background:SetBackdropColor(0.035, 0.030, 0.022, 1)
+    background:SetBackdropBorderColor(0.42, 0.32, 0.15, 1)
+    cb:SetCheckedTexture("Interface\\Buttons\\UI-CheckBox-Check")
+    cb:GetCheckedTexture():SetVertexColor(1, 0.76, 0.30, 1)
+    cb:SetDisabledCheckedTexture("Interface\\Buttons\\UI-CheckBox-Check-Disabled")
+    cb.Text:ClearAllPoints()
+    cb.Text:SetPoint("LEFT", cb, "RIGHT", 8, 0)
+end
+
+local function StyleSettingsScroll(scrollFrame)
+    local bar = scrollFrame.ScrollBar
+    if not bar then return end
+    for _, texture in ipairs({bar:GetRegions()}) do
+        if texture.IsObjectType and texture:IsObjectType("Texture") then texture:SetAlpha(0) end
+    end
+    if bar.ScrollUpButton then bar.ScrollUpButton:Hide() end
+    if bar.ScrollDownButton then bar.ScrollDownButton:Hide() end
+    bar:ClearAllPoints()
+    bar:SetPoint("TOPLEFT", scrollFrame, "TOPRIGHT", 6, -3)
+    bar:SetPoint("BOTTOMLEFT", scrollFrame, "BOTTOMRIGHT", 6, 3)
+    bar:SetWidth(8)
+    local track = bar:CreateTexture(nil, "BACKGROUND")
+    track:SetAllPoints(bar)
+    track:SetColorTexture(0.11, 0.09, 0.06, 0.7)
+    bar:SetThumbTexture("Interface\\BUTTONS\\WHITE8X8")
+    bar:GetThumbTexture():SetSize(8, 28)
+    bar:GetThumbTexture():SetVertexColor(0.72, 0.48, 0.17, 1)
+    bar:GetThumbTexture():SetAlpha(1)
+end
+
 local function CreateSectionHeader(parent, text, yOffset)
     local header = CreateFrame("Frame", nil, parent, "BackdropTemplate")
     header:SetHeight(24)
     header:SetPoint("TOPLEFT", parent, "TOPLEFT", 10, yOffset)
     header:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -10, yOffset)
-    iWR:StyleSurface(header, "header")
+    header:SetBackdrop({ bgFile = "Interface\\BUTTONS\\WHITE8X8" })
+    header:SetBackdropColor(0.11, 0.08, 0.035, 0.6)
 
     local accent = header:CreateTexture(nil, "ARTWORK")
     accent:SetHeight(1)
@@ -37,11 +126,12 @@ local function CreateSectionHeader(parent, text, yOffset)
     label:SetPoint("LEFT", header, "LEFT", 8, 0)
     label:SetText(text)
 
-    return header, yOffset - 28
+    return header, yOffset - 34
 end
 
 local function CreateSettingsCheckbox(parent, label, descText, yOffset, settingKey, getFunc, setFunc)
     local cb = CreateFrame("CheckButton", nil, parent, "InterfaceOptionsCheckButtonTemplate")
+    StyleSettingsCheckbox(cb)
     cb:SetPoint("TOPLEFT", parent, "TOPLEFT", 20, yOffset)
     cb.Text:SetText(label)
     cb.Text:SetFontObject(GameFontHighlight)
@@ -61,16 +151,16 @@ local function CreateSettingsCheckbox(parent, label, descText, yOffset, settingK
         end
     end)
 
-    local nextY = yOffset - 22
+    local nextY = yOffset - 26
     if descText and descText ~= "" then
         local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-        desc:SetPoint("TOPLEFT", parent, "TOPLEFT", 48, nextY)
-        desc:SetWidth(480)
+        desc:SetPoint("TOPLEFT", parent, "TOPLEFT", 52, nextY)
+        desc:SetWidth(parent:GetWidth() - 72)
         desc:SetJustifyH("LEFT")
         desc:SetText(descText)
         local height = desc:GetStringHeight()
         if height < 12 then height = 12 end
-        nextY = nextY - height - 6
+        nextY = nextY - height - 12
     end
 
     return cb, nextY
@@ -78,7 +168,7 @@ end
 
 local function CreateSettingsButton(parent, text, width, yOffset, onClick)
     local btn = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-    iWR:StyleButton(btn)
+    StyleSettingsButton(btn)
     btn:SetSize(width, 26)
     btn:SetPoint("TOPLEFT", parent, "TOPLEFT", 20, yOffset)
     btn:SetText(text)
@@ -86,23 +176,115 @@ local function CreateSettingsButton(parent, text, width, yOffset, onClick)
     return btn, yOffset - 34
 end
 
-local function CreateSettingsDropdown(parent, label, yOffset, width, initFunc)
-    local labelStr = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    labelStr:SetPoint("TOPLEFT", parent, "TOPLEFT", 25, yOffset)
-    labelStr:SetText(label)
+local openSettingsDropdown
 
-    local dropdown = CreateFrame("Frame", "iWRDropdown_" .. label:gsub("%s", ""), parent, "UIDropDownMenuTemplate")
-    dropdown:SetPoint("TOPLEFT", parent, "TOPLEFT", 5, yOffset - 16)
-    UIDropDownMenu_SetWidth(dropdown, width or 160)
-    UIDropDownMenu_Initialize(dropdown, initFunc)
+local function CreateSettingsDropdown(parent, width, getOptions, getValue, setValue, placeholder)
+    local dropdown = CreateFrame("Button", nil, parent, "BackdropTemplate")
+    dropdown:SetSize(width, 28)
+    StyleSettingsButton(dropdown)
+    dropdown.text = dropdown:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    dropdown.text:SetPoint("LEFT", 10, 0)
+    dropdown.text:SetPoint("RIGHT", -26, 0)
+    dropdown.text:SetJustifyH("LEFT")
+    dropdown.text:SetWordWrap(false)
+    local arrow = dropdown:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    arrow:SetPoint("RIGHT", -9, 0)
+    arrow:SetText("v")
 
-    return dropdown, labelStr, yOffset - 52
+    -- Parent the choices to the window so they can extend beyond the scroll area.
+    local menu = CreateFrame("Frame", nil, iWR.SettingsFrame, "BackdropTemplate")
+    menu:SetWidth(math.max(width, 100))
+    menu:SetFrameStrata("FULLSCREEN_DIALOG")
+    menu:SetClampedToScreen(true)
+    menu:EnableMouse(true)
+    menu:SetToplevel(true)
+    StyleSettingsSurface(menu)
+    local dismiss = CreateFrame("Button", nil, menu:GetParent())
+    dismiss:SetAllPoints(UIParent)
+    dismiss:SetFrameStrata("FULLSCREEN_DIALOG")
+    dismiss:SetFrameLevel(menu:GetFrameLevel())
+    menu:SetFrameLevel(dismiss:GetFrameLevel() + 1)
+    dismiss:SetScript("OnClick", function() menu:Hide() end)
+    dismiss:Hide()
+    menu:SetScript("OnHide", function()
+        dismiss:Hide()
+        if openSettingsDropdown == menu then openSettingsDropdown = nil end
+    end)
+    menu:Hide()
+    dropdown.menu = menu
+    local scroll = CreateFrame("ScrollFrame", nil, menu, "UIPanelScrollFrameTemplate")
+    scroll:SetPoint("TOPLEFT", 4, -4)
+    scroll:SetPoint("BOTTOMRIGHT", -20, 4)
+    StyleSettingsScroll(scroll)
+    local content = CreateFrame("Frame", nil, scroll)
+    content:SetWidth(math.max(width, 100) - 24)
+    content:SetHeight(1)
+    scroll:SetScrollChild(content)
+    scroll:EnableMouseWheel(true)
+    scroll:SetScript("OnMouseWheel", function(self, delta)
+        self:SetVerticalScroll(math.max(0, math.min(self:GetVerticalScrollRange(), self:GetVerticalScroll() - delta * 24)))
+    end)
+    local rows = {}
+    function dropdown:Refresh()
+        local current = getValue()
+        self.text:SetText(current and tostring(current) or placeholder or "")
+    end
+    dropdown:SetScript("OnClick", function(self)
+        if menu:IsShown() then menu:Hide(); return end
+        if openSettingsDropdown then openSettingsDropdown:Hide() end
+        local options = getOptions()
+        if #options == 0 then return end
+        for index, value in ipairs(options) do
+            local row = rows[index]
+            if not row then
+                row = CreateFrame("Button", nil, content)
+                row:SetHeight(24)
+                row:SetPoint("TOPLEFT", 0, -(index - 1) * 24)
+                row:SetPoint("TOPRIGHT", 0, -(index - 1) * 24)
+                row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                row.text:SetPoint("LEFT", 8, 0)
+                row.text:SetPoint("RIGHT", -8, 0)
+                row.text:SetJustifyH("LEFT")
+                row.text:SetWordWrap(false)
+                row:SetHighlightTexture("Interface\\BUTTONS\\WHITE8X8", "ADD")
+                row:GetHighlightTexture():SetVertexColor(0.4, 0.28, 0.08, 0.4)
+                rows[index] = row
+            end
+            row.text:SetText(tostring(value))
+            if value == getValue() then row.text:SetTextColor(1, 0.72, 0.2)
+            else row.text:SetTextColor(0.9, 0.86, 0.76) end
+            row:SetScript("OnClick", function()
+                menu:Hide()
+                setValue(value)
+                self:Refresh()
+            end)
+            row:Show()
+        end
+        for index = #options + 1, #rows do rows[index]:Hide() end
+        content:SetHeight(#options * 24)
+        menu:SetHeight(math.min(#options, 10) * 24 + 8)
+        scroll:SetVerticalScroll(0)
+        menu:SetScale(self:GetEffectiveScale() / menu:GetParent():GetEffectiveScale())
+        menu:ClearAllPoints()
+        if (self:GetBottom() or 0) > menu:GetHeight() + 12 then
+            menu:SetPoint("TOPRIGHT", self, "BOTTOMRIGHT", 0, -2)
+        else
+            menu:SetPoint("BOTTOMRIGHT", self, "TOPRIGHT", 0, 2)
+        end
+        openSettingsDropdown = menu
+        dismiss:Show()
+        menu:Show()
+    end)
+    dropdown:SetScript("OnHide", function() menu:Hide() end)
+    dropdown:SetScript("OnShow", function(self) self:Refresh() end)
+    dropdown:Refresh()
+    return dropdown
 end
 
 local function CreateInfoText(parent, text, yOffset, fontObj)
     local fs = parent:CreateFontString(nil, "OVERLAY", fontObj or "GameFontHighlight")
     fs:SetPoint("TOPLEFT", parent, "TOPLEFT", 25, yOffset)
-    fs:SetWidth(500)
+    fs:SetWidth(parent:GetWidth() - 50)
     fs:SetJustifyH("LEFT")
     fs:SetText(text)
     local height = fs:GetStringHeight()
@@ -144,18 +326,36 @@ end
 
 local function CreateSettingsSlider(parent, frameName, label, descText, yOffset,
                                     minValue, maxValue, step, value, onValueChanged)
-    local slider = CreateFrame("Slider", frameName, parent, "OptionsSliderTemplate")
-    slider:SetPoint("TOPLEFT", parent, "TOPLEFT", 30, yOffset - 18)
-    slider:SetWidth(300)
+    local slider = CreateFrame("Slider", frameName, parent)
+    slider:SetPoint("TOPLEFT", parent, "TOPLEFT", 25, yOffset - 24)
+    slider:SetSize(360, 18)
+    slider:SetOrientation("HORIZONTAL")
     slider:SetMinMaxValues(minValue, maxValue)
     slider:SetValueStep(step)
     slider:SetObeyStepOnDrag(true)
 
-    _G[frameName .. "Low"]:SetText(tostring(minValue))
-    _G[frameName .. "High"]:SetText(tostring(maxValue))
+    local title = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    title:SetPoint("BOTTOMLEFT", slider, "TOPLEFT", 0, 4)
+    title:SetText(label)
+    local valueText = slider:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    valueText:SetPoint("BOTTOMRIGHT", slider, "TOPRIGHT", 0, 4)
+    local track = slider:CreateTexture(nil, "BACKGROUND")
+    track:SetHeight(4)
+    track:SetPoint("LEFT", 0, 0)
+    track:SetPoint("RIGHT", 0, 0)
+    track:SetColorTexture(0.16, 0.13, 0.09, 1)
+    local fill = slider:CreateTexture(nil, "ARTWORK")
+    fill:SetHeight(4)
+    fill:SetPoint("LEFT", track, "LEFT")
+    fill:SetColorTexture(0.85, 0.52, 0.12, 1)
+    slider:SetThumbTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
+    local thumb = slider:GetThumbTexture()
+    thumb:SetSize(14, 14)
+    thumb:SetVertexColor(1, 0.73, 0.26, 1)
 
     local function UpdateText(currentValue)
-        _G[frameName .. "Text"]:SetText(label .. ": " .. tostring(currentValue))
+        valueText:SetText(tostring(currentValue))
+        fill:SetWidth(math.max(1, slider:GetWidth() * (currentValue - minValue) / (maxValue - minValue)))
     end
 
     value = tonumber(value) or 0
@@ -166,12 +366,16 @@ local function CreateSettingsSlider(parent, frameName, label, descText, yOffset,
         UpdateText(currentValue)
         onValueChanged(currentValue)
     end)
+    slider:EnableMouseWheel(true)
+    slider:SetScript("OnMouseWheel", function(self, delta)
+        self:SetValue(math.max(minValue, math.min(maxValue, self:GetValue() + delta * step)))
+    end)
 
     local nextY = yOffset - 52
     if descText and descText ~= "" then
         local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-        desc:SetPoint("TOPLEFT", parent, "TOPLEFT", 30, nextY)
-        desc:SetWidth(480)
+        desc:SetPoint("TOPLEFT", parent, "TOPLEFT", 25, nextY)
+        desc:SetWidth(parent:GetWidth() - 50)
         desc:SetJustifyH("LEFT")
         desc:SetText(descText)
         nextY = nextY - math.max(desc:GetStringHeight(), 12) - 8
@@ -186,7 +390,7 @@ end
 
 local iconPickerFrame = nil
 
-local function ShowIconPicker(typeIndex, previewTexture)
+local function ShowIconPicker(typeIndex, previewTexture, onChanged)
     if iconPickerFrame then
         iconPickerFrame:Hide()
         iconPickerFrame = nil
@@ -207,7 +411,7 @@ local function ShowIconPicker(typeIndex, previewTexture)
 
     local popup = iWR:CreateiWRStyleFrame(UIParent, popupWidth, popupHeight, {"CENTER", UIParent, "CENTER"})
     popup:SetFrameStrata("DIALOG")
-    iWR:StyleSurface(popup, "panel")
+    StyleSettingsSurface(popup)
     popup:EnableMouse(true)
     popup:SetMovable(true)
     popup:SetScript("OnDragStart", function(self) self:StartMoving() end)
@@ -221,7 +425,7 @@ local function ShowIconPicker(typeIndex, previewTexture)
     pTitleBar:SetHeight(28)
     pTitleBar:SetPoint("TOPLEFT", popup, "TOPLEFT", 0, 0)
     pTitleBar:SetPoint("TOPRIGHT", popup, "TOPRIGHT", 0, 0)
-    iWR:StyleSurface(pTitleBar, "header")
+    StyleSettingsSurface(pTitleBar, true)
 
     local pTitle = pTitleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     pTitle:SetPoint("LEFT", pTitleBar, "LEFT", 12, 0)
@@ -250,11 +454,11 @@ local function ShowIconPicker(typeIndex, previewTexture)
         highlight:SetAllPoints(btn)
         highlight:SetColorTexture(1, 0.59, 0.09, 0.24)
 
-        local border = btn:CreateTexture(nil, "OVERLAY")
+        -- The solid border sits behind the icon, showing only its outer edge.
+        local border = btn:CreateTexture(nil, "BORDER")
         border:SetPoint("TOPLEFT", btn, "TOPLEFT", -1, 1)
         border:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", 1, -1)
         border:SetColorTexture(unpack(iWR.Theme.border))
-        border:SetDrawLayer("OVERLAY", -1)
 
         btn:SetScript("OnClick", function()
             if not iWRSettings.CustomIcons then iWRSettings.CustomIcons = {} end
@@ -262,6 +466,7 @@ local function ShowIconPicker(typeIndex, previewTexture)
             if previewTexture then
                 previewTexture:SetTexture(path)
             end
+            if onChanged then onChanged() end
             popup:Hide()
             iconPickerFrame = nil
         end)
@@ -288,7 +493,7 @@ local function ShowIconPicker(typeIndex, previewTexture)
     manualBox:SetMaxLetters(200)
 
     local manualBtn = CreateFrame("Button", nil, popup, "UIPanelButtonTemplate")
-    iWR:StyleButton(manualBtn)
+    StyleSettingsButton(manualBtn)
     manualBtn:SetSize(44, 22)
     manualBtn:SetPoint("LEFT", manualBox, "RIGHT", 4, 0)
     manualBtn:SetText(L["SetButton"])
@@ -300,6 +505,7 @@ local function ShowIconPicker(typeIndex, previewTexture)
             if previewTexture then
                 previewTexture:SetTexture(path)
             end
+            if onChanged then onChanged() end
             popup:Hide()
             iconPickerFrame = nil
         end
@@ -361,6 +567,7 @@ StaticPopupDialogs["IWR_RESET_SETTINGS"] = {
         end
         iWR:ResetSharingSession()
         iWR:SaveRulesetStorage()
+        if iWR.RefreshLevelColors then iWR:RefreshLevelColors() end
         print(L["SettingsResetSuccess"])
         if iWR.RefreshSettingsPanel then
             iWR:RefreshSettingsPanel()
@@ -381,13 +588,13 @@ function iWR:CreateOptionsPanel()
     -- ╭───────────────────────────────────────────────────────────────╮
     -- │                        Main Frame                             │
     -- ╰───────────────────────────────────────────────────────────────╯
-    local settingsFrame = iWR:CreateiWRStyleFrame(UIParent, 750, 520, {"CENTER", UIParent, "CENTER"})
+    local settingsFrame = iWR:CreateiWRStyleFrame(UIParent, 820, 580, {"CENTER", UIParent, "CENTER"})
     settingsFrame:Hide()
     settingsFrame:EnableMouse(true)
     settingsFrame:SetMovable(true)
     settingsFrame:SetFrameStrata("HIGH")
     settingsFrame:SetClampedToScreen(true)
-    iWR:StyleSurface(settingsFrame, "panel")
+    StyleSettingsSurface(settingsFrame)
     iWR.SettingsFrame = settingsFrame
 
     -- Shadow
@@ -410,53 +617,83 @@ function iWR:CreateOptionsPanel()
     -- │                         Title Bar                             │
     -- ╰───────────────────────────────────────────────────────────────╯
     local titleBar = CreateFrame("Frame", nil, settingsFrame, "BackdropTemplate")
-    titleBar:SetHeight(31)
-    titleBar:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 0, 0)
-    titleBar:SetPoint("TOPRIGHT", settingsFrame, "TOPRIGHT", 0, 0)
-    iWR:StyleSurface(titleBar, "header")
+    titleBar:SetHeight(40)
+    titleBar:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 1, -1)
+    titleBar:SetPoint("TOPRIGHT", settingsFrame, "TOPRIGHT", -1, -1)
+    StyleSettingsSurface(titleBar, true)
 
     local titleText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-    titleText:SetPoint("CENTER", titleBar, "CENTER", 0, 0)
-    titleText:SetText(iWR.Colors.iWR .. "iWillRemember" .. iWR.Colors.Green .. " v" .. iWR.Version)
+    titleText:SetPoint("LEFT", titleBar, "LEFT", 15, 0)
+    titleText:SetText(iWR.Colors.iWR .. "iWillRemember|r  |cFFAAA08C" .. L["SettingsTitle"] .. "|r")
 
     local closeButton = CreateFrame("Button", nil, settingsFrame, "UIPanelCloseButton")
-    closeButton:SetPoint("TOPRIGHT", settingsFrame, "TOPRIGHT", 0, 0)
+    closeButton:SetPoint("TOPRIGHT", settingsFrame, "TOPRIGHT", -4, -4)
     closeButton:SetScript("OnClick", function() iWR:SettingsClose() end)
 
     -- ╭───────────────────────────────────────────────────────────────╮
     -- │                     Sidebar Navigation                        │
     -- ╰───────────────────────────────────────────────────────────────╯
-    local sidebarWidth = 150
+    local sidebarWidth = 160
 
     local sidebar = CreateFrame("Frame", nil, settingsFrame, "BackdropTemplate")
     sidebar:SetWidth(sidebarWidth)
-    sidebar:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 10, -35)
-    sidebar:SetPoint("BOTTOMLEFT", settingsFrame, "BOTTOMLEFT", 10, 10)
-    iWR:StyleSurface(sidebar, "surface")
+    sidebar:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 10, -50)
+    sidebar:SetPoint("BOTTOMLEFT", settingsFrame, "BOTTOMLEFT", 10, 30)
+    StyleSettingsSurface(sidebar)
+
+    local footer = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    footer:SetPoint("BOTTOMLEFT", settingsFrame, "BOTTOMLEFT", 14, 11)
+    footer:SetText(L["SettingsSavedAutomatically"])
+    local versionText = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    versionText:SetPoint("BOTTOMRIGHT", settingsFrame, "BOTTOMRIGHT", -14, 11)
+    versionText:SetText("v" .. iWR.Version)
 
     -- ╭───────────────────────────────────────────────────────────────╮
     -- │                       Content Area                            │
     -- ╰───────────────────────────────────────────────────────────────╯
     local contentArea = CreateFrame("Frame", nil, settingsFrame, "BackdropTemplate")
-    contentArea:SetPoint("TOPLEFT", sidebar, "TOPRIGHT", 6, 0)
-    contentArea:SetPoint("BOTTOMRIGHT", settingsFrame, "BOTTOMRIGHT", -10, 10)
-    iWR:StyleSurface(contentArea, "surface")
+    contentArea:SetPoint("TOPLEFT", sidebar, "TOPRIGHT", 10, 0)
+    contentArea:SetPoint("BOTTOMRIGHT", settingsFrame, "BOTTOMRIGHT", -10, 30)
+    StyleSettingsSurface(contentArea)
+
+    local pageHeader = CreateFrame("Frame", nil, contentArea, "BackdropTemplate")
+    pageHeader:SetPoint("TOPLEFT", 1, -1)
+    pageHeader:SetPoint("TOPRIGHT", -1, -1)
+    pageHeader:SetHeight(58)
+    pageHeader.title = pageHeader:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    pageHeader.title:SetPoint("TOPLEFT", 20, -12)
+    pageHeader.subtitle = pageHeader:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    pageHeader.subtitle:SetPoint("TOPLEFT", 20, -34)
+    pageHeader.subtitle:SetPoint("TOPRIGHT", -20, -34)
+    pageHeader.subtitle:SetJustifyH("LEFT")
+    local pageInfo = {
+        {L["Tab1General"], L["SettingsGeneralSummary"]},
+        {L["Tab2Sync"], L["SettingsSyncSummary"]},
+        {L["Tab3Backup"], L["SettingsBackupSummary"]},
+        {L["Tab5Customize"], L["SettingsCustomizeSummary"]},
+        {L["Tab4About"], L["SettingsAboutSummary"]},
+        {L["TabINIFPromo"], L["SettingsCompanionSummary"]},
+        {L["TabISTPromo"], L["SettingsCompanionSummary"]},
+        {L["TabPlatynator"], L["SettingsNameplateSummary"]},
+        {L["TabIRCPromo"], L["SettingsCompanionSummary"]},
+    }
 
     -- Tab content frames with scroll
     local scrollFrames = {}
     local scrollChildren = {}
-    -- Content area is ~574px wide (750 - 10 left - 150 sidebar - 6 gap - 10 right - borders)
-    local contentWidth = 550
+    -- Match the scroll viewport; wider children would clip controls on the right.
+    local contentWidth = 592
 
     local function CreateTabContent()
         local container = CreateFrame("Frame", nil, contentArea)
-        container:SetPoint("TOPLEFT", contentArea, "TOPLEFT", 5, -5)
+        container:SetPoint("TOPLEFT", contentArea, "TOPLEFT", 5, -62)
         container:SetPoint("BOTTOMRIGHT", contentArea, "BOTTOMRIGHT", -5, 5)
         container:Hide()
 
         local scrollFrame = CreateFrame("ScrollFrame", nil, container, "UIPanelScrollFrameTemplate")
         scrollFrame:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
         scrollFrame:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", -22, 0)
+        StyleSettingsScroll(scrollFrame)
 
         local scrollChild = CreateFrame("Frame", nil, scrollFrame)
         scrollChild:SetWidth(contentWidth)
@@ -492,20 +729,28 @@ function iWR:CreateOptionsPanel()
     local iNIFContainer, iNIFContent = CreateTabContent()
     local iSTContainer, iSTContent = CreateTabContent()
     local platynatorContainer, platynatorContent = CreateTabContent()
+    local iRCContainer, iRCContent = CreateTabContent()
 
-    local tabContents = {generalContainer, syncContainer, backupContainer, customizeContainer, aboutContainer, iNIFContainer, iSTContainer, platynatorContainer}
+    local tabContents = {generalContainer, syncContainer, backupContainer, customizeContainer, aboutContainer, iNIFContainer, iSTContainer, platynatorContainer, iRCContainer}
 
     local sidebarButtons = {}
     local activeIndex = 1
 
     local function ShowTab(index)
+        if openSettingsDropdown then openSettingsDropdown:Hide() end
         activeIndex = index
+        pageHeader.title:SetText(pageInfo[index][1])
+        pageHeader.subtitle:SetText(pageInfo[index][2])
         for i, content in ipairs(tabContents) do
             content:SetShown(i == index)
         end
         -- Update sidebar button highlights
         for i, btn in pairs(sidebarButtons) do
-            iWR:SetButtonActive(btn, i == index)
+            btn.selected = i == index
+            btn.selection:SetShown(btn.selected)
+            btn.accent:SetShown(btn.selected)
+            if btn.selected then btn.text:SetTextColor(1, 0.73, 0.25)
+            else btn.text:SetTextColor(0.78, 0.74, 0.65) end
         end
     end
 
@@ -527,8 +772,9 @@ function iWR:CreateOptionsPanel()
     table.insert(sidebarItems, {type = "header", label = L["SidebarHeaderOtherAddons"]})
     table.insert(sidebarItems, {type = "tab", label = L["TabINIFPromo"], index = 6})
     table.insert(sidebarItems, {type = "tab", label = L["TabISTPromo"], index = 7})
+    table.insert(sidebarItems, {type = "tab", label = L["TabIRCPromo"], index = 9})
 
-    local sidebarY = -6
+    local sidebarY = -10
     for _, item in ipairs(sidebarItems) do
         if item.type == "header" then
             local headerText = sidebar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -537,14 +783,21 @@ function iWR:CreateOptionsPanel()
             sidebarY = sidebarY - 20
         else
             local btn = CreateFrame("Button", nil, sidebar)
-            iWR:StyleButton(btn)
-            btn:SetSize(sidebarWidth - 12, 26)
+            btn:SetSize(sidebarWidth - 12, 30)
             btn:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, sidebarY)
 
             local text = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             text:SetPoint("LEFT", btn, "LEFT", 14, 0)
             text:SetText(item.label)
             btn.text = text
+            btn.selection = btn:CreateTexture(nil, "BACKGROUND")
+            btn.selection:SetAllPoints(btn)
+            btn.selection:SetColorTexture(0.85, 0.52, 0.12, 0.14)
+            btn.accent = btn:CreateTexture(nil, "ARTWORK")
+            btn.accent:SetPoint("TOPLEFT", 0, -3)
+            btn.accent:SetPoint("BOTTOMLEFT", 0, 3)
+            btn.accent:SetWidth(2)
+            btn.accent:SetColorTexture(1, 0.67, 0.16, 1)
 
             local highlight = btn:CreateTexture(nil, "HIGHLIGHT")
             highlight:SetAllPoints(btn)
@@ -556,7 +809,7 @@ function iWR:CreateOptionsPanel()
             end)
 
             sidebarButtons[tabIndex] = btn
-            sidebarY = sidebarY - 28
+            sidebarY = sidebarY - 32
         end
     end
 
@@ -619,6 +872,9 @@ function iWR:CreateOptionsPanel()
         end)
     checkboxRefs.ShowWhoNotes = cbWhoNotes
 
+    y = y - 8
+    _, y = CreateSectionHeader(generalContent, L["SettingsMenuAndHistory"], y)
+
     local cbSimpleMenu
     cbSimpleMenu, y = CreateSettingsCheckbox(generalContent, L["SimpleMenu"] or "Simple Menu",
         L["DescSimpleMenu"] or "|cFF808080Use five quick buttons with names below the icons to save or clear a note.|r",
@@ -662,6 +918,7 @@ function iWR:CreateOptionsPanel()
 
     -- Sound Warnings (indented)
     local cbSoundOuter = CreateFrame("CheckButton", nil, generalContent, "InterfaceOptionsCheckButtonTemplate")
+    StyleSettingsCheckbox(cbSoundOuter)
     cbSoundOuter:SetPoint("TOPLEFT", generalContent, "TOPLEFT", 40, y)
     cbSoundOuter.Text:SetText(L["EnableSoundWarning"])
     cbSoundOuter.Text:SetFontObject(GameFontHighlight)
@@ -733,7 +990,7 @@ function iWR:CreateOptionsPanel()
         edgeSize = 12,
         insets = {left = 3, right = 3, top = 3, bottom = 3},
     })
-    iWR:StyleSurface(mcPanel, "surface")
+    StyleSettingsSurface(mcPanel)
 
     local mcText = mcPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     mcText:SetPoint("TOPLEFT", mcPanel, "TOPLEFT", 8, -6)
@@ -763,31 +1020,27 @@ function iWR:CreateOptionsPanel()
     mcRemoveLabel:SetPoint("TOPLEFT", mcPanel, "TOPRIGHT", 20, -4)
     mcRemoveLabel:SetText(L["MyCharsRemove"])
 
-    local mcRemoveDropdown = CreateFrame("Frame", "iWRDropdown_RemoveMyChar", generalContent, "UIDropDownMenuTemplate")
-    mcRemoveDropdown:SetPoint("TOPLEFT", mcRemoveLabel, "BOTTOMLEFT", -20, -2)
-    UIDropDownMenu_SetWidth(mcRemoveDropdown, 140)
+    local mcRemoveDropdown = CreateSettingsDropdown(generalContent, 230,
+        function()
+            local names = {}
+            for name in pairs(iWRSettings.MyCharacters or {}) do names[#names + 1] = name end
+            table.sort(names)
+            return names
+        end,
+        function() return nil end,
+        function(name)
+            iWRSettings.MyCharacters[name] = nil
+            UpdateMyCharsDisplay()
+        end, L["SettingsChooseCharacter"])
+    mcRemoveDropdown:SetPoint("TOPLEFT", mcRemoveLabel, "BOTTOMLEFT", 0, -8)
 
-    UIDropDownMenu_Initialize(mcRemoveDropdown, function(frame, level)
-        for name in pairs(iWRSettings.MyCharacters or {}) do
-            local info = UIDropDownMenu_CreateInfo()
-            info.text = name
-            info.value = name
-            info.func = function(self)
-                iWRSettings.MyCharacters[self.value] = nil
-                UpdateMyCharsDisplay()
-                UIDropDownMenu_SetText(frame, "")
-                CloseDropDownMenus()
-            end
-            UIDropDownMenu_AddButton(info, level)
-        end
-    end)
-
-    y = y - mcPanel:GetHeight() - 10
+    y = y - math.max(mcPanel:GetHeight(), 60) - 12
 
     -- Section: Chat Output
     _, y = CreateSectionHeader(generalContent, L["SectionChatOutput"], y - 6)
 
     local generalChatCb = CreateFrame("CheckButton", nil, generalContent, "InterfaceOptionsCheckButtonTemplate")
+    StyleSettingsCheckbox(generalChatCb)
     generalChatCb:SetPoint("TOPLEFT", generalContent, "TOPLEFT", 20, y)
     if not generalChatCb.Text then
         generalChatCb.Text = generalChatCb:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -805,6 +1058,7 @@ function iWR:CreateOptionsPanel()
         if name and name ~= "" and not skipTabs[name] then
             local frameIndex = i
             local cb = CreateFrame("CheckButton", nil, generalContent, "InterfaceOptionsCheckButtonTemplate")
+            StyleSettingsCheckbox(cb)
             cb:SetPoint("TOPLEFT", generalContent, "TOPLEFT", 20, y)
             if not cb.Text then
                 cb.Text = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -851,7 +1105,7 @@ function iWR:CreateOptionsPanel()
     nameInput:SetMaxLetters(120)
     iWR:StyleEditBox(nameInput)
     local add = CreateFrame("Button", nil, syncContent, "UIPanelButtonTemplate")
-    iWR:StyleButton(add)
+    StyleSettingsButton(add)
     add:SetSize(90, 28)
     add:SetPoint("LEFT", nameInput, "RIGHT", 8, 0)
     add:SetText(L["WhitelistAddPlayer"])
@@ -878,7 +1132,7 @@ function iWR:CreateOptionsPanel()
         iWR:RefreshSharingStatus()
     end)
     local share = CreateFrame("Button", nil, syncContent, "UIPanelButtonTemplate")
-    iWR:StyleButton(share)
+    StyleSettingsButton(share)
     share:SetSize(150, 26)
     share:SetPoint("LEFT", refresh, "RIGHT", 8, 0)
     share:SetText(L["WhitelistSyncNow"])
@@ -888,6 +1142,7 @@ function iWR:CreateOptionsPanel()
     list:SetPoint("TOPLEFT", syncContent, "TOPLEFT", 20, y - 4)
     list:SetPoint("TOPRIGHT", syncContent, "TOPRIGHT", -36, y - 4)
     list:SetHeight(240)
+    StyleSettingsScroll(list)
     local content = CreateFrame("Frame", nil, list)
     content:SetSize(480, 240)
     list:SetScrollChild(content)
@@ -907,7 +1162,7 @@ function iWR:CreateOptionsPanel()
                 row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(index - 1) * 34)
                 row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -(index - 1) * 34)
                 row:SetHeight(30)
-                self:StyleSurface(row, "surface")
+                StyleSettingsSurface(row)
                 row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
                 row.name:SetPoint("LEFT", row, "LEFT", 8, 0)
                 row.name:SetWidth(240)
@@ -915,7 +1170,7 @@ function iWR:CreateOptionsPanel()
                 row.status = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
                 row.status:SetPoint("RIGHT", row, "RIGHT", -35, 0)
                 row.remove = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-                self:StyleButton(row.remove)
+                StyleSettingsButton(row.remove)
                 row.remove:SetSize(22, 22)
                 row.remove:SetPoint("RIGHT", row, "RIGHT", -4, 0)
                 row.remove:SetText("x")
@@ -1057,6 +1312,43 @@ function iWR:CreateOptionsPanel()
     local iconPreviewTextures = {}
     local iconRowLabels = {}
     local labelEditBoxes = {}
+    local colorButtons = {}
+
+    local function RefreshLevelColorButtons()
+        for level, controls in pairs(colorButtons) do
+            StyleSettingsButton(controls.color)
+            if controls.swatch then controls.swatch:SetColorTexture(iWR:GetLevelColor(level)) end
+            controls.reset:SetEnabled(iWRSettings.LevelColors and iWRSettings.LevelColors[level] ~= nil or false)
+            if controls.iconReset then controls.iconReset:SetEnabled(iWRSettings.CustomIcons and iWRSettings.CustomIcons[level] ~= nil or false) end
+        end
+    end
+
+    local function ShowLevelColorPicker(level)
+        if not ColorPickerFrame or not ColorPickerFrame.SetupColorPickerAndShow then
+            iWR:DebugMsg("The level color picker is not available on this client.", 1)
+            return
+        end
+        local settings = iWRSettings
+        local original = settings.LevelColors and settings.LevelColors[level]
+        local r, g, b = iWR:GetLevelColor(level)
+        ColorPickerFrame:SetupColorPickerAndShow({
+            r = r, g = g, b = b, hasOpacity = false,
+            swatchFunc = function()
+                if iWRSettings ~= settings or iWR:ResolveLevel(level) ~= level then return end
+                local red, green, blue = ColorPickerFrame:GetColorRGB()
+                iWR:SetLevelColor(level, red, green, blue)
+                RefreshLevelColorButtons()
+            end,
+            cancelFunc = function()
+                settings.LevelColors = settings.LevelColors or {}
+                settings.LevelColors[level] = original
+                if iWRSettings == settings then
+                    iWR:RefreshLevelColors()
+                    RefreshLevelColorButtons()
+                end
+            end,
+        })
+    end
 
     local function BuildCustomizeContent()
         -- Clean up previous dynamic content
@@ -1068,6 +1360,7 @@ function iWR:CreateOptionsPanel()
         wipe(iconPreviewTextures)
         wipe(iconRowLabels)
         wipe(labelEditBoxes)
+        wipe(colorButtons)
 
         local y = -10
 
@@ -1081,11 +1374,9 @@ function iWR:CreateOptionsPanel()
         y = y - (customizeInfo:GetStringHeight() + 8)
 
         -- ── Relation Levels Section ──
-        local levelsHeader = customizeContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        levelsHeader:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 14, y)
-        levelsHeader:SetText(L["RelationLevelsHeader"] or (iWR.Colors.iWR .. "Relation Levels"))
+        local levelsHeader
+        levelsHeader, y = CreateSectionHeader(customizeContent, L["RelationLevelsHeader"], y)
         customizeRows[#customizeRows + 1] = levelsHeader
-        y = y - 22
 
         local levelsDesc = customizeContent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
         levelsDesc:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 25, y)
@@ -1105,53 +1396,28 @@ function iWR:CreateOptionsPanel()
         goodLabel:SetPoint("LEFT", levelRow, "LEFT", 0, 0)
         goodLabel:SetText(L["GoodLevels"] or "Positive Levels")
 
-        local goodDropdown = CreateFrame("Frame", "iWRDropdown_CustGoodLevels", levelRow, "UIDropDownMenuTemplate")
-        goodDropdown:SetPoint("LEFT", goodLabel, "RIGHT", -10, -2)
-        UIDropDownMenu_SetWidth(goodDropdown, 50)
-        UIDropDownMenu_Initialize(goodDropdown, function(frame, level)
-            for i = 3, 10 do
-                local info = UIDropDownMenu_CreateInfo()
-                info.text = tostring(i)
-                info.value = i
-                info.checked = ((iWRSettings.GoodLevels or iWR.SettingsDefault.GoodLevels) == i)
-                info.func = function()
-                    iWRSettings.GoodLevels = i
-                    UIDropDownMenu_SetText(goodDropdown, tostring(i))
-                    CloseDropDownMenus()
-                    BuildCustomizeContent()
-                    if iWR.RebuildSliderTicks then iWR.RebuildSliderTicks() end
-                    if iWR.UpdateMenuMode then iWR.UpdateMenuMode() end
-                end
-                UIDropDownMenu_AddButton(info, level)
-            end
-        end)
-        UIDropDownMenu_SetText(goodDropdown, tostring(iWRSettings.GoodLevels or iWR.SettingsDefault.GoodLevels))
+        local function UpdateLevelCount(setting, value)
+            iWRSettings[setting] = value
+            BuildCustomizeContent()
+            if iWR.RebuildSliderTicks then iWR.RebuildSliderTicks() end
+            if iWR.UpdateMenuMode then iWR.UpdateMenuMode() end
+        end
+        local goodDropdown = CreateSettingsDropdown(levelRow, 64,
+            function() return {3, 4, 5, 6, 7, 8, 9, 10} end,
+            function() return iWRSettings.GoodLevels or iWR.SettingsDefault.GoodLevels end,
+            function(value) UpdateLevelCount("GoodLevels", value) end)
+        goodDropdown:SetPoint("LEFT", goodLabel, "RIGHT", 12, 0)
+        customizeRows[#customizeRows + 1] = goodDropdown.menu
 
         local badLabel = levelRow:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        badLabel:SetPoint("LEFT", goodDropdown, "RIGHT", 10, 2)
+        badLabel:SetPoint("LEFT", levelRow, "LEFT", 280, 0)
         badLabel:SetText(L["BadLevels"] or "Negative Levels")
-
-        local badDropdown = CreateFrame("Frame", "iWRDropdown_CustBadLevels", levelRow, "UIDropDownMenuTemplate")
-        badDropdown:SetPoint("LEFT", badLabel, "RIGHT", -10, -2)
-        UIDropDownMenu_SetWidth(badDropdown, 50)
-        UIDropDownMenu_Initialize(badDropdown, function(frame, level)
-            for i = 2, 10 do
-                local info = UIDropDownMenu_CreateInfo()
-                info.text = tostring(i)
-                info.value = i
-                info.checked = ((iWRSettings.BadLevels or iWR.SettingsDefault.BadLevels) == i)
-                info.func = function()
-                    iWRSettings.BadLevels = i
-                    UIDropDownMenu_SetText(badDropdown, tostring(i))
-                    CloseDropDownMenus()
-                    BuildCustomizeContent()
-                    if iWR.RebuildSliderTicks then iWR.RebuildSliderTicks() end
-                    if iWR.UpdateMenuMode then iWR.UpdateMenuMode() end
-                end
-                UIDropDownMenu_AddButton(info, level)
-            end
-        end)
-        UIDropDownMenu_SetText(badDropdown, tostring(iWRSettings.BadLevels or iWR.SettingsDefault.BadLevels))
+        local badDropdown = CreateSettingsDropdown(levelRow, 64,
+            function() return {2, 3, 4, 5, 6, 7, 8, 9, 10} end,
+            function() return iWRSettings.BadLevels or iWR.SettingsDefault.BadLevels end,
+            function(value) UpdateLevelCount("BadLevels", value) end)
+        badDropdown:SetPoint("LEFT", badLabel, "RIGHT", 12, 0)
+        customizeRows[#customizeRows + 1] = badDropdown.menu
 
         y = y - 40
 
@@ -1170,32 +1436,51 @@ function iWR:CreateOptionsPanel()
 
         -- ── Custom Icons Section ──
         y = y - 4
-        local iconHeader = customizeContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        iconHeader:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 14, y)
-        iconHeader:SetText(L["CustomIconsSettings"] or (iWR.Colors.iWR .. "Custom Icons"))
+        local iconHeader
+        iconHeader, y = CreateSectionHeader(customizeContent, iWR.Colors.iWR .. L["LevelAppearanceHeader"], y)
         customizeRows[#customizeRows + 1] = iconHeader
-        y = y - 22
 
         local iconDesc = customizeContent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
         iconDesc:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 25, y)
         iconDesc:SetWidth(500)
         iconDesc:SetJustifyH("LEFT")
-        iconDesc:SetText(L["DescCustomIcons"] or "|cFF808080Choose custom icons for each rating.|r")
+        iconDesc:SetText(L["LevelColorsDesc"])
         customizeRows[#customizeRows + 1] = iconDesc
         y = y - (iconDesc:GetStringHeight() + 8)
 
-        for _, key in ipairs(activeLevels) do
-            y = y - 4
+        local appearanceHeaders = CreateFrame("Frame", nil, customizeContent)
+        appearanceHeaders:SetSize(contentWidth - 40, 22)
+        appearanceHeaders:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 20, y)
+        customizeRows[#customizeRows + 1] = appearanceHeaders
+        for _, column in ipairs({ {L["AppearanceRating"], 12}, {L["AppearanceIcon"], 210}, {L["AppearanceColor"], 366} }) do
+            local heading = appearanceHeaders:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+            heading:SetPoint("LEFT", column[2], 0)
+            heading:SetText(column[1])
+        end
+        y = y - 24
 
+        for index, key in ipairs(activeLevels) do
             local rowFrame = CreateFrame("Frame", nil, customizeContent)
-            rowFrame:SetSize(500, 36)
+            rowFrame:SetSize(contentWidth - 40, 54)
             rowFrame:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 20, y)
+            local background = rowFrame:CreateTexture(nil, "BACKGROUND")
+            background:SetAllPoints()
+            if index % 2 == 0 then background:SetColorTexture(0.055, 0.045, 0.030, 0.85)
+            else background:SetColorTexture(0.030, 0.027, 0.022, 0.85) end
+            local divider = rowFrame:CreateTexture(nil, "BORDER")
+            divider:SetHeight(1)
+            divider:SetPoint("BOTTOMLEFT")
+            divider:SetPoint("BOTTOMRIGHT")
+            divider:SetColorTexture(0.32, 0.25, 0.14, 0.5)
             customizeRows[#customizeRows + 1] = rowFrame
 
-            -- Icon preview
-            local preview = rowFrame:CreateTexture(nil, "ARTWORK")
+            local iconButton = CreateFrame("Button", nil, rowFrame)
+            iconButton:SetSize(36, 36)
+            iconButton:SetPoint("LEFT", 10, 0)
+            iconButton:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+            local preview = iconButton:CreateTexture(nil, "ARTWORK")
             preview:SetSize(32, 32)
-            preview:SetPoint("LEFT", rowFrame, "LEFT", 0, 0)
+            preview:SetPoint("CENTER")
             local currentIcon = iWR:GetIcon(key) or iWR.Icons[key]
             if currentIcon then preview:SetTexture(currentIcon) end
             iconPreviewTextures[key] = preview
@@ -1205,46 +1490,72 @@ function iWR:CreateOptionsPanel()
             local typeName = iWR:GetTypeName(key)
             local sign = key > 0 and "+" or ""
             local label = rowFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-            label:SetPoint("LEFT", preview, "RIGHT", 10, 0)
-            label:SetWidth(100)
+            label:SetPoint("TOPLEFT", 60, -9)
+            label:SetWidth(138)
             label:SetJustifyH("LEFT")
-            label:SetText(typeColor .. sign .. key .. " " .. typeName .. "|r")
+            label:SetWordWrap(false)
+            label:SetText(typeColor .. typeName .. "|r")
             iconRowLabels[key] = label
+            local rating = rowFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+            rating:SetPoint("TOPLEFT", 60, -30)
+            rating:SetText(sign .. key)
 
-            -- Change button
             local changeBtn = CreateFrame("Button", nil, rowFrame, "UIPanelButtonTemplate")
-            iWR:StyleButton(changeBtn)
-            changeBtn:SetSize(70, 24)
-            changeBtn:SetPoint("LEFT", label, "RIGHT", 10, 0)
+            StyleSettingsButton(changeBtn)
+            changeBtn:SetSize(88, 26)
+            changeBtn:SetPoint("LEFT", rowFrame, "LEFT", 210, 0)
             changeBtn:SetText(L["ChangeIcon"] or "Change")
-            changeBtn:SetScript("OnClick", function()
-                ShowIconPicker(key, preview)
-            end)
+            local function chooseIcon() ShowIconPicker(key, preview, RefreshLevelColorButtons) end
+            changeBtn:SetScript("OnClick", chooseIcon)
+            iconButton:SetScript("OnClick", chooseIcon)
 
-            -- Reset button
-            local resetIconBtn = CreateFrame("Button", nil, rowFrame, "UIPanelButtonTemplate")
-            iWR:StyleButton(resetIconBtn, true)
-            resetIconBtn:SetSize(60, 24)
-            resetIconBtn:SetPoint("LEFT", changeBtn, "RIGHT", 6, 0)
-            resetIconBtn:SetText(L["ResetIcon"] or "Reset")
-            resetIconBtn:SetScript("OnClick", function()
+            local resetIconBtn = CreateAppearanceReset(rowFrame, L["AppearanceResetIconHint"], function()
                 if iWRSettings.CustomIcons then
                     iWRSettings.CustomIcons[key] = nil
                 end
                 local defaultIcon = iWR.Icons[key]
                 if defaultIcon then preview:SetTexture(defaultIcon) end
+                RefreshLevelColorButtons()
             end)
+            resetIconBtn:SetPoint("LEFT", changeBtn, "RIGHT", 6, 0)
 
-            y = y - 38
+            local selectedLevel = key
+            local colorBtn = CreateFrame("Button", nil, rowFrame, "UIPanelButtonTemplate")
+            StyleSettingsButton(colorBtn)
+            colorBtn:SetSize(90, 26)
+            colorBtn:SetPoint("LEFT", rowFrame, "LEFT", 366, 0)
+            colorBtn:SetText(L["AppearanceChooseColor"])
+            local colorText = colorBtn:GetFontString()
+            colorText:ClearAllPoints()
+            colorText:SetPoint("LEFT", 33, 0)
+            colorText:SetPoint("RIGHT", -5, 0)
+            colorText:SetJustifyH("LEFT")
+            local swatch = colorBtn:CreateTexture(nil, "OVERLAY")
+            swatch:SetSize(18, 16)
+            swatch:SetPoint("LEFT", 8, 0)
+            colorBtn:SetScript("OnClick", function() ShowLevelColorPicker(selectedLevel) end)
+            colorBtn:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                GameTooltip:SetText(L["LevelColorHint"], 1, 1, 1, 1, true)
+                GameTooltip:Show()
+            end)
+            colorBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+            local resetColorBtn = CreateAppearanceReset(rowFrame, L["AppearanceResetColorHint"], function()
+                iWR:SetLevelColor(selectedLevel)
+                RefreshLevelColorButtons()
+            end)
+            resetColorBtn:SetPoint("LEFT", colorBtn, "RIGHT", 6, 0)
+            colorButtons[selectedLevel] = { color = colorBtn, reset = resetColorBtn, swatch = swatch, iconReset = resetIconBtn }
+
+            y = y - 55
         end
 
         -- ── Button Labels Section ──
         y = y - 8
-        local labelsHeader = customizeContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        labelsHeader:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 14, y)
-        labelsHeader:SetText(L["ButtonLabelsSettings"])
+        local labelsHeader
+        labelsHeader, y = CreateSectionHeader(customizeContent, L["ButtonLabelsSettings"], y)
         customizeRows[#customizeRows + 1] = labelsHeader
-        y = y - 22
 
         local labelDesc = customizeContent:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
         labelDesc:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 25, y)
@@ -1259,7 +1570,7 @@ function iWR:CreateOptionsPanel()
             local sign = key > 0 and "+" or ""
             local displayLabel = typeColor .. sign .. key .. ":|r"
 
-            local eb, labelStr, newY = CreateSettingsEditBox(customizeContent, displayLabel, y, 150,
+            local eb, labelStr, newY = CreateSettingsEditBox(customizeContent, displayLabel, y, 280,
                 function() return iWRSettings.ButtonLabels and iWRSettings.ButtonLabels[key] or iWR.Types[key] or "" end,
                 function(text)
                     if not iWRSettings.ButtonLabels then iWRSettings.ButtonLabels = {} end
@@ -1275,7 +1586,7 @@ function iWR:CreateOptionsPanel()
         -- Reset Labels button
         y = y - 4
         local resetLabelsBtn = CreateFrame("Button", nil, customizeContent, "UIPanelButtonTemplate")
-        iWR:StyleButton(resetLabelsBtn, true)
+        StyleSettingsButton(resetLabelsBtn, true)
         resetLabelsBtn:SetSize(200, 24)
         resetLabelsBtn:SetPoint("TOPLEFT", customizeContent, "TOPLEFT", 20, y)
         resetLabelsBtn:SetText(L["ResetLabels"])
@@ -1294,6 +1605,7 @@ function iWR:CreateOptionsPanel()
         y = y - 34
 
         scrollChildren[4]:SetHeight(math.abs(y) + 20)
+        RefreshLevelColorButtons()
     end
 
     -- Build on first load
@@ -1320,7 +1632,7 @@ function iWR:CreateOptionsPanel()
         y = y - 10
 
         local iNIFButton = CreateFrame("Button", nil, iNIFInstalledFrame, "UIPanelButtonTemplate")
-        iWR:StyleButton(iNIFButton)
+        StyleSettingsButton(iNIFButton)
         iNIFButton:SetSize(180, 28)
         iNIFButton:SetPoint("TOPLEFT", iNIFInstalledFrame, "TOPLEFT", 25, y)
         iNIFButton:SetText(L["INIFOpenSettingsButton"])
@@ -1382,7 +1694,7 @@ function iWR:CreateOptionsPanel()
         y = y - 10
 
         local iSTButton = CreateFrame("Button", nil, iSTInstalledFrame, "UIPanelButtonTemplate")
-        iWR:StyleButton(iSTButton)
+        StyleSettingsButton(iSTButton)
         iSTButton:SetSize(180, 28)
         iSTButton:SetPoint("TOPLEFT", iSTInstalledFrame, "TOPLEFT", 25, y)
         iSTButton:SetText(L["ISTOpenSettingsButton"])
@@ -1419,6 +1731,30 @@ function iWR:CreateOptionsPanel()
     end
 
     scrollChildren[7]:SetHeight(400)
+
+    -- Guild tools have the same installed/settings view as the other addons.
+    local iRCInstalledFrame = CreateFrame("Frame", nil, iRCContent)
+    iRCInstalledFrame:SetAllPoints(iRCContent)
+    iRCInstalledFrame:Hide()
+    do
+        local _, iRCY = CreateSectionHeader(iRCInstalledFrame, L["IRCSettingsHeader"], -10)
+        _, iRCY = CreateInfoText(iRCInstalledFrame, L["IRCInstalledDesc"], iRCY, "GameFontHighlight")
+        CreateSettingsButton(iRCInstalledFrame, L["IRCOpenSettingsButton"], 180, iRCY - 10, function()
+            local open = SlashCmdList and SlashCmdList.IRC
+            if type(open) ~= "function" then return end
+            settingsFrame:Hide()
+            open("settings")
+        end)
+    end
+    local iRCPromoFrame = CreateFrame("Frame", nil, iRCContent)
+    iRCPromoFrame:SetAllPoints(iRCContent)
+    iRCPromoFrame:Hide()
+    do
+        local _, iRCY = CreateSectionHeader(iRCPromoFrame, L["IRCSettingsHeader"], -10)
+        _, iRCY = CreateInfoText(iRCPromoFrame, L["IRCPromoDesc"], iRCY, "GameFontHighlight")
+        CreateInfoText(iRCPromoFrame, L["IRCPromoLink"], iRCY - 4, "GameFontDisableSmall")
+    end
+    scrollChildren[9]:SetHeight(400)
 
     -- Platynator integration is only offered when Platynator is active.
     local platynatorOffsetXSlider
@@ -1613,6 +1949,7 @@ function iWR:CreateOptionsPanel()
         end
 
         -- Update icon previews and row labels on Customize tab
+        RefreshLevelColorButtons()
         for typeKey, tex in pairs(iconPreviewTextures) do
             local icon = iWR:GetIcon(typeKey) or iWR.Icons[typeKey]
             if icon then tex:SetTexture(icon) end
@@ -1659,12 +1996,20 @@ function iWR:CreateOptionsPanel()
             sidebarButtons[7].text:SetText(iSTLoaded and L["TabIST"] or L["TabISTPromo"])
         end
 
+        local iRCLoaded = C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("iRC")
+        iRCInstalledFrame:SetShown(iRCLoaded)
+        iRCPromoFrame:SetShown(not iRCLoaded)
+        if sidebarButtons[9] then
+            sidebarButtons[9].text:SetText(iRCLoaded and L["TabIRC"] or L["TabIRCPromo"])
+        end
+
     end)
 
     -- ╭───────────────────────────────────────────────────────────────╮
     -- │                   Refresh Settings Panel                      │
     -- ╰───────────────────────────────────────────────────────────────╯
     function iWR:RefreshSettingsPanel()
+        RefreshLevelColorButtons()
         for key, cb in pairs(checkboxRefs) do
             if key == "ShowMinimapButton" then
                 cb:SetChecked(not iWRSettings.MinimapButton.hide)
@@ -1707,7 +2052,7 @@ function iWR:CreateOptionsPanel()
     stubDesc:SetText(L["SettingsPanelStubDesc"])
 
     local stubButton = CreateFrame("Button", nil, stubPanel, "UIPanelButtonTemplate")
-    iWR:StyleButton(stubButton)
+    StyleSettingsButton(stubButton)
     stubButton:SetSize(180, 28)
     stubButton:SetPoint("TOPLEFT", stubDesc, "BOTTOMLEFT", 0, -15)
     stubButton:SetText(L["SettingsTitle"])

@@ -206,6 +206,15 @@ local function setButtonVisual(button, active)
         background = pressed and { 0.12, 0.085, 0.045, 0.98 } or { 0.08, 0.06, 0.035, 0.98 }
         border = hovered and theme.goldSoft or { 0.52, 0.38, 0.17, 1 }
     end
+    if button.iWRSettingsControl and not destructive then
+        background = { 0.035, 0.030, 0.022, 1 }
+        if hovered or active then background = { 0.14, 0.10, 0.04, 1 } end
+        if pressed then background = { 0.09, 0.065, 0.025, 1 } end
+    end
+    if button.iWRRatingLevel ~= nil then
+        local r, g, b = iWR:GetLevelColor(button.iWRRatingLevel)
+        border = { r, g, b, 1 }
+    end
     if button.iWRButtonBackdrop then
         button.iWRButtonBackdrop:SetBackdropColor(unpack(background))
         button.iWRButtonBackdrop:SetBackdropBorderColor(unpack(border))
@@ -541,6 +550,49 @@ function iWR:GetTypeName(typeIndex)
 
     -- Fall back to default type name for resolved key
     return iWR.Types[resolved] or iWR.Types[typeIndex] or ""
+end
+
+local DEFAULT_LEVEL_COLORS = {
+    Superior = { 0.3, 0.65, 1 }, Respected = { 0, 0.9, 0 }, Liked = { 0, 0.7, 0 },
+    Disliked = { 0.7, 0, 0 }, Hated = { 0.9, 0, 0 }, Clear = { 0.52, 0.38, 0.17 },
+}
+
+local function validLevelColor(r, g, b)
+    for _, value in ipairs({ r, g, b }) do
+        if issecretvalue and issecretvalue(value) then return false end
+        if type(value) ~= "number" or value ~= value or value < 0 or value > 1 then return false end
+    end
+    return r ~= nil and g ~= nil and b ~= nil
+end
+
+function iWR:GetLevelColor(typeIndex, useDefault)
+    local level = self:ResolveLevel(typeIndex) or tonumber(typeIndex)
+    local colors = iWRSettings and iWRSettings.LevelColors
+    local saved = not useDefault and type(colors) == "table" and colors[level]
+    if type(saved) == "table" and validLevelColor(saved[1], saved[2], saved[3]) then
+        return saved[1], saved[2], saved[3]
+    end
+    local color = DEFAULT_LEVEL_COLORS[self.Types[level]] or DEFAULT_LEVEL_COLORS.Clear
+    return color[1], color[2], color[3]
+end
+
+function iWR:RefreshLevelColors()
+    if self.UpdateMenuMode then self.UpdateMenuMode() end
+    if self.UpdateTargetFrame then self:UpdateTargetFrame() end
+end
+
+function iWR:SetLevelColor(typeIndex, r, g, b)
+    local level = self:ResolveLevel(typeIndex)
+    if not iWRSettings or type(level) ~= "number" or level < -10 or level > 10 or level ~= math.floor(level) then return false end
+    if r ~= nil or g ~= nil or b ~= nil then
+        if not validLevelColor(r, g, b) then return false end
+    end
+    if type(iWRSettings.LevelColors) ~= "table" or iWRSettings.LevelColors == self.SettingsDefault.LevelColors then
+        iWRSettings.LevelColors = {}
+    end
+    iWRSettings.LevelColors[level] = r ~= nil and { r, g, b } or nil
+    self:RefreshLevelColors()
+    return true
 end
 
 function iWR:GetIcon(typeIndex)
@@ -1134,6 +1186,8 @@ function iWR:SetTargetFrameShadowedUnitFrames()
             iWR:DebugMsg("Relationship type is missing. [SetTargetFrameShadowedUnitFrames]", 1)
             dragonFrame:Hide()
         end
+        local r, g, b = iWR:GetLevelColor(targetRelation)
+        dragonTexture:SetVertexColor(r, g, b, 1)
 
         iWR:DebugMsg("Custom frame successfully anchored to:" .. portraitParent:GetName() .. ".", 3)
     else
@@ -1222,6 +1276,8 @@ function iWR:SetTargetFrameForeverDragon()
             iWR:DebugMsg("Relationship type is missing. [SetTargetFrameForeverDragon]", 1)
             dragonFrame:Hide()
         end
+        local r, g, b = iWR:GetLevelColor(targetRelation)
+        dragonTexture:SetVertexColor(r, g, b, 1)
 
         iWR:DebugMsg("Custom frame successfully anchored to:" .. portraitParent:GetName() .. ".", 3)
     else

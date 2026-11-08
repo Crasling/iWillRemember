@@ -54,6 +54,9 @@ end
 function addon:StyleButton() end
 function addon:StyleEditBox() end
 function addon:StyleSurface() end
+env.StyleSettingsButton = function(button, destructive) addon:StyleButton(button, destructive) end
+env.StyleSettingsSurface = function(frame) addon:StyleSurface(frame) end
+env.StyleSettingsScroll = function() end
 env.L = setmetatable({}, { __index = function(_, key) return key end })
 env.syncContent, env.scrollChildren, env.checkboxRefs = widget("Frame"), { {}, widget("Frame") }, {}
 local helper = assert(read("iWillRemember_iWRFunctions.lua"):match("(function iWR:AttachAutocomplete%b().-\nend)"))
@@ -133,8 +136,10 @@ local onShowStop = assert(source:find('    function iWR:RefreshSettingsPanel()',
 env.settingsFrame = widget("Frame")
 env.checkboxRefs = { DataSharing = widget("CheckButton") }
 env.iconPreviewTextures, env.iconRowLabels, env.labelEditBoxes, env.sidebarButtons = {}, {}, {}, {}
+env.RefreshLevelColorButtons = function() end
 env.iNIFInstalledFrame, env.iNIFPromoFrame = widget("Frame"), widget("Frame")
 env.iSTInstalledFrame, env.iSTPromoFrame = widget("Frame"), widget("Frame")
+env.iRCInstalledFrame, env.iRCPromoFrame = widget("Frame"), widget("Frame")
 local backupRefreshes, statRefreshes, sharingRefreshes = 0, 0, 0
 env.UpdateBackupInfoDisplay = function() backupRefreshes = backupRefreshes + 1 end
 env.UpdateDatabaseStats = function() statRefreshes = statRefreshes + 1 end
