@@ -74,9 +74,13 @@ end)
 ----------------------------------------------------------------
 local zoneFrame = CreateFrame("Frame")
 zoneFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+zoneFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+zoneFrame:RegisterEvent("PLAYER_LEAVING_WORLD")
 
-zoneFrame:SetScript("OnEvent", function()
-    if iWR.UpdateGroupLogZone then
+zoneFrame:SetScript("OnEvent", function(_, event, initialLogin, reloading)
+    if event ~= "ZONE_CHANGED_NEW_AREA" then
+        iWR:OnGroupLogWorldEvent(event, initialLogin, reloading)
+    elseif iWR.UpdateGroupLogZone then
         iWR:UpdateGroupLogZone()
     end
 end)
@@ -86,6 +90,7 @@ end)
 ----------------------------------------------------------------
 function iWR:OnEnable()
     iWR:ActivateSharingRuleset()
+    iWR:InitializeChatIconTooltips()
     ----------------------------------------------------------------
     -- INFO OUTPUT
     ----------------------------------------------------------------
@@ -215,6 +220,7 @@ local isMoP = (tocNumber >= 50500 and tocNumber < 60000)
 iWR.UseTargetFrameHook = type(TargetFrame_Update) == "function" and not isClassicEra and not isAnniversary and not isMoP
 
 function iWR:OnPlayerLogin()
+    self:InitializeChatIconTooltips()
     ----------------------------------------------------------------
     -- TARGET FRAME HOOK (SAFE + GUARDED)
     ----------------------------------------------------------------

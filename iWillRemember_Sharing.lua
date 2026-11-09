@@ -5,6 +5,7 @@ local CHUNK, MAX_PARTS, MAX_TRANSFERS = 120, 4096, 8
 -- Chat delivery can be delayed by minutes on a busy server. Keep request
 -- tokens long enough to accept late replies, with bounded transfer retries.
 local REPLY_TIMEOUT, TRANSFER_IDLE = 900, 900
+local MANUAL_RECHECK, AUTOMATIC_RECHECK = 5, 30
 local peers, controls, outgoing, incoming, completed = {}, {}, {}, {}, {}
 local session, sequence, roundRobin = "", 0, 0
 local worker = CreateFrame("Frame")
@@ -286,13 +287,14 @@ function iWR:ConnectSharingPeer(contact, allowWho, debugAction)
     end
     if peer.nonce and not allowWho then return end
     if peer.checking then report("an availability check is already pending."); return end
-    if (peer.retryAt or 0) > now() then
+    if (peer.retryAt or 0) > now() and not debugAction then
         report("checks are paused for " .. math.ceil(peer.retryAt - now()) .. " seconds (" .. (peer.status or "cooldown") .. ").")
         return
     end
     local confirmedSync = peer.syncRequested and peer.remote and (peer.readyUntil or 0) > now()
-    if not confirmedSync and now() - peer.checkedAt < 30 and (not allowWho or peer.allowWho) then
-        report("availability was checked recently; recheck in " .. math.ceil(30 - (now() - peer.checkedAt)) .. " seconds.")
+    local recheck = debugAction and MANUAL_RECHECK or AUTOMATIC_RECHECK
+    if not confirmedSync and now() - peer.checkedAt < recheck and (not allowWho or peer.allowWho) then
+        report("availability was checked recently; recheck in " .. math.ceil(recheck - (now() - peer.checkedAt)) .. " seconds.")
         return
     end
     local scope, currentSession = self:GetSharingScope(), session
@@ -310,6 +312,9 @@ function iWR:ConnectSharingPeer(contact, allowWho, debugAction)
             notify()
             return
         end
+        -- A manual refresh may recover from a failed send or an earlier offline
+        -- reply, but only after availability has been confirmed again.
+        peer.retryAt = nil
         if queueHello(peer) then report("online confirmed; iWR handshake queued, waiting for a response.")
         else report("online confirmed, but the iWR handshake could not be queued.") end
         notify()
@@ -453,7 +458,7 @@ function iWR:OnSharePacket(prefix, message, distribution, sender)
         local duplicateSync = peer.remote == parts[4] and peer.lastSyncNonce == parts[5]
         adoptSession(peer, parts[4])
         peer.lastHello, peer.remote, peer.readyUntil = now(), parts[4], now() + 120
-        peer.status, peer.version, peer.nonce = "iWR ready", parts[6], nil
+        peer.status, peer.version, peer.nonce, peer.retryAt = "iWR ready", parts[6], nil, nil
         local contact = self:GetWhitelistEntry(sender)
         contact.lastSeen, contact.ruleset = time(), parts[3]
         checkVersion(parts[6])
@@ -472,6 +477,7 @@ function iWR:OnSharePacket(prefix, message, distribution, sender)
         if peer.retired and peer.retired[parts[4]] then return end
         adoptSession(peer, parts[4])
         peer.remote, peer.readyUntil, peer.status, peer.version, peer.nonce = parts[4], now() + 120, "iWR ready", parts[6], nil
+        peer.retryAt = nil
         local contact = self:GetWhitelistEntry(sender)
         contact.lastSeen, contact.ruleset = time(), parts[3]
         checkVersion(parts[6])

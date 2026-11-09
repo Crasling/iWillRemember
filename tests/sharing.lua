@@ -700,5 +700,28 @@ assert(hasLog("no handshake sent; availability is Offline") and hasLog("availabi
     "manual actions explain native offline status and the short recheck cooldown")
 diagnostic:event("CHAT_MSG_SYSTEM", "No player named 'Offline Contact' is currently playing.")
 diagnostic.addon:SyncWithWhitelist()
-assert(hasLog("checks are paused for 300 seconds (Offline)"), "manual actions report the full offline pause rather than only the short recheck delay")
+local sentBeforeRetry = #diagnostic.sent
+advance(5)
+diagnostic.addon:RefreshSharingStatus(); advance(1)
+assert(#diagnostic.sent == sentBeforeRetry, "manual refresh during an offline pause still verifies availability without an offline whisper")
+link(diagnostic, offline); link(offline, diagnostic); whitelist(offline, diagnostic)
+offline.env.iWRDatabase["Recovered Contact-Forever"] = note("Recovered Contact")
+advance(5)
+diagnostic.addon:SyncWithWhitelist(); advance(8)
+assert(diagnostic.env.iWRDatabase["Recovered Contact-Forever"],
+    "manual sync recovers an online contact after five seconds instead of waiting out the five-minute offline pause")
+local delayedRefresh, delayedContact = client("Delayed Refresh"), client("Delayed Contact")
+link(delayedRefresh, delayedContact); link(delayedContact, delayedRefresh)
+whitelist(delayedRefresh, delayedContact); whitelist(delayedContact, delayedRefresh)
+delayedContact.env.iWRDatabase["Delayed Refresh Note-Forever"] = note("Delayed Refresh Note")
+delayedRefresh.locked = true
+delayedRefresh.addon:SyncWithWhitelist()
+local initialChecks = delayedRefresh.preflights
+advance(5)
+delayedRefresh.addon:RefreshSharingStatus()
+assert(delayedRefresh.preflights == initialChecks + 1, "manual refresh checks again after five seconds rather than thirty")
+delayedRefresh.locked = false; advance(8)
+assert(delayedRefresh.env.iWRDatabase["Delayed Refresh Note-Forever"],
+    "refreshing after five seconds preserves the pending two-way request and its reply token")
+print("PASS: five-second manual refresh, safe offline recovery, and pending sync preservation")
 return { client = client, advance = advance }

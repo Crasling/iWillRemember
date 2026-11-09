@@ -2292,9 +2292,11 @@ end)
 
 -- Reusable row frames for group log
 local glRowCache = {}
+local glExpanded = setmetatable({}, { __mode = "k" })
 
 function iWR:PopulateGroupLog()
     if not iWRMemory or not iWRMemory.GroupLog then return end
+    self:PruneGroupLog()
 
     -- Hide all cached rows first
     for _, row in ipairs(glRowCache) do
@@ -2333,6 +2335,16 @@ function iWR:PopulateGroupLog()
             row:SetPoint("TOPRIGHT", glContainer, "TOPRIGHT", 0, 0)
             row:EnableMouse(true)
 
+            local expand = CreateFrame("Button", nil, row)
+            iWR:StyleButton(expand)
+            expand:SetSize(20, 20)
+            expand:SetPoint("TOPLEFT", row, "TOPLEFT", 6, -7)
+            local expandText = expand:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            expandText:SetPoint("CENTER")
+            row.expand, row.expandText = expand, expandText
+
+            row.visitLines = {}
+
             local rowBackground = row:CreateTexture(nil, "BACKGROUND")
             rowBackground:SetAllPoints(row)
             row.rowBackground = rowBackground
@@ -2351,7 +2363,7 @@ function iWR:PopulateGroupLog()
             -- Race and class icons
             local raceIcon = row:CreateTexture(nil, "ARTWORK")
             raceIcon:SetSize(20, 20)
-            raceIcon:SetPoint("LEFT", row, "LEFT", 8, 0)
+            raceIcon:SetPoint("TOPLEFT", row, "TOPLEFT", 34, -7)
             row.raceIcon = raceIcon
 
             local classIcon = row:CreateTexture(nil, "ARTWORK")
@@ -2374,13 +2386,15 @@ function iWR:PopulateGroupLog()
             nameText:SetPoint("LEFT", classIcon, "RIGHT", 8, 0)
             nameText:SetWidth(155)
             nameText:SetJustifyH("LEFT")
+            nameText:SetWordWrap(false)
             row.nameText = nameText
 
             -- Zone name
             local zoneText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             zoneText:SetPoint("LEFT", nameText, "RIGHT", 5, 0)
-            zoneText:SetWidth(160)
+            zoneText:SetWidth(134)
             zoneText:SetJustifyH("LEFT")
+            zoneText:SetWordWrap(false)
             row.zoneText = zoneText
 
             -- Date
@@ -2410,7 +2424,7 @@ function iWR:PopulateGroupLog()
             dismissIcon:SetTexture("Interface\\Buttons\\UI-GroupLoot-Pass-Up")
 
             -- Anchor from the right: dismiss first, then editBtn to its left
-            dismissBtn:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+            dismissBtn:SetPoint("TOPRIGHT", row, "TOPRIGHT", -8, -5)
             editBtn:SetPoint("RIGHT", dismissBtn, "LEFT", -4, 0)
             row.dismissBtn = dismissBtn
 
@@ -2423,6 +2437,37 @@ function iWR:PopulateGroupLog()
         row:SetPoint("TOPRIGHT", glContainer, "TOPRIGHT", 0, yOffset)
         row:Show()
         row.rowBackground:SetColorTexture(displayIndex % 2 == 0 and 0.12 or 0.035, displayIndex % 2 == 0 and 0.085 or 0.03, displayIndex % 2 == 0 and 0.04 or 0.024, displayIndex % 2 == 0 and 0.34 or 0.62)
+
+        local expanded = glExpanded[entry] == true
+        row.expandText:SetText(expanded and "-" or "+")
+        for _, line in ipairs(row.visitLines) do line:Hide() end
+        if expanded then
+            local lines = iWR:GetGroupLogVisitLines(entry)
+            -- Use a separate single-line label for each visit. A no-wrap font
+            -- string containing the entire history can show only its first line.
+            for index, text in ipairs(lines) do
+                local line = row.visitLines[index]
+                if not line then
+                    line = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                    local top = -38 - (index - 1) * 18
+                    line:SetPoint("TOPLEFT", row, "TOPLEFT", 36, top)
+                    line:SetPoint("TOPRIGHT", row, "TOPRIGHT", -12, top)
+                    line:SetHeight(18)
+                    line:SetJustifyH("LEFT")
+                    line:SetJustifyV("MIDDLE")
+                    line:SetWordWrap(false)
+                    line:SetMaxLines(1)
+                    row.visitLines[index] = line
+                end
+                line:SetText(text)
+                line:Show()
+            end
+            row:SetHeight(ROW_HEIGHT + #lines * 18 + 10)
+        else row:SetHeight(ROW_HEIGHT) end
+        row.expand:SetScript("OnClick", function()
+            glExpanded[entry] = not glExpanded[entry]
+            iWR:PopulateGroupLog()
+        end)
 
         local raceToken = entry.race and tostring(entry.race):upper() or nil
         row.raceIcon:SetTexture(IWR_RACE_ICONS[raceToken] or "Interface\\Icons\\Achievement_General")
@@ -2449,23 +2494,7 @@ function iWR:PopulateGroupLog()
         row.nameText:SetText(nameColor .. entry.name)
 
         -- Zone with instance indicator
-        local zoneStr = entry.zone or ""
-        if entry.isInstance then
-            local instanceLabel = ""
-            if entry.instanceType == "party" then
-                instanceLabel = " |cFF00CCFF(Dungeon)|r"
-            elseif entry.instanceType == "raid" then
-                instanceLabel = " |cFFFF8800(Raid)|r"
-            elseif entry.instanceType == "pvp" then
-                instanceLabel = " |cFFFF0000(BG)|r"
-            elseif entry.instanceType == "arena" then
-                instanceLabel = " |cFFFF0000(Arena)|r"
-            else
-                instanceLabel = " |cFF808080(Instance)|r"
-            end
-            zoneStr = zoneStr .. instanceLabel
-        end
-        row.zoneText:SetText(zoneStr)
+        row.zoneText:SetText(iWR:GetGroupLogSummary(entry))
 
         -- Date
         row.dateText:SetText(entry.date or "")
@@ -2479,7 +2508,8 @@ function iWR:PopulateGroupLog()
             GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
             GameTooltip:AddLine(nameColor .. capturedEntry.name .. "-" .. capturedEntry.realm, 1, 1, 1)
             if capturedEntry.race and capturedEntry.race ~= "" then
-                GameTooltip:AddLine("Race: " .. capturedEntry.race, 0.75, 0.75, 0.75)
+                local raceName = capturedEntry.race:upper() == "SCOURGE" and "Undead" or capturedEntry.race
+                GameTooltip:AddLine("Race: " .. raceName, 0.75, 0.75, 0.75)
             end
             if capturedEntry.class and capturedEntry.class ~= "" then
                 GameTooltip:AddLine("Class: " .. capturedEntry.class, 0.75, 0.75, 0.75)
@@ -2489,6 +2519,7 @@ function iWR:PopulateGroupLog()
                 GameTooltip:AddLine(L["DetailInstanceType"] .. " " .. (capturedEntry.instanceType or "none"), 1, 0.82, 0)
             end
             GameTooltip:AddLine(L["DetailDate"] .. " " .. (capturedEntry.date or ""), 1, 0.82, 0)
+            GameTooltip:AddLine("Expand to see this group session's zones and dungeon visits.", 0.75, 0.75, 0.75, true)
             GameTooltip:Show()
         end)
         row:SetScript("OnLeave", function()
@@ -2519,9 +2550,10 @@ function iWR:PopulateGroupLog()
         row.editBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
         -- Dismiss button: remove this entry from the log
-        local capturedEntryIndex = i
         row.dismissBtn:SetScript("OnClick", function()
-            table.remove(iWRMemory.GroupLog, capturedEntryIndex)
+            for index, logged in ipairs(iWRMemory.GroupLog) do
+                if logged == capturedEntry then table.remove(iWRMemory.GroupLog, index); break end
+            end
             iWR:PopulateGroupLog()
         end)
         row.dismissBtn:SetScript("OnEnter", function(self)
@@ -2532,7 +2564,7 @@ function iWR:PopulateGroupLog()
         end)
         row.dismissBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-        yOffset = yOffset - ROW_HEIGHT
+        yOffset = yOffset - row:GetHeight()
         end -- end of else (skip players already in DB)
     end
 

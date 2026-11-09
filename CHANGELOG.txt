@@ -2,6 +2,14 @@
 iWillRemember - Changelog
 ================================================================================
 
+v0.24.6 - Group Log and Sync Fixes
+--------------------------------------------------------------------------------
+[CHANGED] Group Log shows each group session with expandable visit history
+[FIXED] Chat icon hover no longer causes errors
+[FIXED] Notes can be saved while target details are hidden
+[FIXED] Expanded Group Log shows every visit
+[FIXED] Refresh status checks sooner and reconnects without the long wait
+
 v0.24.5 - Settings Updates
 --------------------------------------------------------------------------------
 [ADDED] Custom drake colors with matching button borders

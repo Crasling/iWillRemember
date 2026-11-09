@@ -76,13 +76,14 @@ function iWR:IsForeverClient()
 end
 
 local function TrimPlayerName(value)
-    if type(value) ~= "string" then return "" end
+    if (issecretvalue and issecretvalue(value)) or type(value) ~= "string" then return "" end
     return value:gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
 end
 
 -- Forever has no realms. Blizzard may expose the same two-part character as
 -- "Firstname Lastname" through unit APIs and "Firstname-Lastname" in chat/comms.
 function iWR:ResolvePlayerIdentity(name, realm)
+    if issecretvalue and (issecretvalue(name) or issecretvalue(realm)) then return nil end
     name = TrimPlayerName(name)
     realm = TrimPlayerName(realm)
 
@@ -100,17 +101,41 @@ end
 
 function iWR:GetPlayerDatabaseKey(name, realm)
     local resolvedName, resolvedRealm = self:ResolvePlayerIdentity(name, realm)
-    if resolvedName == "" then return nil end
+    if not resolvedName or resolvedName == "" then return nil end
     return resolvedName .. "-" .. resolvedRealm, resolvedName, resolvedRealm
 end
 
 function iWR:GetUnitPlayerIdentity(unit)
+    if issecretvalue and issecretvalue(unit) then return nil end
     local name, secondName = UnitName(unit)
-    if not name then return nil, "Forever" end
+    if (issecretvalue and (issecretvalue(name) or issecretvalue(secondName))) or type(name) ~= "string" then return nil end
     return self:ResolvePlayerIdentity(name, secondName)
 end
 
+function iWR:ResolveNoteIdentity(enteredName)
+    if self:IsSharingSecret(enteredName) or type(enteredName) ~= "string" then return nil end
+    local cleanName = StripColorCodes(enteredName)
+    local enteredRealm
+    if not self:IsForeverClient() then
+        local plainName, explicitRealm = cleanName:match("^([^-]+)%-(.+)$")
+        if plainName then cleanName, enteredRealm = plainName, explicitRealm end
+    end
+    local databaseKey, name, realm = self:GetPlayerDatabaseKey(cleanName, enteredRealm)
+    if not databaseKey then return nil end
+
+    -- The editor's name is sufficient. Only use target information when it is
+    -- readable and belongs to that name; hostile target identities may be hidden.
+    local targetName, targetRealm = self:SharingCall(self.GetUnitPlayerIdentity, self, "target")
+    local targetKey = targetName and self:GetPlayerDatabaseKey(targetName, targetRealm)
+    if targetKey and self:IsSamePlayerName(cleanName, targetName)
+        and not enteredRealm then
+        databaseKey, name, realm = self:GetPlayerDatabaseKey(targetName, targetRealm)
+    end
+    return databaseKey, name, realm, targetKey ~= nil and databaseKey == targetKey
+end
+
 function iWR:NormalizePlayerDatabaseKey(databaseKey, data)
+    if issecretvalue and issecretvalue(databaseKey) then return nil end
     if type(databaseKey) ~= "string" then return databaseKey end
     if self:IsForeverClient() then
         local displayName = type(data) == "table" and StripColorCodes(data[4] or "") or ""
@@ -145,6 +170,7 @@ function iWR:GetDatabaseEntry(databaseKey)
 end
 
 function iWR:VerifyInputNote(Note)
+    if self:IsSharingSecret(Note) then return false end
     if Note ~= L["DefaultNameInput"]
         and Note ~= L["DefaultNoteInput"]
         and Note ~= ""
@@ -628,6 +654,7 @@ function iWR:GetChatIcon(typeIndex)
 end
 
 function iWR:VerifyInputName(Name)
+    if self:IsSharingSecret(Name) or type(Name) ~= "string" then return false end
     local verifyName = StripColorCodes(Name)
     if verifyName ~= L["DefaultNameInput"]
         and verifyName ~= L["DefaultNoteInput"]
@@ -878,7 +905,7 @@ function iWR:HandleGroupRosterUpdate(wasInGroup)
     if not isInGroup and wasInGroup then
         -- Player has left the group, wipe warned players and session log tracker
         wipe(iWR.WarnedPlayers)
-        wipe(iWR.LoggedThisSession)
+        iWR:EndGroupLogSession()
         iWR:DebugMsg("Player has left the group. Warned players list wiped.", 3)
     else
         iWR:CheckGroupMembersAgainstDatabase()
@@ -964,111 +991,7 @@ end
 -- ╭────────────────────────────────────────────────╮
 -- │      Group Log: Automatic Member Logging      │
 -- ╰────────────────────────────────────────────────╯
-function iWR:LogGroupMembers()
-    if not iWRSettings.GroupLogEnabled then return end
-    if not iWRMemory.GroupLog then iWRMemory.GroupLog = {} end
-
-    local numGroupMembers = GetNumGroupMembers()
-    if numGroupMembers <= 1 then return end
-
-    local isInRaid = IsInRaid()
-    local playerName = iWR:GetUnitPlayerIdentity("player")
-    local maxPartyIndex = isInRaid and numGroupMembers or (numGroupMembers - 1)
-
-    -- Get current zone and instance info
-    local zoneName = GetRealZoneText() or ""
-    local inInstance, instanceType = IsInInstance()
-
-    for i = 1, maxPartyIndex do
-        local unitID = isInRaid and "raid" .. i or "party" .. i
-        local targetName, targetRealm = UnitName(unitID)
-
-        -- Skip self, unknown/nil names, and units that don't exist
-        if targetName and targetName ~= UNKNOWNOBJECT and targetName ~= "Unknown"
-            and UnitExists(unitID) and not UnitIsUnit(unitID, "player") then
-            if targetRealm == "" or targetRealm == nil then
-                targetRealm = iWR.CurrentRealm
-            end
-
-            local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
-            local sessionKey = capitalizedName .. "-" .. capitalizedRealm
-
-            -- Skip if already logged this session
-            if not iWR.LoggedThisSession[sessionKey] then
-                iWR.LoggedThisSession[sessionKey] = true
-
-                -- Get class info
-                local _, classToken = UnitClass(unitID)
-                local _, raceToken = UnitRace(unitID)
-
-                -- Check if player already has a note in database
-                local databaseKey = capitalizedName .. "-" .. capitalizedRealm
-                local hasNote = iWRDatabase[databaseKey] ~= nil
-
-                -- Create log entry
-                local entry = {
-                    name = capitalizedName,
-                    realm = capitalizedRealm,
-                    class = classToken or "UNKNOWN",
-                    race = raceToken or "",
-                    faction = UnitFactionGroup(unitID) or "",
-                    timestamp = time(),
-                    date = date("%Y-%m-%d"),
-                    zone = zoneName,
-                    isInstance = inInstance or false,
-                    instanceType = instanceType or "none",
-                    hasNote = hasNote,
-                }
-
-                table.insert(iWRMemory.GroupLog, entry)
-                iWR:DebugMsg("Group Log: Logged " .. capitalizedName .. "-" .. capitalizedRealm .. " in " .. zoneName, 3)
-            end
-        end
-    end
-end
-
-function iWR:UpdateGroupLogZone()
-    if not iWRSettings.GroupLogEnabled then return end
-    if not iWRMemory.GroupLog then return end
-    if not IsInGroup() then return end
-
-    local now = time()
-    local window = iWR.CONSTANTS.GROUP_LOG_ZONE_UPDATE_WINDOW
-    local zoneName = GetRealZoneText() or ""
-    local inInstance, instanceType = IsInInstance()
-
-    -- Update recent entries (within 10 min) that belong to current session
-    for i = #iWRMemory.GroupLog, 1, -1 do
-        local entry = iWRMemory.GroupLog[i]
-        if not entry then break end
-
-        -- Only update entries from this session that are within the time window
-        local age = now - (entry.timestamp or 0)
-        if age > window then break end -- Entries are chronological, older ones are earlier
-
-        local sessionKey = entry.name .. "-" .. entry.realm
-        if iWR.LoggedThisSession[sessionKey] then
-            entry.zone = zoneName
-            entry.isInstance = inInstance or false
-            entry.instanceType = instanceType or "none"
-        end
-    end
-end
-
-function iWR:PruneGroupLog()
-    if not iWRMemory.GroupLog then return end
-    local maxEntries = iWR.CONSTANTS.MAX_GROUP_LOG_ENTRIES
-    while #iWRMemory.GroupLog > maxEntries do
-        table.remove(iWRMemory.GroupLog, 1) -- Remove oldest (first) entry
-    end
-end
-
-function iWR:ClearGroupLog()
-    if iWRMemory.GroupLog then
-        wipe(iWRMemory.GroupLog)
-    end
-    iWR:DebugMsg("Group log cleared.", 3)
-end
+-- Session history and dungeon visits are managed in iWillRemember_GroupLog.lua.
 
 -- ╭────────────────────────────────────────╮
 -- │      Function: Update the Tooltip      │
@@ -1376,6 +1299,8 @@ end
 -- │      Colorize Player Name by Class     │
 -- ╰────────────────────────────────────────╯
 function iWR:ColorizePlayerNameByClass(playerName, class)
+    if self:IsSharingSecret(playerName) or type(playerName) ~= "string" then return "" end
+    if self:IsSharingSecret(class) then class = nil end
     if iWR.Colors.Classes[class] then
         return iWR.Colors.Classes[class] .. playerName .. iWR.Colors.Reset
     else
@@ -1570,7 +1495,8 @@ local function NormalizeRealmName(realm)
     return formattedRealm
 end
 
-local hookedChatIconFrames = {}
+local chatIconTooltipEventsRegistered = false
+local chatIconTooltipEventsUnavailable = false
 local activeChatIconTooltipFrame
 local chatIconTooltipMouseWasEnabled
 
@@ -1587,50 +1513,71 @@ local function HideChatIconTooltip(chatFrame)
     chatIconTooltipMouseWasEnabled = nil
 end
 
-local function HookChatIconTooltip(chatFrame)
-    if not chatFrame or not chatFrame.HookScript or hookedChatIconFrames[chatFrame] then return end
-    hookedChatIconFrames[chatFrame] = true
+local function ShowChatIconTooltip(self, link)
+    if not iWRSettings or not iWRSettings.ShowChatIcons or issecretvalue and issecretvalue(link) then
+        HideChatIconTooltip(self)
+        return
+    end
+    local databaseKey = type(link) == "string" and link:match("^addon:iWR:(.+)$")
+    databaseKey = databaseKey and iWR:NormalizePlayerDatabaseKey(databaseKey)
+    local data = databaseKey and iWRDatabase[databaseKey]
+    if not data or not GameTooltip then
+        HideChatIconTooltip(self)
+        return
+    end
 
-    chatFrame:HookScript("OnHyperlinkEnter", function(self, link)
-        local databaseKey = type(link) == "string" and link:match("^addon:iWR:(.+)$")
-        databaseKey = databaseKey and iWR:NormalizePlayerDatabaseKey(databaseKey)
-        local data = databaseKey and iWRDatabase[databaseKey]
-        if not data or not GameTooltip then
-            HideChatIconTooltip(self)
-            return
-        end
+    activeChatIconTooltipFrame = self
+    GameTooltip.iWRChatIconOwner = self
+    if chatIconTooltipMouseWasEnabled == nil and GameTooltip.IsMouseEnabled then
+        chatIconTooltipMouseWasEnabled = GameTooltip:IsMouseEnabled()
+    end
+    GameTooltip:EnableMouse(false)
+    GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
 
-        activeChatIconTooltipFrame = self
-        GameTooltip.iWRChatIconOwner = self
-        if chatIconTooltipMouseWasEnabled == nil and GameTooltip.IsMouseEnabled then
-            chatIconTooltipMouseWasEnabled = GameTooltip:IsMouseEnabled()
-        end
-        GameTooltip:EnableMouse(false)
-        GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
+    local typeIndex = tonumber(data[2]) or 0
+    local typeName = iWR:GetTypeName(typeIndex)
+    local displayName = StripColorCodes(data[4] or databaseKey)
+    GameTooltip:SetText(string.format(L["ChatIconTooltipTitle"], typeName or "iWR"), 1, 0.59, 0.09)
+    GameTooltip:AddLine(string.format(L["ChatIconTooltipPlayer"], displayName), 1, 1, 1)
+    if data[1] and data[1] ~= "" then
+        GameTooltip:AddLine(data[1], 1, 1, 1, true)
+    end
+    if iWRSettings.TooltipShowAuthor and data[6] and data[6] ~= "" then
+        local author = StripColorCodes(data[6])
+        local savedDate = data[5] and data[5] ~= "" and (" (" .. data[5] .. ")") or ""
+        GameTooltip:AddLine((L["DetailAuthor"] or "Author:") .. " " .. author .. savedDate, 0.75, 0.75, 0.75, true)
+    end
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine(L["ChatIconTooltipClick"], 1, 0.82, 0, true)
+    GameTooltip:Show()
+end
 
-        local typeIndex = tonumber(data[2]) or 0
-        local typeName = iWR:GetTypeName(typeIndex)
-        local displayName = StripColorCodes(data[4] or databaseKey)
-        GameTooltip:SetText(string.format(L["ChatIconTooltipTitle"], typeName or "iWR"), 1, 0.59, 0.09)
-        GameTooltip:AddLine(string.format(L["ChatIconTooltipPlayer"], displayName), 1, 1, 1)
-        if data[1] and data[1] ~= "" then
-            GameTooltip:AddLine(data[1], 1, 1, 1, true)
+function iWR:InitializeChatIconTooltips()
+    if chatIconTooltipEventsRegistered then return true end
+    if not EventRegistry or type(EventRegistry.RegisterCallback) ~= "function" then
+        if not chatIconTooltipEventsUnavailable then
+            self:DebugMsg("Chat icon tooltips: chat hover events are not available yet.", 3)
+            chatIconTooltipEventsUnavailable = true
         end
-        if iWRSettings.TooltipShowAuthor and data[6] and data[6] ~= "" then
-            local author = StripColorCodes(data[6])
-            local savedDate = data[5] and data[5] ~= "" and (" (" .. data[5] .. ")") or ""
-            GameTooltip:AddLine((L["DetailAuthor"] or "Author:") .. " " .. author .. savedDate, 0.75, 0.75, 0.75, true)
-        end
-        GameTooltip:AddLine(" ")
-        GameTooltip:AddLine(L["ChatIconTooltipClick"], 1, 0.82, 0, true)
-        GameTooltip:Show()
-    end)
-
-    chatFrame:HookScript("OnHyperlinkLeave", HideChatIconTooltip)
+        return false
+    end
+    -- Register outside chat-message filters. Blizzard dispatches these events
+    -- for every chat window, including temporary whisper windows.
+    EventRegistry:RegisterCallback("ChatFrame.OnHyperlinkEnter", function(_, chatFrame, link)
+        ShowChatIconTooltip(chatFrame, link)
+    end, self)
+    EventRegistry:RegisterCallback("ChatFrame.OnHyperlinkLeave", function(_, chatFrame)
+        HideChatIconTooltip(chatFrame)
+    end, self)
+    chatIconTooltipEventsRegistered = true
+    self:DebugMsg("Chat icon tooltips: registered chat hover events.", 3)
+    return true
 end
 
 -- Function to add relationship icons to chat messages
 local function AddRelationshipIconToChat(self, event, message, author, flags, ...)
+    if issecretvalue and (issecretvalue(message) or issecretvalue(author)) then return false, message, author, flags, ... end
+    if type(message) ~= "string" then return false, message, author, flags, ... end
     if iWRSettings.ShowChatIcons then
         if not author or author == "" then
             return false, message, author, flags, ...
@@ -1650,7 +1597,6 @@ local function AddRelationshipIconToChat(self, event, message, author, flags, ..
 
         -- Check the database using the constructed key
         if iWRDatabase[databaseKey] and not message:find("|Haddon:iWR:") then
-            HookChatIconTooltip(self)
             local iconPath = iWR:GetChatIcon(iWRDatabase[databaseKey][2])
 
             -- Zero dimensions make WoW scale the inline texture to this chat line's font.
@@ -2456,6 +2402,11 @@ end
 function iWR:AddNewNote(Name, Note, Type, personal)
     iWRNameInput:ClearFocus()
     iWRNoteInput:ClearFocus()
+    if self:IsSharingSecret(Name) or self:IsSharingSecret(Note) then
+        print(L["RestrictedNoteInput"])
+        self:DebugMsg("Note not saved: the entered name or note text is restricted.", 2)
+        return false
+    end
     if iWR:VerifyInputName(Name) then
         if iWR:VerifyInputNote(Note) then
             iWR:CreateNote(Name, tostring(Note), Type, personal)
@@ -2473,6 +2424,10 @@ end
 -- │      Clear Note      │
 -- ╰──────────────────────╯
 function iWR:ClearNote(Name)
+    if self:IsSharingSecret(Name) then
+        print(L["RestrictedNoteInput"])
+        return false
+    end
     -- Validate input name
     if not iWR:VerifyInputName(Name) then
         print(L["ClearInputError"])
@@ -2480,41 +2435,8 @@ function iWR:ClearNote(Name)
         return
     end
 
-    -- Determine target details
-    local targetNameWithRealm = GetUnitName("target", true) -- "Name-Realm"
-    local targetName = GetUnitName("target", false) -- "Name"
-    local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWR.CurrentRealm
-    targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
-
-    local uncoloredName = StripColorCodes(Name)
-
-    -- Determine the final name and realm to use
-    local finalName, finalRealm
-    if not iWR:IsForeverClient() and string.find(Name, "-") then
-        -- Case 1: Input name includes "-"
-        finalName, finalRealm = strsplit("-", Name)
-        iWR:DebugMsg("Input includes realm. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
-    elseif targetName and iWR:IsSamePlayerName(targetName, uncoloredName) then
-        -- Case 2: Input name matches target name
-        finalName = targetName
-        finalRealm = targetRealm
-        iWR:DebugMsg("Input matches target. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
-    else
-        -- Case 3: Input name does not include realm and does not match target name
-        finalName = Name
-        finalRealm = iWR.CurrentRealm
-        iWR:DebugMsg("Input differs from target. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
-    end
-
-    -- Validate final target name and realm
-    if not finalName or not finalRealm then
-        iWR:DebugMsg("Error on Deletion: " .. (finalName or "Nothing") .. ", " .. (finalRealm or "Nothing"), 1)
-        return
-    end
-
-    -- Format name and realm for database key
-    local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(StripColorCodes(finalName), finalRealm)
-    local databaseKey = capitalizedName .. "-" .. capitalizedRealm
+    local databaseKey = self:ResolveNoteIdentity(Name)
+    if not databaseKey then return false end
 
     -- Check if the key exists in the database
     if iWRDatabase[databaseKey] then
@@ -2806,52 +2728,37 @@ end
 -- │      Function: Create Note      │
 -- ╰─────────────────────────────────╯
 function iWR:CreateNote(Name, Note, Type, personal)
+    if self:IsSharingSecret(Name) or self:IsSharingSecret(Note) or self:IsSharingSecret(Type)
+        or self:IsSharingSecret(personal) then
+        print(L["RestrictedNoteInput"])
+        self:DebugMsg("Note not saved: an editor value is restricted.", 2)
+        return false
+    end
+    if type(Name) ~= "string" or type(Note) ~= "string" or type(Type) ~= "number"
+        or type(self.Colors[Type]) ~= "string" then
+        self:DebugMsg("Note not saved: invalid editor input.", 2)
+        return false
+    end
     -- Debug logging
     iWR:DebugMsg("New note Name: [|r" .. Name .. iWR.Colors.iWR .. "].", 3)
     iWR:DebugMsg("New note Note: [" .. (Note ~= "" and ("|r" .. Note .. iWR.Colors.iWR) or iWR.Colors.Reset .. "Nothing" .. iWR.Colors.iWR) .. "].", 3)
     iWR:DebugMsg("New note Type: [|r" .. iWR.Colors[Type] .. iWR:GetTypeName(Type) .. iWR.Colors.iWR .. "].", 3)
 
-    local playerName = iWR:GetUnitPlayerIdentity("player")
+    local playerName = self:SharingCall(self.GetUnitPlayerIdentity, self, "player")
+    if not playerName or playerName == "" then
+        print(L["RestrictedNoteInput"])
+        self:DebugMsg("Note not saved: the current character's name is unavailable.", 2)
+        return false
+    end
     local currentTime, currentDate = iWR:GetCurrentTimeByHours()
     local playerUpdate = false
 
-    -- Determine target details
-    local targetNameWithRealm = GetUnitName("target", true) -- "Name-Realm"
-    local targetName = GetUnitName("target", false) -- "Name"
-    local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWR.CurrentRealm
-    targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
-
-    local uncoloredName = StripColorCodes(Name)
-
-    -- Determine the final name and realm to use
-    local finalName, finalRealm
-    if not iWR:IsForeverClient() and string.find(Name, "-") then
-        -- Case 1: Input name includes "-"
-        finalName, finalRealm = strsplit("-", Name)
-        iWR:DebugMsg("Input includes realm. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
-    elseif targetName and iWR:IsSamePlayerName(targetName, uncoloredName) then
-        -- Case 2: Input name matches target name
-        finalName = targetName
-        finalRealm = targetRealm
-        iWR:DebugMsg("Input matches target. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
-    else
-        -- Case 3: Input name does not include realm and does not match target name
-        finalName = Name
-        finalRealm = iWR.CurrentRealm
-        iWR:DebugMsg("Input differs from target. Using: Name=" .. finalName .. ", Realm=" .. finalRealm, 3)
-    end
-
-    -- Strip color codes and validate name and realm
-    finalName = StripColorCodes(finalName)
-    if not finalName or not finalRealm then
-        iWR:DebugMsg("Error on creation: Name or Realm missing. Name: " .. (finalName or "nil") .. ", Realm: " .. (finalRealm or "nil"), 1)
-        return
-    end
-
-    -- Format name and realm for database key
-    local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(finalName, finalRealm)
-    local databaseKey = capitalizedName .. "-" .. capitalizedRealm
+    local databaseKey, capitalizedName, capitalizedRealm, targetMatches = self:ResolveNoteIdentity(Name)
+    if not databaseKey then return false end
     iWR:DebugMsg("Formatted database key: " .. databaseKey, 3)
+
+    local _, targetClass
+    if targetMatches then _, targetClass = self:SharingCall(UnitClass, "target") end
 
     -- Clear global tombstones if user is intentionally creating a note for this player
     if iWRSettings.DeletedEntries and iWRSettings.DeletedEntries[databaseKey] then
@@ -2866,9 +2773,8 @@ function iWR:CreateNote(Name, Note, Type, personal)
     if colorCode then
         dbName = colorCode .. capitalizedName
     else
-        if iWR:IsSamePlayerName(targetName, capitalizedName) then
-            local targetClass = select(2, UnitClass("target"))
-            dbName = targetClass and (iWR.Colors.Classes[targetClass] .. capitalizedName)
+        if targetClass and iWR.Colors.Classes[targetClass] then
+            dbName = iWR.Colors.Classes[targetClass] .. capitalizedName
         else
             dbName = iWR.Colors.Gray .. capitalizedName
             noClass = true
@@ -2876,7 +2782,8 @@ function iWR:CreateNote(Name, Note, Type, personal)
     end
 
     -- Note author
-    local noteAuthor = iWR:ColorizePlayerNameByClass(playerName, select(2, UnitClass("player")))
+    local _, playerClass = self:SharingCall(UnitClass, "player")
+    local noteAuthor = iWR:ColorizePlayerNameByClass(playerName, playerClass)
 
     -- Check if player exists in the database
     local existingData = iWR:GetDatabaseEntry(databaseKey)
@@ -2885,19 +2792,24 @@ function iWR:CreateNote(Name, Note, Type, personal)
     end
 
     -- Capture faction from target (if target matches this note)
-    local noteFaction = ""
-    local noteClass = existingData[12] or ""
-    local noteRace = existingData[13] or ""
+    local function readableText(value)
+        return not self:IsSharingSecret(value) and type(value) == "string" and value or nil
+    end
+    local noteFaction = readableText(existingData[8]) or ""
+    local noteClass = readableText(existingData[12]) or ""
+    local noteRace = readableText(existingData[13]) or ""
     local pendingIdentity = iWR.PendingNoteIdentity
-    if pendingIdentity and iWR:IsSamePlayerName(pendingIdentity.name, capitalizedName) then
-        noteClass = pendingIdentity.class or noteClass
-        noteRace = pendingIdentity.race or noteRace
+    if not self:IsSharingSecret(pendingIdentity) and type(pendingIdentity) == "table"
+        and iWR:IsSamePlayerName(pendingIdentity.name, capitalizedName) then
+        noteClass = readableText(pendingIdentity.class) or noteClass
+        noteRace = readableText(pendingIdentity.race) or noteRace
     end
     local noFaction = true
-    if targetName and iWR:IsSamePlayerName(targetName, capitalizedName) then
-        noteFaction = UnitFactionGroup("target") or ""
-        noteClass = select(2, UnitClass("target")) or noteClass
-        noteRace = select(2, UnitRace("target")) or noteRace
+    if targetMatches then
+        local _, targetRace = self:SharingCall(UnitRace, "target")
+        noteFaction = readableText(self:SharingCall(UnitFactionGroup, "target")) or noteFaction
+        noteClass = readableText(targetClass) or noteClass
+        noteRace = readableText(targetRace) or noteRace
     end
     if noteClass == "" and colorCode then
         local normalizedColor = colorCode:upper()
@@ -2946,7 +2858,7 @@ function iWR:CreateNote(Name, Note, Type, personal)
         currentDate,        -- [5]: Date
         noteAuthor,         -- [6]: Author
         capitalizedRealm,   -- [7]: Realm
-        noteFaction ~= "" and noteFaction or (existingData[8] or ""), -- [8]: Faction (preserve existing)
+        noteFaction,        -- [8]: Faction (preserve readable existing data)
         personalFlag or nil, -- [9]: Personal flag (true = not shared)
         history,            -- [10]: Notes history (nil if single note)
         existingData[11] or nil, -- [11]: Tombstones (preserved from existing entry)

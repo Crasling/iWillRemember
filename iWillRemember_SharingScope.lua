@@ -140,6 +140,7 @@ function iWR:ActivateSharingRuleset()
     end
     if self.ResetSharingSession then self:ResetSharingSession() end
     self.WarnedPlayers, self.ExpandedEntries, self.LoggedThisSession = {}, {}, {}
+    if self.PruneGroupLog then self:PruneGroupLog() end
     if self.detailFrame then self.detailFrame:Hide() end
     if self.RefreshSharingPanel then self:RefreshSharingPanel() end
     self:DebugMsg("Active sharing ruleset: " .. label .. " (" .. key .. ").", 3)

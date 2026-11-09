@@ -16,9 +16,17 @@ The scope includes the WoW project, region, game-mode record, active game mode, 
 
 Early 0.24.1 test builds recorded only a Hardcore/non-Hardcore scope. Those buckets are adopted once into the currently confirmed full server category, and their originals are retained. They are never duplicated into every PvE/PvP/RP category. The UI regression check also opens and reopens the parent Settings window to exercise its complete refresh callback.
 
-The real Refresh status and Sync now buttons are tested with Debug Mode on and off. Diagnostics include contact counts, the server ruleset, and reasons for waiting or skipping an action, including an empty whitelist or disabled sharing. Transport debug messages distinguish a queued handshake from an actual successful API send or failed send attempts.
+The real Refresh status and Sync now buttons are tested with Debug Mode on and off. Diagnostics include contact counts, the server ruleset, and reasons for waiting or skipping an action, including an empty whitelist or disabled sharing. Transport debug messages distinguish a queued handshake from an actual successful API send or failed send attempts. Manual checks may retry after five seconds and recover from a five-minute automatic pause only after availability is confirmed. Refresh preserves pending two-way requests and accepts delayed responses using the existing token.
+
+`group_log.lua` checks one row per player per group session, retained zones and dungeon visits, loading-screen event ordering, reloads, party/raid conversion, regrouping, dismissal, history limits, ruleset isolation, and the actual expand/collapse controls. Every fresh dungeon entrance is kept separately; the dungeon map ID is not treated as a unique run ID. Legacy records without session IDs remain intact rather than guessing which historical runs to merge.
 
 ## Wire and limits
+
+`notes_secret_values.lua` reproduces saving a readable, class-colored name while
+the current target's name is protected. It checks the full save and sharing path,
+protected second-name and metadata fields, author checks, retained note history,
+personal flags, deletion, and native realm handling. Protected stand-ins throw on
+string conversion or inspection so they cannot silently pass through formatting.
 
 Only `iWRShareV1`, wire version 1, is registered. Old friend-sharing prefixes are removed. HELLO/READY exchange ruleset and session IDs before DATA is accepted. Sync now includes a SYNC request in HELLO so both peers send a snapshot, even if the initiator has no notes. Repeated handshakes do not create reply loops, and an existing status request can be upgraded to two-way sync. Outgoing databases require a 0.24.3+ receiver to avoid older destructive merge behavior. ACK confirms a complete, validated transfer. Duplicate parts are harmless; incomplete or malformed snapshots cannot partially merge. Reloading a receiver restarts the session and pending transfer. A removed contact loses access to queued packets and open removal confirmations immediately.
 

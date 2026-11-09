@@ -56,7 +56,6 @@ iWR.CONSTANTS = {
 
     -- Group Log
     MAX_GROUP_LOG_ENTRIES = 200,
-    GROUP_LOG_ZONE_UPDATE_WINDOW = 600, -- 10 minutes: update zone on recent entries when zone changes
 }
 
 -- ╭────────────────────────────────────────────────────────────────────────────────╮
