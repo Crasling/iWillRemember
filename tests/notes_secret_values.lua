@@ -74,6 +74,10 @@ assert(entry[1] == "Updated" and entry[8] == "Horde" and entry[12] == "DRUID" an
     "unreadable target and pending metadata preserve the existing class, race, and faction")
 assert(entry[10] and entry[10][#entry[10]][1] == "Hidden surname", "editing still preserves note history")
 plain(entry)
+addon.PendingNoteIdentity = { name = "Argonous Moo", class = "DRUID", race = "Tauren", faction = "Horde" }
+entry[8] = ""
+addon:CreateNote(coloredName, "Restored after combat", -10, false)
+assert(env.iWRDatabase[key][8] == "Horde", "restored editor identity keeps the saved faction")
 targetClass, targetRace, targetFaction = "DRUID", "Tauren", "Horde"
 addon:CreateNote("Argonous Moo", "Readable target", 6, true)
 entry = env.iWRDatabase[key]

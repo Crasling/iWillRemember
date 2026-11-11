@@ -23,6 +23,7 @@ combatEventFrame:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_REGEN_DISABLED" then
         iWR.State.InCombat = true
 
+        iWR.PendingCombatNoteDraft = iWR.CaptureCombatNoteDraft and iWR:CaptureCombatNoteDraft() or nil
         if iWRPanel then iWRPanel:Hide() end
         if iWRDatabaseFrame then iWRDatabaseFrame:Hide() end
         if iWR.SettingsFrame then iWR.SettingsFrame:Hide() end
@@ -35,6 +36,9 @@ combatEventFrame:SetScript("OnEvent", function(_, event)
 
     elseif event == "PLAYER_REGEN_ENABLED" then
         iWR.State.InCombat = false
+        local draft = iWR.PendingCombatNoteDraft
+        iWR.PendingCombatNoteDraft = nil
+        if draft and iWR.RestoreCombatNoteDraft then iWR:RestoreCombatNoteDraft(draft) end
         iWR:DebugMsg("Left combat, UI interaction enabled.", 3)
     end
 end)

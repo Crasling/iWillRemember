@@ -2,6 +2,12 @@
 iWillRemember - Changelog
 ================================================================================
 
+v0.24.7 - Notes and Group Log
+--------------------------------------------------------------------------------
+[IMPROVED] Cleaner note and database windows
+[IMPROVED] Group Log shows the latest dungeon or zone at a glance
+[FIXED] Unfinished notes reopen after combat
+
 v0.24.6 - Group Log and Sync Fixes
 --------------------------------------------------------------------------------
 [CHANGED] Group Log shows each group session with expandable visit history

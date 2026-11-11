@@ -2337,6 +2337,7 @@ end
 -- │      Close Menu Window      │
 -- ╰─────────────────────────────╯
 function iWR:MenuClose()
+    self.PendingCombatNoteDraft = nil
     iWRNameInput:SetText(L["DefaultNameInput"])
     iWRNoteInput:SetText(L["DefaultNoteInput"])
     if iWR.SetPersonalCheckbox then iWR:SetPersonalCheckbox(false) end
@@ -2803,6 +2804,7 @@ function iWR:CreateNote(Name, Note, Type, personal)
         and iWR:IsSamePlayerName(pendingIdentity.name, capitalizedName) then
         noteClass = readableText(pendingIdentity.class) or noteClass
         noteRace = readableText(pendingIdentity.race) or noteRace
+        noteFaction = readableText(pendingIdentity.faction) or noteFaction
     end
     local noFaction = true
     if targetMatches then

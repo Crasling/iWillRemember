@@ -156,8 +156,19 @@ end
 
 function iWR:GetGroupLogSummary(entry)
     local visits = entry.visits or {}
-    if #visits <= 1 then return entry.zone or "" end
-    return #visits .. " visits"
+    local latestZone
+    for index = #visits, 1, -1 do
+        local visit = visits[index]
+        local zone = type(visit) == "table" and visit.zone
+        if type(zone) == "string" and zone ~= "" then
+            if visit.instanceType == "party" or visit.instanceType == "raid"
+                or (visit.isInstance and visit.instanceType ~= "pvp" and visit.instanceType ~= "arena") then
+                return zone
+            end
+            latestZone = latestZone or zone
+        end
+    end
+    return latestZone or entry.zone or ""
 end
 
 function iWR:GetGroupLogVisitLines(entry)

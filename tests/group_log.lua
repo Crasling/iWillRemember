@@ -42,6 +42,13 @@ assert(#first.visits == 4 and first.visits[3].mapID == 389 and first.visits[4].m
 zone, kind, map = "The Barrens", "none", 1; log()
 zone, kind, map = "Wailing Caverns", "party", 43; log()
 assert(#first.visits == 6, "another entrance to the same dungeon is retained as a separate visit")
+assert(addon:GetGroupLogSummary(first) == "Wailing Caverns", "the latest dungeon appears in the collapsed row")
+local laterZone = env.CopyTable(first)
+laterZone.visits[#laterZone.visits + 1] = { zone = "Durotar", isInstance = false }
+assert(addon:GetGroupLogSummary(laterZone) == "Wailing Caverns", "a later outdoor zone does not replace a dungeon")
+assert(addon:GetGroupLogSummary({ visits = { { zone = "The Barrens" }, { zone = "Durotar" } } }) == "Durotar",
+    "without a dungeon the latest zone appears in the collapsed row")
+assert(addon:GetGroupLogSummary({ zone = "Old Dungeon" }) == "Old Dungeon", "legacy rows keep their location")
 reload(); log()
 assert(#entries == 2 and #first.visits == 6, "reload in the same instance preserves the group and current visit")
 addon:OnGroupLogWorldEvent("PLAYER_ENTERING_WORLD", false, true)
@@ -126,6 +133,7 @@ env.glScrollFrame.height = 100
 env.IWR_RACE_ICONS, env.CLASS_ICON_TCOORDS, env.RAID_CLASS_COLORS = {}, {}, {}
 env.L, addon.Colors.Default = {}, ""
 function addon:StyleButton() end
+addon.StyleSettingsButton = function() end
 local file = assert(io.open("iWillRemember_Frames.lua", "rb"))
 local source = file:read("*a"):gsub("\r\n", "\n"); file:close()
 source = assert(source:match("local glRowCache = %{%}.-\nend\n"))
@@ -135,6 +143,7 @@ addon:PopulateGroupLog()
 local row
 for _, item in ipairs(widgets) do if type(rawget(item, "expand")) == "table" then row = item; break end end
 assert(row and row:GetHeight() == 34 and row.expandText.text == "+", "session row starts collapsed")
+assert(row.zoneText.text == "Wailing Caverns", "the collapsed row names the latest dungeon before expansion")
 row.expand.scripts.OnClick()
 local visitText = addon:GetGroupLogVisitLines(first)
 assert(row:GetHeight() > 34 and #row.visitLines == #first.visits, "expansion creates a separate line for each retained visit")
@@ -151,8 +160,8 @@ while #sixVisits.visits > 6 do table.remove(sixVisits.visits) end
 entries[1] = sixVisits
 addon:PopulateGroupLog()
 row.expand.scripts.OnClick()
-assert(row:GetHeight() == 34 + 6 * 18 + 10 and addon:GetGroupLogSummary(sixVisits) == "6 visits",
-    "the six-visit summary and expanded height agree")
+assert(row:GetHeight() == 34 + 6 * 18 + 10 and addon:GetGroupLogSummary(sixVisits) == "Wailing Caverns",
+    "the six-visit history keeps the dungeon summary")
 for index = 1, 6 do
     assert(row.visitLines[index].shown and row.visitLines[index].text == addon:GetGroupLogVisitLines(sixVisits)[index],
         "all six visits are individually visible")

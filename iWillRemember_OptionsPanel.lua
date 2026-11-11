@@ -32,6 +32,7 @@ local function StyleSettingsSurface(frame, header)
     else frame:SetBackdropColor(0.025, 0.023, 0.020, 0.98) end
     frame:SetBackdropBorderColor(0.32, 0.25, 0.14, 1)
 end
+iWR.StyleSettingsSurface = StyleSettingsSurface
 
 local function StyleSettingsButton(button, destructive)
     button.iWRSettingsControl = true
@@ -40,6 +41,7 @@ local function StyleSettingsButton(button, destructive)
     -- Replacing the backdrop resets its tint, so restore this button's colors.
     iWR:SetButtonActive(button, button.iWRActive)
 end
+iWR.StyleSettingsButton = StyleSettingsButton
 
 local function CreateAppearanceReset(parent, hint, onClick)
     local button = CreateFrame("Button", nil, parent)
