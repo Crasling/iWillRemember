@@ -322,11 +322,10 @@ helpText:SetTextColor(1, 0.59, 0.09)
 helpIcon:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:SetText(L["HelpTooltipTitle"], 1, 0.85, 0.1)
-    GameTooltip:AddLine(L["HelpUse"], 1, 0.82, 0, true)
-    GameTooltip:AddLine(L["WhitelistSharingHelp"], 1, 0.82, 0, true)
-    GameTooltip:AddLine(L["HelpClear"], 1, 0.82, 0, true)
-    GameTooltip:AddLine(L["HelpSettings"], 1, 0.82, 0, true)
-    GameTooltip:AddLine(L["HelpDiscord"], 1, 0.82, 0, true)
+    for _, key in ipairs({ "HelpUse", "HelpSave", "HelpSharing",
+        "HelpClear", "HelpSettings", "HelpDiscord" }) do
+        GameTooltip:AddLine(L[key], 1, 1, 1, true)
+    end
     GameTooltip:Show()
 end)
 helpIcon:SetScript("OnLeave", function() GameTooltip:Hide() end)

@@ -2,6 +2,10 @@
 iWillRemember - Changelog
 ================================================================================
 
+v0.24.8 - Menu Help
+--------------------------------------------------------------------------------
+[IMPROVED] Updated the note editor's help for Simple and Advanced modes and private notes.
+
 v0.24.7 - Notes and Group Log
 --------------------------------------------------------------------------------
 [IMPROVED] Cleaner note and database windows

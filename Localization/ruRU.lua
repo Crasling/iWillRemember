@@ -21,7 +21,7 @@ if not L then return end
 L["ShowPlatynatorIcons"] = "Show Icons on Platynator Nameplates"
 L["DescShowPlatynatorIcons"] = "|cFF808080Shows the saved relationship icon beside tracked players' nameplates when Platynator is loaded.|r"
 L["TabPlatynator"] = "Platynator"
-L["PlatynatorSettings"] = Colors.iWR .. "Platynator Nameplates"
+L["PlatynatorSettings"] = "|cffff9716Platynator Nameplates"
 L["PlatynatorSettingsInfo"] = "Configure how iWillRemember relationship icons appear on Platynator nameplates. Changes are shown immediately on visible nameplates."
 L["PlatynatorIconOffsetX"] = "Horizontal position"
 L["PlatynatorIconOffsetY"] = "Vertical position"
@@ -131,10 +131,12 @@ L["DBNameNotFound1"] = Colors.iWR .. "[iWR]: Имя [|r"
 L["DBNameNotFound2"] = Colors.iWR .. "] не найдено в базе данных."
 
 L["HelpSync"] = Colors.Yellow .. "Как синхронизировать: " .. Colors.iWR .. "Добавьте своих друзей в социальную панель в игре, это не будет распространяться на друзей Battle.Net (REAL ID), только на друзей, добавленных в список друзей World of Warcraft, и вам обоим нужно добавить друг друга для успешной синхронизации."
-L["HelpUse"] = Colors.Yellow .. "Как использовать: " .. Colors.iWR .. "Выберите игрока или введите его имя вручную, при необходимости добавьте заметку и нажмите Уважаемый, Нравится, Не нравится или Ненавижу, чтобы сохранить игрока в базе данных."
-L["HelpClear"] = Colors.Yellow .. "Как очистить: " .. Colors.iWR .. "При нажатии кнопки Очистить имя в текстовом поле имени игрока будет удалено из базы данных, вы также можете удалить их из базы данных с помощью кнопки удаления или просто отредактировать из базы данных."
-L["HelpSettings"] = Colors.Yellow .. "Меню настроек: " .. Colors.iWR .. "ПКМ по иконке на миникарте, чтобы открыть меню настроек."
-L["HelpDiscord"] = Colors.Yellow .."Помощь в Discord: " .. Colors.iWR .. "Нажмите кнопку с вопросительным знаком без имени игрока, чтобы вставить код в поле заметки для копирования [https://discord.gg/8nnt25aw8B]"
+L["HelpUse"] = Colors.Yellow .. "Игрок: " .. Colors.White .. "Выберите игрока, откройте создание заметки через его контекстное меню или введите полное имя. При желании добавьте текст заметки." -- AI translated
+L["HelpSave"] = Colors.Yellow .. "Сохранение: " .. Colors.White .. "В расширенном режиме выберите ненулевой уровень отношения и нажмите сохранение заметки. В простом режиме нажмите кнопку отношения." -- AI translated
+L["HelpSharing"] = Colors.Yellow .. "Обмен: " .. Colors.White .. "Оба игрока должны добавить друг друга в белый список. Личные заметки не передаются." -- AI translated
+L["HelpClear"] = Colors.Yellow .. "Очистка: " .. Colors.White .. "Удаляет сохранённую запись указанного игрока и историю заметок. Для просмотра и изменения записей откройте базу данных." -- AI translated
+L["HelpSettings"] = Colors.Yellow .. "Миникарта: " .. Colors.White .. "ПКМ открывает настройки. Shift + ЛКМ открывает базу данных." -- AI translated
+L["HelpDiscord"] = Colors.Yellow .. "Discord: " .. Colors.White .. "Оставьте поле имени пустым и нажмите ?, чтобы поместить ссылку поддержки в поле заметки для копирования." -- AI translated
 
 L["Russian"] = "Русский язык"
 
@@ -280,7 +282,7 @@ L["FilterFriends"] = "Друзья" -- ИИ перевод
 L["EntriesCount"] = "%d записей" -- ИИ перевод
 L["EntriesFiltered"] = "%d из %d записей" -- ИИ перевод
 L["SearchPlaceholder"] = "Поиск..." -- ИИ перевод
-L["HelpTooltipTitle"] = "Как использовать iWillRemember" -- ИИ перевод
+L["HelpTooltipTitle"] = "Краткая справка iWillRemember" -- AI translated
 L["RightClickWhisper"] = "ПКМ — написать в шёпот" -- ИИ перевод
 L["LeftClickNotes"] = "ЛКМ по заметке — развернуть историю" -- ИИ перевод
 

@@ -179,6 +179,8 @@ end
 if not iWRMemory then
     iWRMemory = {}
 end
+-- Discard context recorded by the removed Recent Events experiment.
+iWRMemory.RecentInteractions = nil
 if not iWRSettings.SyncList then
     iWRSettings.SyncList = {}
 end
