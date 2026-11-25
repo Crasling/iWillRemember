@@ -109,7 +109,18 @@ function iWR:GetUnitPlayerIdentity(unit)
     if issecretvalue and issecretvalue(unit) then return nil end
     local name, secondName = UnitName(unit)
     if (issecretvalue and (issecretvalue(name) or issecretvalue(secondName))) or type(name) ~= "string" then return nil end
-    return self:ResolvePlayerIdentity(name, secondName)
+    name, secondName = self:ResolvePlayerIdentity(name, secondName)
+    if name == "" then return nil end
+    if self:IsForeverClient() and not name:find(" ", 1, true) and type(GetUnitName) == "function" then
+        local ok, fullName = pcall(GetUnitName, unit, true)
+        if ok and not (issecretvalue and issecretvalue(fullName)) and type(fullName) == "string" then
+            fullName = TrimPlayerName(fullName):gsub("%s*%(%*%)$", ""):gsub("%-Forever$", "")
+            fullName = self:ResolvePlayerIdentity(fullName)
+            -- Accept a surname only when the full name agrees with UnitName.
+            if fullName:match("^(%S+) %S") == name then name = fullName end
+        end
+    end
+    return name, secondName
 end
 
 function iWR:ResolveNoteIdentity(enteredName)
@@ -688,30 +699,11 @@ end
 -- │      Function: Add note to Tooltip     │
 -- ╰────────────────────────────────────────╯
 function iWR:AddNoteToGameTooltip(self, ...)
-    local name, unit = self:GetUnit()
+    local _, unit = self:GetUnit()
 
-    -- Secret value guard for retail 12.0+
-    local issv = _G.issecretvalue
-    if issv and unit and issv(unit) then return end
-
-    -- Check if the unit is valid and is a player
-    if not unit or not UnitIsPlayer(unit) then
-        return
-    end
-
-    -- Get the player's realm and format the database key
-    local targetNameWithRealm = GetUnitName(unit, true)
-    local targetName = GetUnitName(unit, false)
-
-    -- Secret value guard for name/realm
-    if issv and ((targetNameWithRealm and issv(targetNameWithRealm)) or (targetName and issv(targetName))) then return end
-
-    local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWR.CurrentRealm
-    targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
-    
-    -- Format name and realm for database key
-    local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
-    local databaseKey = capitalizedName .. "-" .. capitalizedRealm
+    if iWR:IsSharingSecret(unit) or not unit or not iWR:SharingCall(UnitIsPlayer, unit) then return end
+    local databaseKey = iWR:GetPlayerDatabaseKey(iWR:GetUnitPlayerIdentity(unit))
+    if not databaseKey then return end
 
     -- Get player data from the database
     local data = iWR:GetDatabaseEntry(databaseKey)
@@ -1048,15 +1040,8 @@ function iWR:SetTargetFrameShadowedUnitFrames()
     if shadowunitframes then
         iWR:DebugMsg("Using Portrait Parent: " .. portraitParent:GetName(), 3)
 
-        -- Get the target's name and realm for database lookup
-        local targetNameWithRealm = GetUnitName("target", true)
-        local targetName = GetUnitName("target", false)
-        local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWR.CurrentRealm
-        targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
-
-        -- Format name and realm for database key
-        local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
-        local databaseKey = capitalizedName .. "-" .. capitalizedRealm
+        local databaseKey = iWR:GetPlayerDatabaseKey(iWR:GetUnitPlayerIdentity("target"))
+        if not databaseKey then return end
 
         -- Ensure the database entry exists
         if not iWRDatabase[databaseKey] then
@@ -1118,7 +1103,7 @@ function iWR:SetTargetFrameShadowedUnitFrames()
     end
 end
 
-function iWR:SetTargetFrameForeverDragon()
+function iWR:SetTargetFrameForeverDragon(databaseKey)
     local portraitParent = _G["TargetFrame"]
     if portraitParent then
         local dragonOffsetX, dragonOffsetY = 6, 0
@@ -1134,15 +1119,8 @@ function iWR:SetTargetFrameForeverDragon()
             or portraitParent
         iWR:DebugMsg("Using Portrait Parent: " .. portraitParent:GetName(), 3)
 
-        -- Get the target's name and realm for database lookup
-        local targetNameWithRealm = GetUnitName("target", true)
-        local targetName = GetUnitName("target", false)
-        local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWR.CurrentRealm
-        targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
-
-        -- Format name and realm for database key
-        local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
-        local databaseKey = capitalizedName .. "-" .. capitalizedRealm
+        databaseKey = databaseKey or iWR:GetPlayerDatabaseKey(iWR:GetUnitPlayerIdentity("target"))
+        if not databaseKey then return end
 
         -- Ensure the database entry exists
         if not iWRDatabase[databaseKey] then
@@ -1216,15 +1194,11 @@ function iWR:SetTargetFrameDefault()
         return
     end
 
-    -- Get the target's name and realm for database lookup
-    local targetNameWithRealm = GetUnitName("target", true)
-    local targetName = GetUnitName("target", false)
-    local targetRealm = select(2, strsplit("-", targetNameWithRealm or "")) or iWR.CurrentRealm
-    targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
-
-    -- Format name and realm for database key
-    local capitalizedName, capitalizedRealm = iWR:FormatNameAndRealm(targetName, targetRealm)
-    local databaseKey = capitalizedName .. "-" .. capitalizedRealm
+    local databaseKey = iWR:GetPlayerDatabaseKey(iWR:GetUnitPlayerIdentity("target"))
+    if not databaseKey then
+        if iWR.customFrame then iWR.customFrame:Hide() end
+        return
+    end
 
     -- Ensure the database entry exists
     if not iWRDatabase[databaseKey] then
@@ -1319,26 +1293,11 @@ function iWR:SetTargetingFrame()
         iWR.customFrame:Hide()
     end
 
-    -- Get target name and realm
-    local targetNameWithRealm = GetUnitName("target", true)
-    local targetName = GetUnitName("target", false)
-
-    -- Secret value guard for retail 12.0+
-    local issv = _G.issecretvalue
-    if issv and ((targetNameWithRealm and issv(targetNameWithRealm)) or (targetName and issv(targetName))) then return end
-
-    local targetRealm = select(2, strsplit("-", targetNameWithRealm or ""))
-    targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
-
-    -- Use current realm if no realm is found
-    if not targetRealm or targetRealm == "" then
-        targetRealm = iWR.CurrentRealm
-    end
-
     -- Reset Classic texture only if iWR modified it
     if iWR.modifiedTargetTexture and TargetFrameTextureFrameTexture then
         -- Restore correct texture based on target classification (elite/rare/boss/normal)
-        local classification = UnitExists("target") and UnitClassification("target") or "normal"
+        local classification = iWR:SharingCall(UnitExists, "target")
+            and iWR:SharingCall(UnitClassification, "target") or "normal"
         if classification == "worldboss" or classification == "boss" then
             TargetFrameTextureFrameTexture:SetTexture("Interface\\TargetingFrame\\UI-TargetingFrame-Elite")
         elseif classification == "rareelite" then
@@ -1354,32 +1313,26 @@ function iWR:SetTargetingFrame()
         iWR.modifiedTargetTexture = false
     end
     -- Only proceed for players
-    if not UnitExists("target") or not UnitIsPlayer("target") then
-        if UnitExists("target") then
-            local classification = UnitClassification("target") or "normal"
-            iWR:DebugMsg("Target is NPC [" .. (GetUnitName("target", false) or "Unknown") .. "], classification: " .. classification .. ". Skipping. [SetTargetingFrame]", 3)
-        end
-        return
-    end
+    if not iWR:SharingCall(UnitExists, "target") or not iWR:SharingCall(UnitIsPlayer, "target") then return end
+
+    local databaseKey, targetName, targetRealm = iWR:GetPlayerDatabaseKey(iWR:GetUnitPlayerIdentity("target"))
+    if not databaseKey then return end
 
     -- Reset note input if Discord link is set (guard for panel not yet created)
     if iWRNoteInput and iWRNoteInput:GetText() == L["DiscordLink"] then
         iWRNoteInput:SetText(L["DefaultNoteInput"])
     end
 
-    -- Format the database key as "Name-Realm"
-    local databaseKey, resolvedTargetName, resolvedTargetRealm = iWR:GetPlayerDatabaseKey(targetName, targetRealm)
-    targetName, targetRealm = resolvedTargetName, resolvedTargetRealm
+    local _, class = iWR:SharingCall(UnitClass, "target")
+    local _, race = iWR:SharingCall(UnitRace, "target")
+    local faction = iWR:SharingCall(UnitFactionGroup, "target")
 
     -- Check if the target is in the database
     if not iWRDatabase[databaseKey] then
-        local _, class = UnitClass("target")
-        local _, race = UnitRace("target")
-
         -- Guild Watchlist: auto-import if target's guild is watched
-        local guildName = GetGuildInfo("target")
+        local guildName = iWR:SharingCall(GetGuildInfo, "target")
         if guildName and iWRSettings.GuildWatchlist and iWRSettings.GuildWatchlist[guildName] then
-            iWR:CheckGuildWatchlist(databaseKey, guildName, targetName, targetRealm, class, race, UnitFactionGroup("target"))
+            iWR:CheckGuildWatchlist(databaseKey, guildName, targetName, targetRealm, class, race, faction)
         end
 
         -- Re-check after potential guild import
@@ -1389,7 +1342,6 @@ function iWR:SetTargetingFrame()
             if databaseKey == "Baldvin-Spineshatter" and toc >= 20500 and toc < 30000 and UnitName("player") ~= "Baldvin" then
                 local currentTime, currentDate = iWR:GetCurrentTimeByHours()
                 local dbName = class and (iWR.Colors.Classes[class] .. "Baldvin") or (iWR.Colors.Gray .. "Baldvin")
-                local faction = UnitFactionGroup("target") or ""
                 iWRDatabase[databaseKey] = {
                     "iWR Author",                           -- [1] Note
                     10,                                     -- [2] Type (Superior)
@@ -1398,9 +1350,9 @@ function iWR:SetTargetingFrame()
                     currentDate,                            -- [5] Date
                     iWR.Colors.iWR .. "iWillRemember",      -- [6] Author
                     "Spineshatter",                         -- [7] Realm
-                    faction,                                -- [8] Faction
+                    faction or "",                          -- [8] Faction
                     [12] = class or "",                     -- [12] Class token
-                    [13] = select(2, UnitRace("target")) or "", -- [13] Race token
+                    [13] = race or "",                      -- [13] Race token
                 }
             else
                 if iWRNameInput then
@@ -1422,22 +1374,22 @@ function iWR:SetTargetingFrame()
     end
 
     -- If the target is in the database and has a valid type
-    if iWRDatabase[databaseKey][2] ~= 0 then
-        local _, class = UnitClass("target")
-        local _, race = UnitRace("target")
-
+    local data = iWRDatabase[databaseKey]
+    if data[2] ~= 0 then
         -- Verify and update the class in the database if necessary
-        iWR:VerifyTargetClassinDB(databaseKey, class)
-        iWRDatabase[databaseKey][12] = class or iWRDatabase[databaseKey][12] or ""
-        iWRDatabase[databaseKey][13] = race or iWRDatabase[databaseKey][13] or ""
+        local classUpdated = iWR:VerifyTargetClassinDB(databaseKey, class, targetName)
+        data[12] = class or data[12] or ""
+        data[13] = race or data[13] or ""
 
         -- Update faction if available and missing
-        local faction = UnitFactionGroup("target")
+        local factionAdded = faction and (not data[8] or data[8] == "")
+        if factionAdded then data[8] = faction end
+        if classUpdated or factionAdded then
+            local message = classUpdated and (factionAdded and "CharNoteClassFactionUpdate" or "CharNoteColorUpdate")
+                or "CharNoteFactionUpdate"
+            print(L[message]:format(data[4] or targetName))
+        end
         if faction then
-            if not iWRDatabase[databaseKey][8] or iWRDatabase[databaseKey][8] == "" then
-                iWRDatabase[databaseKey][8] = faction
-                print(L["CharNoteStart"] .. iWRDatabase[databaseKey][4] .. L["CharNoteFactionUpdate"])
-            end
             iWR:DebugMsg("Target faction: " .. faction, 3)
         end
 
@@ -1448,7 +1400,6 @@ function iWR:SetTargetingFrame()
 
         -- Auto-fill menu fields if open (target found in database)
         if iWRPanel and iWRPanel:IsVisible() then
-            local data = iWRDatabase[databaseKey]
             if iWRNoteInput and data[1] and data[1] ~= "" then
                 iWRNoteInput:SetText(data[1])
             elseif iWRNoteInput then
@@ -1462,7 +1413,7 @@ function iWR:SetTargetingFrame()
         -- Update the target frame based on settings
         if iWRSettings.UpdateTargetFrame then
             iWR:DebugMsg("TargetFrameType = " .. (iWR.ImagePath or "nil"), 3)
-            iWR:SetTargetFrameForeverDragon()
+            iWR:SetTargetFrameForeverDragon(databaseKey)
         end
 
         if targetRealm == iWR.CurrentRealm then
@@ -2040,20 +1991,10 @@ function iWR:RegisterChatFilters()
     end
 end
 
-function iWR:VerifyTargetClassinDB(databasekey, targetClass)
+function iWR:VerifyTargetClassinDB(databasekey, targetClass, resolvedTargetName)
     if iWRDatabase[databasekey][2] ~= 0 and targetClass then
-
-        -- Get target name and realm
-        local targetNameWithRealm = GetUnitName("target", true)
-        local targetName = GetUnitName("target", false)
-        local targetRealm = select(2, strsplit("-", targetNameWithRealm or ""))
-        targetName = targetName and targetName:match("^(.-)%s*%(%*%)$") or targetName -- Remove (*) if present
-
-        -- Use current realm if no realm is found
-        if not targetRealm or targetRealm == "" then
-            targetRealm = iWR.CurrentRealm
-        end
-        local _, resolvedTargetName = iWR:GetPlayerDatabaseKey(targetName, targetRealm)
+        resolvedTargetName = resolvedTargetName or iWR:GetUnitPlayerIdentity("target")
+        if not resolvedTargetName then return end
         local storedValue = iWRDatabase[databasekey][4] or ""
         local storedName = StripColorCodes(storedValue)
         local coloredTargetName = iWR:ColorizePlayerNameByClass(resolvedTargetName, targetClass)
@@ -2062,7 +2003,6 @@ function iWR:VerifyTargetClassinDB(databasekey, targetClass)
         if iWR:IsSamePlayerName(resolvedTargetName, storedName)
             and storedColor ~= targetColor then
             iWRDatabase[databasekey][4] = coloredTargetName
-            print(L["CharNoteStart"] .. iWRDatabase[databasekey][4] .. L["CharNoteColorUpdate"])
             iWR:PopulateDatabase()
             if iWRSettings.DataSharing ~= false and not iWRDatabase[databasekey][9] then
                 wipe(iWR.Cache.DataTable)
@@ -2077,6 +2017,7 @@ function iWR:VerifyTargetClassinDB(databasekey, targetClass)
                 iWR.Cache.Data = iWR:Serialize(iWR.Cache.DataTable)
                 iWR:SendNewDBUpdateToWhitelist()
             end
+            return true
         end
     end
 end

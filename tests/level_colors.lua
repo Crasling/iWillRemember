@@ -117,16 +117,13 @@ assert(next(env.iWRSettings.LevelColors) == nil, "an old picker cannot write to 
 env.iWRSettings = oldSettings
 
 env.TargetFrame, env.CreateFrame = widget(), widget
-env.GetUnitName = function(_, full) return full and "Example-Realm" or "Example" end
-env.strsplit = function() return "Example", "Realm" end
 env.iWRDatabase = { ["Example-Realm"] = { [2] = -10 } }
 addon.AddonPath, addon.CurrentRealm = "Interface/AddOns/iWillRemember/", "Realm"
-function addon:FormatNameAndRealm(name, realm) return name, realm end
-first = assert(source:find("function iWR:SetTargetFrameForeverDragon()", 1, true))
+first = assert(source:find("function iWR:SetTargetFrameForeverDragon(", 1, true))
 last = assert(source:find("function iWR:SetTargetFrameDefault()", first, true))
 assert(load(source:sub(first, last - 1), "drake color", "t", env))()
-addon:SetTargetFrameForeverDragon()
+addon:SetTargetFrameForeverDragon("Example-Realm")
 equal(addon.customFrame.texture.color, 0.2, 0.4, 0.8)
-assert(addon:SetLevelColor(-10)); addon:SetTargetFrameForeverDragon()
+assert(addon:SetLevelColor(-10)); addon:SetTargetFrameForeverDragon("Example-Realm")
 equal(addon.customFrame.texture.color, 0.9, 0, 0)
 print("PASS: per-level drake and border colors, configured-level inheritance, immediate refresh, hover stability, reset, picker Cancel, and settings isolation")
